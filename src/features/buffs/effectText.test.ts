@@ -5,6 +5,7 @@ import { loadBundledGameData, requireItem, requireSkill, UPCUT_STONE_ITEM_ID } f
 import {
   achievementShortName,
   effectTextOrNone,
+  splitEffectText,
   powerupSearchText,
   premiumItemEffect,
   rmBuffEffect,
@@ -45,6 +46,12 @@ describe('powerupSearchText', () => {
 
     expect(text).toContain('Red Love Candy');
     expect(text.toLowerCase()).toContain('hit');
+  });
+});
+
+describe('splitEffectText', () => {
+  it('splits an effect into one stat per line', () => {
+    expect(splitEffectText('STR +10 · Hit Rate +8%')).toEqual(['STR +10', 'Hit Rate +8%']);
   });
 });
 

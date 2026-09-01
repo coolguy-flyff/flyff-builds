@@ -12,7 +12,7 @@ import { Tooltip } from '@/components/Tooltip';
 import { cx } from '@/lib/cx';
 import { useActions, useAppStore, useGameData } from '@/state';
 
-import { powerupSearchText, premiumItemEffect } from './effectText';
+import { powerupSearchText, premiumItemEffect, splitEffectText } from './effectText';
 
 function PremiumItemTile({
   item,
@@ -36,7 +36,11 @@ function PremiumItemTile({
       content={
         <>
           <div className="font-semibold text-text">{item.name}</div>
-          <div className="mt-0.5 font-mono text-[11px]">{effect}</div>
+          <ul className="mt-0.5 flex flex-col gap-0.5 font-mono text-[11px]">
+            {splitEffectText(effect).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
         </>
       }
     >

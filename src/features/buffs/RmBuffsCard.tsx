@@ -8,7 +8,7 @@ import { Tooltip } from '@/components/Tooltip';
 import { cx } from '@/lib/cx';
 import { useActions, useAppStore, useGameData } from '@/state';
 
-import { rmBuffEffect } from './effectText';
+import { rmBuffEffect, splitEffectText } from './effectText';
 
 interface RmBuffRowModel {
   readonly skillId: number;
@@ -43,7 +43,16 @@ function RmBuffRow({
   onToggle: () => void;
 }) {
   return (
-    <Tooltip content={row.effect} className="w-full">
+    <Tooltip
+      className="w-full"
+      content={
+        <ul className="flex flex-col gap-0.5">
+          {splitEffectText(row.effect).map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      }
+    >
       <div
         className={cx(
           'flex w-full items-center gap-2 rounded-control bg-sub px-2.5 py-1.5 transition-colors select-none',
