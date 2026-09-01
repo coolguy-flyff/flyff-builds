@@ -1,0 +1,27 @@
+node_modules/
+dist/
+coverage/
+*.local
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.claude/settings.local.json
+
+# Agent worktrees created by Claude Code
+.claude/worktrees/
+
+# Raw game data (pnpm scrape-data). Scraped files are huge and reproducible; only the
+# hand-curated files and the version stamp are committed.
+data-src/*
+!data-src/Blessings.json
+!data-src/Achievements.json
+!data-src/version.json
+
+# Local-only deployment notes (kept out of the published repository).
+DEPLOYMENT.md

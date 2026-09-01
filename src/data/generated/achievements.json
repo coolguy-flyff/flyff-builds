@@ -1,0 +1,7 @@
+[
+  {"id":1,"name":"2026 FWC Brawler","image":"fwc2026_brawler.png","abilities":[{"parameter":"allstats","add":3,"rate":false}]},
+  {"id":2,"name":"2026 FWC Warrior","image":"fwc2026_warrior.png","abilities":[{"parameter":"allstats","add":5,"rate":false}]},
+  {"id":3,"name":"2026 FWC Savior","image":"fwc2026_savior.png","abilities":[{"parameter":"allstats","add":10,"rate":false}]},
+  {"id":4,"name":"2026 FWC Overlord","image":"fwc2026_overload.png","abilities":[{"parameter":"allstats","add":15,"rate":false},{"parameter":"maxhp","add":1000,"rate":false},{"parameter":"speed","add":5,"rate":true},{"parameter":"criticalchance","add":1,"rate":true},{"parameter":"parry","add":1,"rate":true}]},
+  {"id":5,"name":"2026 FWC Master","image":"fwc2026_master.png","abilities":[{"parameter":"allstats","add":20,"rate":false},{"parameter":"maxhp","add":2000,"rate":false},{"parameter":"speed","add":5,"rate":true},{"parameter":"criticalchance","add":3,"rate":true},{"parameter":"parry","add":3,"rate":true}]}
+]

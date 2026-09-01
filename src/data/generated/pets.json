@@ -1,0 +1,11 @@
+[
+  {"petItemId":148,"name":"Unicorn Corral","parameter":"maxhp","rate":false,"values":[96,191,383,670,1053,1356,1628,2539,3161]},
+  {"petItemId":885,"name":"Dragon Cage","parameter":"attack","rate":false,"values":[7,13,27,47,73,95,113,165,220]},
+  {"petItemId":1644,"name":"Angel Cage","parameter":"criticalchance","rate":true,"values":[1,2,3,4,5,6,7,8,9]},
+  {"petItemId":2563,"name":"Griffin Cage","parameter":"def","rate":false,"values":[6,12,24,42,66,88,102,140,198]},
+  {"petItemId":4817,"name":"Fox Cage","parameter":"int","rate":false,"values":[1,2,4,7,11,15,17,24,33]},
+  {"petItemId":5471,"name":"Rabbit Coop","parameter":"dex","rate":false,"values":[1,2,4,7,11,15,17,24,33]},
+  {"petItemId":5851,"name":"Tiger Cage","parameter":"str","rate":false,"values":[1,2,4,7,11,15,17,24,33]},
+  {"petItemId":6296,"name":"King Crab Cage","parameter":"criticaldamage","rate":true,"values":[2,3,4,5,6,7,9,11,16]},
+  {"petItemId":9941,"name":"Lion Cage","parameter":"sta","rate":false,"values":[1,2,4,7,11,15,17,24,33]}
+]

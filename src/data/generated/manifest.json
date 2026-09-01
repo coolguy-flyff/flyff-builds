@@ -1,0 +1,8 @@
+{
+  "generatedAt": "2026-09-01T22:05:32.949Z",
+  "generator": "build-data/1",
+  "sourceDir": "data-src",
+  "dataVersion": 37,
+  "sources": {"Items.json":{"sha256":"1e048287144787b8ed2aea1130e0a2810e6d04f98d7109f53261626e198a7d08","bytes":43823647},"Classes.json":{"sha256":"07415c22e6f0dde126a02efcedbcca8ac9f0d75a19e79d99a65fccaec8ac0154","bytes":22174},"EquipSets.json":{"sha256":"a73a8298a7801933b0b824d47bf38beda58c768c04a76924d357383589651c07","bytes":459999},"StatAwakes.json":{"sha256":"1b3b8dba5f0ab67f73ad04ec63f76ac918402ace187798e1fe3e2d011f999545","bytes":30712},"SkillAwakes.json":{"sha256":"dc062079e0ff11eceb260165538ae2c9604e6d173f5646081c8739b2ee1bc3b0","bytes":44234},"UpgradeBonus.json":{"sha256":"4dcb1a909294cd4fc7eef11fb0783fb4ff9b005894c4e9e2354b410f18712619","bytes":7802},"Blessings.json":{"sha256":"a9c71e6a4fa4531ff55709737769a477aed95255930291fdc32da275ba840d3e","bytes":6828},"Achievements.json":{"sha256":"9ae9ffd7726ca5ffe58312802bb53cf4cdf138b3bfbda22230f5b73edc7cd79c","bytes":4918},"HousingNPCs.json":{"sha256":"fa40af44dcffba6acbf01025b370a18508a7bf49dcd6890fa8cab162aef43e3e","bytes":37010},"Pets.json":{"sha256":"3fd8e3ba5d8d8811594205990869223123a04f1cd545a4e5f762b961864dda67","bytes":16040},"Skills.json":{"sha256":"3fc32f64f687517f977cac4c4c357f266dd04534f98b87d11c821137fff3c027","bytes":4669444},"StatNames.json":{"sha256":"e16421a5434838dcae54e4a2e44af13a49a45e683c51d5e8597f5cfc6589ae0f","bytes":113420}},
+  "counts": {"items":2847,"classes":21,"armorSets":274,"accessorySets":4,"statAwakes":48,"skillAwakes":9,"awakeSkills":137,"upgradeBonus":20,"blessings":21,"achievements":5,"housingNpcs":39,"pets":9,"skills":16,"statNames":169}
+}

@@ -1,0 +1,23 @@
+{
+  "str": {"rate":false,"values":[0,1,2,3,4,5]},
+  "dex": {"rate":false,"values":[0,1,2,3,4,5]},
+  "int": {"rate":false,"values":[0,1,2,3,4,5]},
+  "sta": {"rate":false,"values":[0,1,2,3,4,5]},
+  "criticalchance": {"rate":true,"values":[0,0.5,1,1.5,2,2.5]},
+  "criticaldamage": {"rate":true,"values":[0,0.5,1,1.5,2,2.5]},
+  "speed": {"rate":true,"values":[0,1,2,3]},
+  "attackspeed": {"rate":true,"values":[0,1,2,3]},
+  "decreasedcastingtime": {"rate":true,"values":[0,1,2,3]},
+  "actionspeed": {"rate":true,"values":[0,1,2,3]},
+  "def": {"rate":false,"values":[0,2,6,10,14,18]},
+  "attack": {"rate":false,"values":[0,5,9,13,17,21]},
+  "maxhp": {"rate":false,"values":[0,12,20,28,37,46]},
+  "maxmp": {"rate":false,"values":[0,12,20,28,37,46]},
+  "maxfp": {"rate":false,"values":[0,12,20,28,37,46]},
+  "magicdefense": {"rate":false,"values":[0,2,6,10,14,18]},
+  "parry": {"rate":true,"values":[0,1,2,3]},
+  "meleeblock": {"rate":true,"values":[0,1,2,3]},
+  "rangedblock": {"rate":true,"values":[0,1,2,3]},
+  "pvedamage": {"rate":false,"values":[0,10,15,20,25,30]},
+  "pveincomingdamage": {"rate":false,"values":[0,10,15,20,25,30]}
+}

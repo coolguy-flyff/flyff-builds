@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+src/data/generated
+.claude/
+
+data-src/

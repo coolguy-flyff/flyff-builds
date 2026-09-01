@@ -1,0 +1,2 @@
+* text=auto eol=lf
+src/data/generated/*.json linguist-generated=true

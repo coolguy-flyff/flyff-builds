@@ -1,0 +1,147 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens transcribed from the Claude Design canvas (plan Part D).
+ * Surfaces differ by fill, never by border; two type families: Sora for text, JetBrains Mono for values.
+ */
+@theme {
+  --font-sans: 'Sora', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --color-bg: #101319;
+  --color-band: #151a22;
+  --color-card: #161c25;
+  --color-sub: #1c232e;
+  --color-control: #242c39;
+  --color-control-hover: #2b3444;
+  --color-row: #1a212b;
+  --color-table: #12161d;
+  --color-backdrop: #0b0e13;
+
+  --color-text: #e8edf2;
+  --color-text-2: #b8c2ce;
+  --color-muted: #8b95a3;
+  --color-dim: #5c6773;
+  --color-disabled: #3d4653;
+
+  --color-accent: #45b8dc;
+  --color-on-accent: #06121a;
+  --color-ok: #4caf7d;
+  --color-warn: #d69e2e;
+  --color-danger: #c46a6a;
+
+  /* Ultimate random-stat lines: 1–2 yellow, 3–4 orange (in-game colours). */
+  --color-rand1: #dfc04e;
+  --color-rand2: #de8a3f;
+
+  --color-rarity-common: #78d9ff;
+  --color-rarity-uncommon: #c46200;
+  --color-rarity-rare: #00aa00;
+  --color-rarity-unique: #d20000;
+  --color-rarity-ultimate: #7f00ff;
+
+  --radius-card: 14px;
+  --radius-row: 12px;
+  --radius-sub: 10px;
+  --radius-control: 8px;
+  --radius-chip: 6px;
+  --radius-pill: 16px;
+
+  --shadow-panel: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+}
+
+/* Snap slider (plan D3): 6px track with an accent fill up to the knob; `--fill` is 0–100%. */
+input[type='range'].snap-slider {
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  background: transparent;
+}
+
+input[type='range'].snap-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--slider-fill, var(--color-accent)) 0 var(--fill, 0%),
+    var(--color-control) var(--fill, 0%) 100%
+  );
+}
+
+input[type='range'].snap-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--color-text);
+}
+
+input[type='range'].snap-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-control);
+}
+
+input[type='range'].snap-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--slider-fill, var(--color-accent));
+}
+
+input[type='range'].snap-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-text);
+}
+
+input[type='range'].snap-slider:disabled {
+  opacity: 0.5;
+}
+
+/* Card entrance (stat pages: add / expand-collapse switches). */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-card-in {
+  animation: card-in 160ms ease-out;
+}
