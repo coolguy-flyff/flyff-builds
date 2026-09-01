@@ -40,7 +40,7 @@ export function AppFooter() {
           and are used here for informational purposes only.
         </p>
         <p>
-          Game data and stat formulas adapted from{' '}
+          Game data from the official Flyff Universe API. Stat formulas adapted from{' '}
           <FooterLink href={FLYFFULATOR_URL}>Flyffulator</FooterLink> by Frostiae and contributors
           (GPL-3.0).
         </p>

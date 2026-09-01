@@ -5,7 +5,8 @@ shorthand, keep several alternatives of each gear type, compose them into gear s
 buff configuration, and compare the final stats of every swap side by side.
 
 [Flyffulator](https://github.com/Frostiae/Flyffulator) simulates one fully specified character at
-a time. Flyff Builds reuses its game data and stat formulas but flips the workflow:
+a time. Flyff Builds ports its stat formulas (the game data comes from the official Flyff
+Universe API) and flips the workflow:
 
 1. **Shorthand gear** — "Golden Etranar +10, STA +16 awakes, 28% HP cards" instead of four
    armor pieces configured one by one. Cards and jewels are stacks (`card × count`), awakes are
@@ -82,10 +83,11 @@ addition over Flyffulator, which leaves that synergy as a TODO.
 
 ## Attribution & license
 
-Game data and stat formulas are derived from [Flyffulator](https://github.com/Frostiae/Flyffulator)
-by Frostiae and contributors, licensed under the GPL-3.0; the pet tier and FWC badge images under
-`public/` come from the same project. Flyff Builds is therefore also released under the
-[GPL-3.0](./LICENSE). Item and class images are loaded from the official Flyff Universe API.
+Stat formulas are derived from [Flyffulator](https://github.com/Frostiae/Flyffulator) by Frostiae
+and contributors, licensed under the GPL-3.0; the data scraper is adapted from the same project,
+and the pet tier and FWC badge images under `public/` come from it too. Flyff Builds is therefore
+also released under the [GPL-3.0](./LICENSE). Game data comes from the official Flyff Universe
+API (api.flyff.com), which also serves the item and class images.
 Flyff Builds is a fan community project, not affiliated with or endorsed by Gala Lab Inc.
 ([official site](https://universe.flyff.com)). Flyff Universe and all related names, logos and
 artwork are property of Gala Lab Inc.; all game assets (icons, names, descriptions) remain the
