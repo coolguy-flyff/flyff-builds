@@ -15,6 +15,7 @@ import { maxBuffContributions } from '@/domain/engine/buffs/rmBuffs';
  */
 
 export const EFFECT_SEPARATOR = ' · ';
+
 /** Splits an effect line back into its stats, for tooltips that render one stat per line. */
 export function splitEffectText(effect: string): string[] {
   return effect.split(EFFECT_SEPARATOR);
