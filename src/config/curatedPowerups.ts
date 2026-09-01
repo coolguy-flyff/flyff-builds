@@ -16,8 +16,8 @@ export const CURATED_POWERUP_IDS: readonly number[] = [
   5080, // Flask of the Lion — STA +20
   1766, // Flask of the Rabbit — DEX +20
   9403, // Flask of the Fox — INT +20
-  13803, // Christmas Cookie — Attack +10%, Def +10%, All +10
-  10918, // Champion's Bounty Flask (30 Days) — All +10, Speed +10%, Attack +10%, Def +10%
   4863, // Super Charged Power Scroll — HP +600, Attack +300
   4181, // Flyff Balloon — HP +200
+  13803, // Christmas Cookie — Attack +10%, Def +10%, All +10
+  10918, // Champion's Bounty Flask (30 Days) — All +10, Speed +10%, Attack +10%, Def +10%
 ];

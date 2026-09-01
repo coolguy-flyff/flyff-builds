@@ -20,10 +20,10 @@ const EXPECTED_NAMES = [
   'Flask of the Lion',
   'Flask of the Rabbit',
   'Flask of the Fox',
-  'Christmas Cookie',
-  "Champion's Bounty Flask (30 Days)",
   'Super Charged Power Scroll',
   'Flyff Balloon',
+  'Christmas Cookie',
+  "Champion's Bounty Flask (30 Days)",
 ];
 
 describe('CURATED_POWERUP_IDS', () => {
