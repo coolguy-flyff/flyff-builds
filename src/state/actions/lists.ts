@@ -16,9 +16,6 @@ import {
   type EntryOf,
   type GearSwap,
 } from '@/domain/build';
-import { reachablePetTotals } from '@/domain/rules';
-import type { GameData } from '@/data';
-
 import type { AppState } from '../types';
 
 import { takeId, type ActionContext } from './shared';
@@ -29,6 +26,8 @@ export interface ListActions {
   removeEntry(list: EntryListKey, id: number): boolean;
   /** Moves an entry by `delta` positions (clamped to the list). */
   moveEntry(list: EntryListKey, id: number, delta: number): void;
+  /** Moves an entry to the position `targetId` currently holds (drag & drop). */
+  moveEntryTo(list: EntryListKey, id: number, targetId: number): void;
   setCustomName(list: EntryListKey, id: number, name: string | undefined): void;
   updateEntry<K extends EntryListKey>(
     list: K,
@@ -44,6 +43,19 @@ function entriesOf(build: BuildState, list: EntryListKey): AnyEntry[] {
 
 function firstId(entries: readonly { id: number }[]): number | null {
   return entries[0]?.id ?? null;
+}
+
+/** Re-inserts `entries[from]` at `to`; out-of-range positions (including -1 lookups) are ignored. */
+function moveWithin(entries: AnyEntry[], from: number, to: number): void {
+  if (from === -1 || to < 0 || to >= entries.length) {
+    return;
+  }
+
+  const [entry] = entries.splice(from, 1);
+
+  if (entry !== undefined) {
+    entries.splice(to, 0, entry);
+  }
 }
 
 /** A new swap is pre-filled with the first entry of every list so results appear immediately. */
@@ -66,7 +78,7 @@ function prefilledSwap(build: BuildState, id: number): GearSwap {
   return swap;
 }
 
-function createEntry(data: GameData, build: BuildState, list: EntryListKey, id: number): AnyEntry {
+function createEntry(build: BuildState, list: EntryListKey, id: number): AnyEntry {
   let entry: AnyEntry;
 
   switch (list) {
@@ -83,22 +95,14 @@ function createEntry(data: GameData, build: BuildState, list: EntryListKey, id: 
       entry = createShieldEntry(id);
       break;
     case 'accessorySets':
-      entry = createAccessorySetEntry(id, data.accessorySets[0]?.id ?? null);
+      entry = createAccessorySetEntry(id, null);
       break;
     case 'fashionSets':
       entry = createFashionSetEntry(id);
       break;
-
-    case 'pets': {
-      const pet = data.pets[0];
-      entry = createPetEntry(
-        id,
-        pet?.petItemId ?? null,
-        pet === undefined ? 0 : (reachablePetTotals(pet)[0] ?? 0),
-      );
+    case 'pets':
+      entry = createPetEntry(id, null, 0);
       break;
-    }
-
     case 'gearSwaps':
       entry = prefilledSwap(build, id);
       break;
@@ -116,14 +120,14 @@ function selectNeighbour(draft: AppState, list: EntryListKey, removedIndex: numb
   draft.ui.selected[list] = neighbour?.id ?? null;
 }
 
-export function createListActions({ set, get, deps }: ActionContext): ListActions {
+export function createListActions({ set, get }: ActionContext): ListActions {
   return {
     addEntry(list) {
       let created = 0;
 
       set((draft) => {
         const id = takeId(draft);
-        entriesOf(draft.build, list).push(createEntry(deps.data, draft.build, list, id));
+        entriesOf(draft.build, list).push(createEntry(draft.build, list, id));
         draft.ui.selected[list] = id;
         created = id;
       });
@@ -189,17 +193,18 @@ export function createListActions({ set, get, deps }: ActionContext): ListAction
       set((draft) => {
         const entries = entriesOf(draft.build, list);
         const index = entries.findIndex((entry) => entry.id === id);
-        const target = index + delta;
 
-        if (index === -1 || target < 0 || target >= entries.length) {
-          return;
-        }
+        moveWithin(entries, index, index + delta);
+      });
+    },
 
-        const [entry] = entries.splice(index, 1);
+    moveEntryTo(list, id, targetId) {
+      set((draft) => {
+        const entries = entriesOf(draft.build, list);
+        const index = entries.findIndex((entry) => entry.id === id);
+        const target = entries.findIndex((entry) => entry.id === targetId);
 
-        if (entry !== undefined) {
-          entries.splice(target, 0, entry);
-        }
+        moveWithin(entries, index, target);
       });
     },
 

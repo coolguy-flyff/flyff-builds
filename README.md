@@ -35,7 +35,9 @@ or link (`?b=<code>`) that "Import" previews before replacing the working build.
   (ignored offhand, excess jewels, …).
 
 Keyboard: steppers accept typing and arrow keys (Shift ±10, Ctrl ±100); lists use ↑/↓ and
-Enter; tabs use ←/→; dialogs trap focus and close with Esc.
+Enter; tabs use ←/→; dialogs trap focus and close with Esc. Gear entries, swaps and result
+columns reorder by dragging their ⠿ grip (or focus the grip: Space picks up, arrows move, Space
+drops).
 
 ## Development
 

@@ -47,5 +47,5 @@ export const CLASS_IDS = {
   seraph: 26141,
 } as const;
 
-/** Items usable only by these classes are limited to third jobs and their ancestors. */
-export const MIN_SHIELD_LEVEL = 100;
+/** Level-1 weapons, shields and armor are cosmetic skins; real gear starts above this level. */
+export const SKIN_ITEM_LEVEL = 1;

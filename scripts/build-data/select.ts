@@ -1,4 +1,4 @@
-import { MIN_SHIELD_LEVEL, UPCUT_STONE_ITEM_ID } from '../../src/data/constants';
+import { SKIN_ITEM_LEVEL, UPCUT_STONE_ITEM_ID } from '../../src/data/constants';
 
 import type { RawClass, RawEquipSet, RawItem, RawPet } from './source';
 
@@ -56,7 +56,15 @@ function hasStatAbilities(item: RawItem): boolean {
   );
 }
 
-/** Four armor parts for any job in a third-job chain — 1st/2nd-job and Vagrant sets included. */
+/** Level-1 gear is a cosmetic skin with no place in a stat comparison. */
+function isSkin(item: RawItem): boolean {
+  return item.level <= SKIN_ITEM_LEVEL;
+}
+
+/**
+ * Four armor parts for any job in a third-job chain — 1st/2nd-job and Vagrant sets included,
+ * skins left out.
+ */
 export function isBundledArmorSet(
   set: RawEquipSet,
   items: Readonly<Record<string, RawItem>>,
@@ -69,7 +77,7 @@ export function isBundledArmorSet(
     const first = parts[0];
 
     eligible =
-      parts.every((part) => part?.category === 'armor') &&
+      parts.every((part) => part?.category === 'armor' && !isSkin(part)) &&
       first?.class !== undefined &&
       chainIds.has(first.class);
   }
@@ -78,24 +86,21 @@ export function isBundledArmorSet(
 }
 
 /** Rare-and-above rarities are bundled; common/uncommon shop gear is left out. */
-const BUNDLED_WEAPON_RARITIES: ReadonlySet<string> = new Set([
-  'rare',
-  'veryrare',
-  'unique',
-  'ultimate',
-]);
+const BUNDLED_RARITIES: ReadonlySet<string> = new Set(['rare', 'veryrare', 'unique', 'ultimate']);
 
-/** Weapons of rare+ rarity usable by any third-job chain, from every level. */
+/** Weapons of rare+ rarity usable by any third-job chain, from every level except skins. */
 export function isEligibleWeapon(item: RawItem, chainIds: ReadonlySet<number>): boolean {
   return (
     item.category === 'weapon' &&
-    BUNDLED_WEAPON_RARITIES.has(item.rarity) &&
+    !isSkin(item) &&
+    BUNDLED_RARITIES.has(item.rarity) &&
     (item.class === undefined || chainIds.has(item.class))
   );
 }
 
+/** Shields of rare+ rarity, skins excluded; class limits are applied per job at runtime. */
 export function isEligibleShield(item: RawItem): boolean {
-  return item.subcategory === 'shield' && item.level >= MIN_SHIELD_LEVEL;
+  return item.subcategory === 'shield' && !isSkin(item) && BUNDLED_RARITIES.has(item.rarity);
 }
 
 export function isStatCloak(item: RawItem): boolean {

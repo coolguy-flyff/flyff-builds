@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CLASS_IDS } from '@/data';
+import { reorderByKeyboard, stubSiblingLayout } from '@/components/testing/sortable';
 import { renderWithStore } from '@/features/buffs/renderWithStore';
 import { createTestStore } from '@/features/buffs/testStore';
 import type { AppStoreApi } from '@/state';
@@ -23,7 +24,10 @@ function addWeapon(store: AppStoreApi, itemId: number): number {
   return id;
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe('offhand rule', () => {
   it('disables the offhand for a two-handed weapon and flags a stored shield', () => {
@@ -84,6 +88,20 @@ describe('swap list', () => {
 
     expect(store.getState().ui.expandedSwapId).toBe(FIRST_SWAP);
     expect(screen.getByRole('button', { name: 'Expand Swap 2' })).toBeDefined();
+  });
+
+  it('reorders swaps by dragging their grips', async () => {
+    const store = createTestStore();
+    renderWithStore(<SwapsSection />, store);
+
+    fireEvent.click(screen.getByRole('button', { name: /Add swap/ }));
+
+    const addedId = store.getState().build.gearSwaps[1]?.id;
+
+    stubSiblingLayout('vertical');
+    await reorderByKeyboard(screen.getByLabelText('Drag to reorder Swap 2'), 'ArrowUp');
+
+    expect(store.getState().build.gearSwaps.map((swap) => swap.id)).toEqual([addedId, FIRST_SWAP]);
   });
 
   it('excludes a swap from results and shows it dimmed when collapsed', () => {

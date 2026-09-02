@@ -71,7 +71,7 @@ export function EquipmentSetEditor({ entry }: { entry: EquipmentSetEntry }) {
           groupBy={armorSetTier}
           renderOption={(option) => <SetOptionRow set={option} />}
           leading={suit === undefined ? undefined : <ItemIcon icon={suit.icon} size={26} />}
-          meta={set === null ? undefined : `Lv ${set.level} · ${armorSetTier(set)} tier`}
+          meta={set === null ? undefined : `Lv ${set.level}`}
           placeholder="Pick a set…"
           allowNone
           label="Equipment set"

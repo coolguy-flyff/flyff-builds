@@ -50,17 +50,9 @@ export function EntryEditorShell({
       }
       actions={
         <EditorActions
-          canMoveUp={entryActions.canMoveUp}
-          canMoveDown={entryActions.canMoveDown}
           duplicateDisabled={entryActions.atLimit}
           onDuplicate={() => {
             entryActions.duplicate();
-          }}
-          onMoveUp={() => {
-            entryActions.moveUp();
-          }}
-          onMoveDown={() => {
-            entryActions.moveDown();
           }}
           onDelete={() => {
             entryActions.remove();

@@ -6,8 +6,11 @@ import { EditorActions } from '@/components/EditorFrame';
 import { InlineName } from '@/components/InlineName';
 import { rarityClassName } from '@/components/rarity';
 import { Select } from '@/components/Select';
+import { DragHandle } from '@/components/Sortable';
 import { FieldLabel, Hint } from '@/components/Text';
 import { Toggle } from '@/components/Toggle';
+import { useSortableItem } from '@/components/useSortableItem';
+import { cx } from '@/lib/cx';
 import { useActions, useBuild, useGameData, useSelectors } from '@/state';
 
 import { SwapChips } from './SwapChips';
@@ -66,7 +69,10 @@ export function ExpandedSwapCard({ swap }: { swap: GearSwap }) {
   const issues = issuesFor(selectors.issues(build), 'gearSwaps', swap.id);
   const offhand = offhandModel(data, build, swap, nameOf);
   const weaponItem = mainhandItem(data, build, swap);
-  const index = build.gearSwaps.findIndex((candidate) => candidate.id === swap.id);
+  const { attachNode, shiftStyle, isDragging, handle } = useSortableItem(
+    swap.id,
+    nameOf('gearSwaps', swap.id),
+  );
   const onlySwap = build.gearSwaps.length === 1;
   const statPageError = issues.find((issue) => issue.code === STAT_PAGE_ISSUE)?.message;
   const offhandError = issues.find((issue) => issue.code === OFFHAND_ISSUE)?.message;
@@ -90,8 +96,18 @@ export function ExpandedSwapCard({ swap }: { swap: GearSwap }) {
   };
 
   return (
-    <Card selected padding="editor" className="animate-card-in flex flex-col gap-3.5">
+    <Card
+      ref={attachNode}
+      style={shiftStyle}
+      selected
+      padding="editor"
+      className={cx(
+        'animate-card-in flex flex-col gap-3.5',
+        isDragging && 'relative z-10 shadow-lg',
+      )}
+    >
       <div className="flex flex-wrap items-center gap-2">
+        <DragHandle handle={handle} />
         <InlineName
           customName={swap.customName}
           autoName={selectors.autoName(build, 'gearSwaps', swap)}
@@ -115,17 +131,9 @@ export function ExpandedSwapCard({ swap }: { swap: GearSwap }) {
             onDuplicate={() => {
               expand(actions.duplicateEntry('gearSwaps', swap.id));
             }}
-            onMoveUp={() => {
-              actions.moveEntry('gearSwaps', swap.id, -1);
-            }}
-            onMoveDown={() => {
-              actions.moveEntry('gearSwaps', swap.id, 1);
-            }}
             onDelete={() => {
               actions.removeEntry('gearSwaps', swap.id);
             }}
-            canMoveUp={index > 0}
-            canMoveDown={index < build.gearSwaps.length - 1}
             deleteDisabled={onlySwap}
             deleteTitle={onlySwap ? 'At least one swap is required' : undefined}
           />

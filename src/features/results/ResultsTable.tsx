@@ -1,5 +1,7 @@
 import { Chip } from '@/components/Chip';
+import { DragHandle, Sortable } from '@/components/Sortable';
 import { Tooltip, type TooltipPlacement } from '@/components/Tooltip';
+import { useSortableItem } from '@/components/useSortableItem';
 import { cx } from '@/lib/cx';
 import { cellDetails } from '@/results/cellDetails';
 import { bestColumns, diffValue, rowValues } from '@/results/compare';
@@ -20,8 +22,8 @@ export interface ResultsTableProps {
   showSwapDetails: boolean;
   onToggleGroup: (groupId: string) => void;
   onOpenSwap: (swapId: number) => void;
-  /** Reorders a swap past its visible neighbour (the order is shared with the Buffs & Swaps tab). */
-  onMoveSwap: (swapId: number, direction: -1 | 1) => void;
+  /** Drag & drop: `swapId` takes `targetSwapId`'s column (the order is shared with Buffs & Swaps). */
+  onMoveSwap: (swapId: number, targetSwapId: number) => void;
 }
 
 const STAT_COLUMN_WIDTH_PX = 200;
@@ -31,8 +33,6 @@ const SWAP_COLUMN_WIDTH_PX = 230;
 const CELL = 'border-t border-white/5 px-3.5 py-1.5';
 const STICKY_LEFT = 'sticky left-0 z-10';
 const UPPERCASE_LABEL = 'font-sans text-[11px] font-semibold tracking-[0.07em] uppercase';
-const MOVE_BUTTON =
-  'shrink-0 rounded px-1 text-[11px] text-dim transition-colors hover:text-text disabled:cursor-not-allowed disabled:opacity-30';
 
 /** Groups near the top of the scroll container open their tooltips downwards. */
 const TOOLTIP_BELOW_GROUPS: ReadonlySet<string> = new Set(['base', 'vitals']);
@@ -65,42 +65,52 @@ function issueSummary(count: number): string {
   return `${count} issue${count === 1 ? '' : 's'}`;
 }
 
+function columnName(columns: readonly ResultsColumn[], swapId: number): string {
+  return columns.find((column) => column.swapId === swapId)?.name ?? '';
+}
+
+/** Follows the pointer while a column header is dragged; the cells themselves stay put. */
+function ColumnDragPreview({ name }: { name: string }) {
+  return (
+    <div className="rounded-control bg-control px-3 py-2 font-sans text-[13px] font-semibold text-accent shadow-lg">
+      {name}
+    </div>
+  );
+}
+
 function ColumnHeader({
   column,
-  position,
-  count,
   showDetails,
   onOpenSwap,
-  onMoveSwap,
 }: {
   column: ResultsColumn;
-  position: number;
-  count: number;
   showDetails: boolean;
   onOpenSwap: (swapId: number) => void;
-  onMoveSwap: (swapId: number, direction: -1 | 1) => void;
 }) {
+  const { attachNode, isDragging, isDropTarget, handle } = useSortableItem(
+    column.swapId,
+    column.name,
+  );
+
   return (
-    <th scope="col" className="sticky top-0 z-10 bg-row px-3.5 py-2.5 text-left align-top">
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          aria-label={`Move ${column.name} left`}
-          disabled={position === 0}
-          onClick={() => {
-            onMoveSwap(column.swapId, -1);
-          }}
-          className={MOVE_BUTTON}
-        >
-          ◀
-        </button>
+    <th
+      ref={attachNode}
+      scope="col"
+      className={cx(
+        'sticky top-0 z-10 bg-row px-3.5 py-2.5 text-left align-top',
+        isDragging && 'opacity-40',
+        isDropTarget && 'outline-2 -outline-offset-2 outline-accent',
+      )}
+    >
+      <div className="flex items-start gap-1.5">
+        <DragHandle handle={handle} className="mt-px" />
         <button
           type="button"
           title={`Open ${column.name} on the Buffs & Swaps tab`}
           onClick={() => {
             onOpenSwap(column.swapId);
           }}
-          className="min-w-0 truncate font-sans text-[13px] font-semibold text-accent hover:underline"
+          className="line-clamp-2 min-w-0 flex-1 text-left font-sans text-[13px] leading-snug font-semibold break-words text-accent hover:underline"
         >
           {column.name}
         </button>
@@ -114,17 +124,6 @@ function ColumnHeader({
             ⚠
           </span>
         )}
-        <button
-          type="button"
-          aria-label={`Move ${column.name} right`}
-          disabled={position === count - 1}
-          onClick={() => {
-            onMoveSwap(column.swapId, 1);
-          }}
-          className={cx(MOVE_BUTTON, 'ml-auto')}
-        >
-          ▶
-        </button>
       </div>
       {showDetails && (
         <div className="mt-1 flex flex-wrap gap-1">
@@ -182,8 +181,8 @@ function DetailList({ lines }: { lines: readonly CellDetail[] }) {
     <dl className="flex flex-col gap-0.5">
       {lines.map((line) => (
         <div key={line.label} className="flex justify-between gap-4">
-          <dt className="text-muted">{line.label}</dt>
-          <dd className="font-mono text-text">{line.value}</dd>
+          <dt className="min-w-0 text-muted break-words">{line.label}</dt>
+          <dd className="shrink-0 font-mono whitespace-nowrap text-text">{line.value}</dd>
         </div>
       ))}
     </dl>
@@ -284,7 +283,8 @@ function DataRow({
 /**
  * The comparison table (plan A4.1 / D6): sticky stat column and header rows, collapsible groups,
  * best-value accents, per-cell diffs and factor/source tooltips. Fixed column widths — the table
- * shrink-wraps its columns and scrolls inside its own container, never the page.
+ * shrink-wraps its columns and scrolls inside its own container, never the page. Column headers
+ * drag to reorder the swaps.
  */
 export function ResultsTable({
   groups,
@@ -301,70 +301,76 @@ export function ResultsTable({
   const effectiveBaselineIndex = baselineIndex === -1 ? null : baselineIndex;
 
   return (
-    <div className="min-h-0 w-fit max-w-full flex-1 overflow-auto rounded-xl bg-table">
-      <table
-        className="table-fixed border-separate border-spacing-0 text-[12.5px]"
-        style={{ width: STAT_COLUMN_WIDTH_PX + columns.length * SWAP_COLUMN_WIDTH_PX }}
-      >
-        <colgroup>
-          <col style={{ width: STAT_COLUMN_WIDTH_PX }} />
-          {columns.map((column) => (
-            <col key={column.swapId} style={{ width: SWAP_COLUMN_WIDTH_PX }} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr>
-            <th
-              scope="col"
-              className={cx(
-                UPPERCASE_LABEL,
-                'sticky top-0 left-0 z-20 bg-row px-3.5 py-2.5 text-left align-top text-muted',
-              )}
-            >
-              Swap
-            </th>
-            {columns.map((column, position) => (
-              <ColumnHeader
-                key={column.swapId}
-                column={column}
-                position={position}
-                count={columns.length}
-                showDetails={showSwapDetails}
-                onOpenSwap={onOpenSwap}
-                onMoveSwap={onMoveSwap}
-              />
+    <Sortable
+      ids={columns.map((column) => column.swapId)}
+      direction="horizontal"
+      onMove={onMoveSwap}
+      renderOverlay={(swapId) => <ColumnDragPreview name={columnName(columns, swapId)} />}
+    >
+      <div className="min-h-0 w-fit max-w-full flex-1 overflow-auto rounded-xl bg-table">
+        <table
+          className="table-fixed border-separate border-spacing-0 text-[12.5px]"
+          style={{ width: STAT_COLUMN_WIDTH_PX + columns.length * SWAP_COLUMN_WIDTH_PX }}
+        >
+          <colgroup>
+            <col style={{ width: STAT_COLUMN_WIDTH_PX }} />
+            {columns.map((column) => (
+              <col key={column.swapId} style={{ width: SWAP_COLUMN_WIDTH_PX }} />
             ))}
-          </tr>
-        </thead>
-        {groups.map(({ group, rows }) => {
-          const collapsed = collapsedGroups.includes(group.id);
-          const placement: TooltipPlacement = TOOLTIP_BELOW_GROUPS.has(group.id) ? 'bottom' : 'top';
+          </colgroup>
+          <thead>
+            <tr>
+              <th
+                scope="col"
+                className={cx(
+                  UPPERCASE_LABEL,
+                  'sticky top-0 left-0 z-20 bg-row px-3.5 py-2.5 text-left align-top text-muted',
+                )}
+              >
+                Swap
+              </th>
+              {columns.map((column) => (
+                <ColumnHeader
+                  key={column.swapId}
+                  column={column}
+                  showDetails={showSwapDetails}
+                  onOpenSwap={onOpenSwap}
+                />
+              ))}
+            </tr>
+          </thead>
+          {groups.map(({ group, rows }) => {
+            const collapsed = collapsedGroups.includes(group.id);
+            const placement: TooltipPlacement = TOOLTIP_BELOW_GROUPS.has(group.id)
+              ? 'bottom'
+              : 'top';
 
-          return (
-            <tbody key={group.id}>
-              <GroupRow
-                group={group}
-                columnCount={columns.length}
-                collapsed={collapsed}
-                onToggle={() => {
-                  onToggleGroup(group.id);
-                }}
-              />
-              {!collapsed &&
-                rows.map((row) => (
-                  <DataRow
-                    key={row.id}
-                    row={row}
-                    columns={columns}
-                    highlightBest={highlightBest}
-                    baselineIndex={effectiveBaselineIndex}
-                    tooltipPlacement={placement}
-                  />
-                ))}
-            </tbody>
-          );
-        })}
-      </table>
-    </div>
+            return (
+              <tbody key={group.id}>
+                <GroupRow
+                  group={group}
+                  columnCount={columns.length}
+                  collapsed={collapsed}
+                  onToggle={() => {
+                    onToggleGroup(group.id);
+                  }}
+                />
+                {!collapsed &&
+                  rows.map((row) => (
+                    <DataRow
+                      key={row.id}
+                      row={row}
+                      columns={columns}
+                      highlightBest={highlightBest}
+                      baselineIndex={effectiveBaselineIndex}
+                      tooltipPlacement={placement}
+                    />
+                  ))}
+              </tbody>
+            );
+          })}
+        </table>
+      </div>
+    </Sortable>
   );
 }

@@ -214,6 +214,7 @@ describe('naming', () => {
     const fashion = { ...createFashionSetEntry(9), blessings: [{ parameter: 'sta', total: 40 }] };
 
     expect(autoFashionSetName(data, fashion)).toBe('STA Fashion');
+    expect(autoFashionSetName(data, createFashionSetEntry(9))).toBe('Clean Fashion');
     // Two dominant blessings, ordered by the slots they need (STA 40 needs 8, crit 2.5 needs 1).
     expect(
       autoFashionSetName(data, {

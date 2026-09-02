@@ -13,7 +13,12 @@ import { ItemOptionRow } from '../ItemOptionRow';
 import { stepValues } from '../values';
 import { BlessingLinesEditor } from './BlessingLinesEditor';
 
-const SPEED_OPTIONS = stepValues({ min: 0, max: MAX_FASHION_SPEED_PERCENT, step: 1 });
+const SPEED_OPTIONS = stepValues({
+  min: 0,
+  max: MAX_FASHION_SPEED_PERCENT,
+  step: 1,
+  inverted: false,
+});
 
 function itemKey(item: SlimItem): number {
   return item.id;

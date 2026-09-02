@@ -27,23 +27,16 @@ export function EditorFrame({
   );
 }
 
+/** Duplicate / Delete for an editor card; reordering is drag & drop on the list itself. */
 export function EditorActions({
   onDuplicate,
-  onMoveUp,
-  onMoveDown,
   onDelete,
-  canMoveUp = true,
-  canMoveDown = true,
   duplicateDisabled = false,
   deleteDisabled = false,
   deleteTitle,
 }: {
   onDuplicate: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
   onDelete: () => void;
-  canMoveUp?: boolean | undefined;
-  canMoveDown?: boolean | undefined;
   duplicateDisabled?: boolean | undefined;
   deleteDisabled?: boolean | undefined;
   deleteTitle?: string | undefined;
@@ -52,12 +45,6 @@ export function EditorActions({
     <>
       <Button size="sm" onClick={onDuplicate} disabled={duplicateDisabled}>
         Duplicate
-      </Button>
-      <Button size="sm" aria-label="Move up" onClick={onMoveUp} disabled={!canMoveUp}>
-        ↑
-      </Button>
-      <Button size="sm" aria-label="Move down" onClick={onMoveDown} disabled={!canMoveDown}>
-        ↓
       </Button>
       <Button
         size="sm"

@@ -1,6 +1,7 @@
 import { requireDefined } from '@/lib/assert';
 
 import type {
+  Ability,
   AccessorySet,
   Achievement,
   ArmorSet,
@@ -102,17 +103,45 @@ function groupByJob(
   return grouped;
 }
 
-/** EXP and drop-rate boosts don't affect the computed results; items granting only those are hidden. */
-const RESULT_NEUTRAL_PARAMETERS: ReadonlySet<string> = new Set(['exprate', 'droprate']);
+/**
+ * Parameters that never reach the results: EXP / drop / party boosts, out-of-combat perks (revive
+ * restores, vendor days, dungeon entries, jewel enchants, flying), upgrade and piercing chances.
+ * Items and housing NPCs granting only these (or guild-artifact effects) are hidden.
+ */
+const RESULT_NEUTRAL_PARAMETERS: ReadonlySet<string> = new Set([
+  'exprate',
+  'droprate',
+  'partyexp',
+  'explossreduction',
+  'flyspeed',
+  'samejewelenchant',
+  'freedungeonentry',
+  'addedvendordays',
+  'reviverestorehp',
+  'reviverestoremp',
+  'reviverestorefp',
+  'generalupgraderate',
+  'accessoryupgraderate',
+  'piercingrate',
+]);
+const GUILD_ARTIFACT_MARKER = 'guildartifact';
+
+function affectsResults(ability: Ability): boolean {
+  return (
+    !RESULT_NEUTRAL_PARAMETERS.has(ability.parameter) &&
+    !ability.parameter.includes(GUILD_ARTIFACT_MARKER)
+  );
+}
 
 function grantsCombatStats(item: SlimItem): boolean {
   const abilities = item.abilities ?? [];
 
   // The Upcut Stone has no abilities at all: its ×1.2 lives in the attack formula, so it stays.
-  return (
-    abilities.length === 0 ||
-    abilities.some((ability) => !RESULT_NEUTRAL_PARAMETERS.has(ability.parameter))
-  );
+  return abilities.length === 0 || abilities.some(affectsResults);
+}
+
+function npcGrantsCombatStats(npc: HousingNpc): boolean {
+  return npc.abilities.some(affectsResults);
 }
 
 export function createGameData(raw: GeneratedData): GameData {
@@ -139,7 +168,7 @@ export function createGameData(raw: GeneratedData): GameData {
   const weapons = allItems.filter((item) => item.category === 'weapon');
   const shields = allItems.filter((item) => item.subcategory === 'shield');
   const cards = allItems.filter((item) => item.subcategory === 'piercingcard');
-  const housingNpcs = [...raw.housingNpcs].sort((a, b) => a.id - b.id);
+  const housingNpcs = raw.housingNpcs.filter(npcGrantsCombatStats).sort((a, b) => a.id - b.id);
 
   return {
     items,

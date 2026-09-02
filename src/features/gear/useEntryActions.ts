@@ -11,24 +11,20 @@ export interface EntryActions {
   readonly usage: string;
   /** Names of the swaps using the entry, for the usage tooltip. */
   readonly usageTitle: string;
-  readonly canMoveUp: boolean;
-  readonly canMoveDown: boolean;
   readonly atLimit: boolean;
   rename(name: string | undefined): void;
   duplicate(): void;
-  moveUp(): void;
-  moveDown(): void;
   /** Deletes directly, or asks for confirmation first when swaps reference the entry (plan A2.0). */
   remove(): void;
 }
 
+/** Actions of one entry's editor; reordering lives on the master list (drag & drop). */
 export function useEntryActions(list: GearListKey, entry: AnyEntry): EntryActions {
   const build = useBuild();
   const actions = useActions();
   const selectors = useSelectors();
   const spec = GEAR_CATEGORIES[list];
   const entries = gearEntries(build, list);
-  const index = entries.findIndex((candidate) => candidate.id === entry.id);
   const name = selectors.entryName(build, list, entry.id);
   const swaps = swapsReferencing(build, list, entry.id);
 
@@ -54,20 +50,12 @@ export function useEntryActions(list: GearListKey, entry: AnyEntry): EntryAction
     autoName: selectors.autoName(build, list, entry),
     usage: `in ${plural(swaps.length, 'swap')}`,
     usageTitle: swaps.map((swap) => selectors.entryName(build, 'gearSwaps', swap.id)).join(', '),
-    canMoveUp: index > 0,
-    canMoveDown: index >= 0 && index < entries.length - 1,
     atLimit: entries.length >= LIMITS.entriesPerList,
     rename(next) {
       actions.setCustomName(list, entry.id, next);
     },
     duplicate() {
       actions.duplicateEntry(list, entry.id);
-    },
-    moveUp() {
-      actions.moveEntry(list, entry.id, -1);
-    },
-    moveDown() {
-      actions.moveEntry(list, entry.id, 1);
     },
     remove,
   };

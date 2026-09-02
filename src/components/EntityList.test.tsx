@@ -3,13 +3,17 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { EntityList } from './EntityList';
+import { reorderByKeyboard, stubSiblingLayout } from './testing/sortable';
 
 const ITEMS = [
   { id: 1, name: 'Oracle +10', chips: [{ label: '+10' }], status: 'ok' as const },
   { id: 2, name: 'Maw of Judgement +8', status: 'warning' as const },
 ];
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe('EntityList', () => {
   it('selects with clicks and arrow keys, activates with Enter', () => {
@@ -23,6 +27,7 @@ describe('EntityList', () => {
         selectedId={1}
         onSelect={onSelect}
         onActivate={onActivate}
+        onMove={() => undefined}
         addLabel="+ Add weapon"
         onAdd={() => undefined}
       />,
@@ -49,6 +54,7 @@ describe('EntityList', () => {
         items={ITEMS}
         selectedId={null}
         onSelect={() => undefined}
+        onMove={() => undefined}
         addLabel="+ Add weapon"
         onAdd={onAdd}
       />,
@@ -60,5 +66,26 @@ describe('EntityList', () => {
     fireEvent.click(screen.getByRole('button', { name: '+ Add weapon' }));
 
     expect(onAdd).toHaveBeenCalledOnce();
+  });
+
+  it('reorders rows by dragging their grips (keyboard: Space, arrow, Space)', async () => {
+    const onMove = vi.fn();
+
+    stubSiblingLayout('vertical');
+    render(
+      <EntityList
+        label="Weapons"
+        items={ITEMS}
+        selectedId={null}
+        onSelect={() => undefined}
+        onMove={onMove}
+        addLabel="+ Add weapon"
+        onAdd={() => undefined}
+      />,
+    );
+
+    await reorderByKeyboard(screen.getByLabelText('Drag to reorder Oracle +10'), 'ArrowDown');
+
+    expect(onMove).toHaveBeenCalledWith(1, 2);
   });
 });

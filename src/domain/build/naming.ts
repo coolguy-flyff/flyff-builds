@@ -69,8 +69,8 @@ const SHORT_STAT_LABELS: Readonly<Record<string, string>> = {
   pvedamagereduction: 'PvE red',
   pvpdamagereduction: 'PvP red',
   criticalresist: 'Crit res',
-  decreasedmpconsumption: 'MP cost',
-  decreasedfpconsumption: 'FP cost',
+  decreasedmpconsumption: 'Dec. MP cost',
+  decreasedfpconsumption: 'Dec. FP cost',
 };
 
 export function shortStatLabel(data: GameData, parameter: string): string {
@@ -348,9 +348,11 @@ function dominantBlessingStats(data: GameData, entry: FashionSetEntry): string[]
     .map((line) => line.label);
 }
 
-/** "STA Fashion", "STA/Crit Fashion" (the two dominant blessings) or just "Fashion". */
+/** "STA Fashion", "STA/Crit Fashion" (the two dominant blessings) or "Clean Fashion" without any. */
 export function autoFashionSetName(data: GameData, entry: FashionSetEntry): string {
-  return joinWords([dominantBlessingStats(data, entry).join('/'), 'Fashion']);
+  const stats = dominantBlessingStats(data, entry);
+
+  return stats.length === 0 ? 'Clean Fashion' : joinWords([stats.join('/'), 'Fashion']);
 }
 
 /** "Unicorn Corral" / "Rabbit Coop" -> "Unicorn" / "Rabbit". */

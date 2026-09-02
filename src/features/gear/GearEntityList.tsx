@@ -7,7 +7,7 @@ import {
 } from '@/domain/build';
 import { EntityList, type EntityListItem } from '@/components/EntityList';
 import { ItemIcon } from '@/components/ItemIcon';
-import { useBuild, useGameData, useSelectors } from '@/state';
+import { useActions, useBuild, useGameData, useSelectors } from '@/state';
 
 import { plural } from './format';
 import { addLabelFor, GEAR_CATEGORIES } from './gearCategories';
@@ -42,6 +42,7 @@ export function GearEntityList({
   const data = useGameData();
   const build = useBuild();
   const selectors = useSelectors();
+  const actions = useActions();
   const spec = GEAR_CATEGORIES[category];
   const issues = selectors.issues(build);
   const rows = describeGearEntries(data, build, category);
@@ -51,7 +52,10 @@ export function GearEntityList({
     const entryIssues = issuesFor(issues, category, row.id);
     const swaps = swapsReferencing(build, category, row.id);
     const swapNames = swaps.map((swap) => selectors.entryName(build, 'gearSwaps', swap.id));
-    const issueText = entryIssues.map((issue) => issue.message).join(' · ');
+    const problems = [
+      ...(row.missing === null ? [] : [row.missing]),
+      ...entryIssues.map((issue) => issue.message),
+    ];
 
     return {
       id: row.id,
@@ -60,8 +64,9 @@ export function GearEntityList({
       icon: row.icon === null ? <IconPlaceholder /> : <ItemIcon icon={row.icon} size={ICON_SIZE} />,
       usage: `in ${plural(swaps.length, 'swap')}`,
       usageTitle: swapNames.length === 0 ? undefined : swapNames.join(', '),
-      status: worstSeverity(entryIssues) ?? 'ok',
-      statusTitle: issueText === '' ? undefined : issueText,
+      // An entry with nothing picked yet is a warning, not "no issues".
+      status: worstSeverity(entryIssues) ?? (row.missing === null ? 'ok' : 'warning'),
+      statusTitle: problems.length === 0 ? undefined : problems.join(' · '),
       chips: [...row.chips, ...issueChips(entryIssues)],
     };
   });
@@ -73,6 +78,9 @@ export function GearEntityList({
       selectedId={selectedId}
       onSelect={onSelect}
       onActivate={onActivate}
+      onMove={(id, targetId) => {
+        actions.moveEntryTo(category, id, targetId);
+      }}
       addLabel={addLabelFor(category)}
       onAdd={onAdd}
       addDisabled={atLimit}

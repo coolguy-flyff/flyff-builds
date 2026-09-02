@@ -85,8 +85,11 @@ export function StackEditor({
   const activeOption =
     activeItemId === null ? null : (sorted.find((option) => option.id === activeItemId) ?? null);
 
+  /** Units of an item across every stack (a slot edit can split one item into two stacks). */
   const countOf = (itemId: number): number =>
-    stacks.find((stack) => stack.itemId === itemId)?.count ?? 0;
+    stacks
+      .filter((stack) => stack.itemId === itemId)
+      .reduce((total, stack) => total + stack.count, 0);
 
   /** How many more units of the item the stacks accept (runes: one per type). */
   const allowance = (item: SlimItem): number => Math.max(maxStackCount(item) - countOf(item.id), 0);
@@ -126,9 +129,12 @@ export function StackEditor({
               className="flex items-center gap-2 rounded-control bg-control px-2.5 py-[7px]"
             >
               {item !== undefined && <ItemIcon icon={item.icon} size={20} />}
-              <span className="min-w-0 flex-1 truncate text-[12px] text-text" title={name}>
-                {name}
-              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[12px] text-text" title={name}>
+                  {name}
+                </div>
+                <div className="font-mono text-[11px] break-words text-accent">{effect}</div>
+              </div>
               <span className="text-[11px] text-dim">×</span>
               <Stepper
                 size="compact"
@@ -140,12 +146,6 @@ export function StackEditor({
                   onChange(setStackCount(stacks, index, count));
                 }}
               />
-              <span
-                className="min-w-[64px] shrink-0 text-right font-mono text-[11.5px] text-accent"
-                title={effect}
-              >
-                {effect}
-              </span>
               <button
                 type="button"
                 aria-label={`Remove ${name}`}

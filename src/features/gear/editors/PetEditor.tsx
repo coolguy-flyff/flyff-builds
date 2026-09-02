@@ -43,7 +43,7 @@ export function PetEditor({ entry }: { entry: PetEntry }) {
     label: def === undefined ? String(total) : formatAbility(data, def.parameter, total, def.rate),
   }));
 
-  if (!totals.includes(entry.total)) {
+  if (def !== undefined && !totals.includes(entry.total)) {
     totalOptions.unshift({ value: String(entry.total), label: `${entry.total} (unreachable)` });
   }
 
@@ -85,7 +85,11 @@ export function PetEditor({ entry }: { entry: PetEntry }) {
             });
           }}
         />
-        <Hint className="mt-2">Every reachable total, sorted descending — max {max}</Hint>
+        <Hint className="mt-2">
+          {def === undefined
+            ? 'Pick a pet stat above'
+            : `Every reachable total, sorted descending — max ${max}`}
+        </Hint>
       </SubCard>
       <SubCard label="Tier breakdown" note="one raise per tier">
         <div className="flex items-center justify-center">

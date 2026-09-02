@@ -35,6 +35,10 @@ describe('stack editing', () => {
     expect(addStackUnits(stacks([LAND_A, 2]), LAND_A, 3)).toEqual(stacks([LAND_A, 5]));
     expect(addStackUnits(stacks([LAND_A, 2]), FIRE_A, 1)).toEqual(stacks([LAND_A, 2], [FIRE_A, 1]));
     expect(setStackCount(stacks([LAND_A, 2], [FIRE_A, 1]), 1, 0)).toEqual(stacks([LAND_A, 2]));
+    // Removing the stack between two halves of the same item merges them back together.
+    expect(setStackCount(stacks([LAND_A, 2], [FIRE_A, 1], [LAND_A, 3]), 1, 0)).toEqual(
+      stacks([LAND_A, 5]),
+    );
   });
 
   it('fills the remaining capacity with the last stack', () => {
@@ -50,12 +54,23 @@ describe('stack editing', () => {
     expect(slotContents(stacks([LAND_A, 3]), 2)).toEqual([LAND_A, LAND_A, LAND_A]);
   });
 
-  it('moves one unit between stacks when a slot is repointed', () => {
+  it('keeps a repointed slot in place, splitting the stack around it', () => {
     expect(replaceSlot(stacks([LAND_A, 2]), 1, FIRE_A)).toEqual(stacks([LAND_A, 1], [FIRE_A, 1]));
     expect(replaceSlot(stacks([LAND_A, 1]), 0, WATER_A)).toEqual(stacks([WATER_A, 1]));
     expect(replaceSlot(stacks([LAND_A, 1]), 3, FIRE_A)).toEqual(stacks([LAND_A, 1], [FIRE_A, 1]));
     expect(replaceSlot(stacks([LAND_A, 1]), 0, null)).toEqual([]);
     expect(replaceSlot(stacks([LAND_A, 2]), 0, LAND_A)).toEqual(stacks([LAND_A, 2]));
+    // A full strip: the pick lands in the chosen slot, not at the end.
+    expect(replaceSlot(stacks([LAND_A, 5]), 2, FIRE_A)).toEqual(
+      stacks([LAND_A, 2], [FIRE_A, 1], [LAND_A, 2]),
+    );
+    expect(replaceSlot(stacks([LAND_A, 2], [FIRE_A, 1], [LAND_A, 2]), 2, LAND_A)).toEqual(
+      stacks([LAND_A, 5]),
+    );
+    // Emptying a middle slot closes the gap.
+    expect(replaceSlot(stacks([LAND_A, 1], [FIRE_A, 1], [WATER_A, 1]), 1, null)).toEqual(
+      stacks([LAND_A, 1], [WATER_A, 1]),
+    );
   });
 
   it('derives families and strip abbreviations from item names', () => {

@@ -3,7 +3,10 @@ import { roundTo } from '@/lib/math';
 
 const GRID_EPSILON = 1e-9;
 
-/** Every value on the `min + k·step` grid up to `max`, for snapping sliders. */
+/**
+ * Every value on the `min + k·step` grid up to `max`, weakest roll first, for snapping sliders:
+ * the last value is always the strongest one (so `-10` for an incoming-damage `-6…-10` range).
+ */
 export function stepValues(bounds: ValueBounds): number[] {
   const values: number[] = [];
   const count = Math.floor((bounds.max - bounds.min) / bounds.step + GRID_EPSILON);
@@ -12,7 +15,7 @@ export function stepValues(bounds: ValueBounds): number[] {
     values.push(roundTo(bounds.min + index * bounds.step, 4));
   }
 
-  return values;
+  return bounds.inverted ? values.reverse() : values;
 }
 
 /** The option closest to `value` (ties resolve to the lower option); undefined for no options. */

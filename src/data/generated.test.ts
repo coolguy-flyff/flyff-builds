@@ -113,8 +113,14 @@ describe('bundled game data', () => {
       'yoyo',
     ]);
     expect(data.powerups.some((item) => item.id === UPCUT_STONE_ITEM_ID)).toBe(true);
-    expect(data.personalNpcs.length).toBe(15);
-    expect(data.guildNpcs.length).toBe(24);
+    // Of 15 / 24 NPCs only those with a result-affecting stat remain (no EXP/drop/artifact/upgrade perks).
+    expect(data.personalNpcs.map((npc) => npc.shortName)).toEqual([
+      'Alice',
+      'Temas',
+      'Hatter',
+      'BB Wolf',
+    ]);
+    expect(data.guildNpcs.length).toBe(13);
     expect(data.achievements.length).toBe(5);
   });
 });

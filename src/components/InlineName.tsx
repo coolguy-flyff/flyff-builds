@@ -81,7 +81,7 @@ export function InlineName({
               start();
             }
           }}
-          className={cx('min-w-0 truncate font-semibold', nameClassName)}
+          className={cx('min-w-0 font-semibold break-words', nameClassName)}
         >
           {shown}
         </span>

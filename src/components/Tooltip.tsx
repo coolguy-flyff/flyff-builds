@@ -30,7 +30,7 @@ export function Tooltip({
       <span
         role="tooltip"
         className={cx(
-          'pointer-events-none absolute left-1/2 z-40 w-max max-w-[280px] -translate-x-1/2 rounded-sub border border-white/15 bg-backdrop px-3 py-2 text-left text-[11.5px] leading-relaxed text-text-2 opacity-0 shadow-panel transition-opacity delay-100 group-focus-within/tip:opacity-100 group-hover/tip:opacity-100',
+          'pointer-events-none absolute left-1/2 z-40 w-max max-w-[340px] -translate-x-1/2 rounded-sub border border-white/15 bg-backdrop px-3 py-2 text-left text-[11.5px] leading-relaxed whitespace-normal text-text-2 opacity-0 shadow-panel transition-opacity delay-100 group-focus-within/tip:opacity-100 group-hover/tip:opacity-100',
           PLACEMENT_CLASSES[placement],
         )}
       >

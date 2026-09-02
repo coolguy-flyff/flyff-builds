@@ -58,7 +58,7 @@ const DEFAULT_OUT_DIR = resolve(REPO_ROOT, 'src', 'data', 'generated');
 
 /** Expected table sizes at the time of writing; drift beyond ±20 % is reported, not fatal. */
 const EXPECTED_COUNTS: Readonly<Record<string, number>> = {
-  items: 2847,
+  items: 2167,
   classes: 21,
   armorSets: 274,
   accessorySets: 4,

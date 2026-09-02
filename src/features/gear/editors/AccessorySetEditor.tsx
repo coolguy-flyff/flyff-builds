@@ -107,6 +107,7 @@ export function AccessorySetEditor({ entry }: { entry: AccessorySetEntry }) {
           leading={ring === undefined ? undefined : <ItemIcon icon={ring.icon} size={26} />}
           meta={set === null ? undefined : ringSignature(data, ring)}
           placeholder="Pick a set…"
+          allowNone
           label="Accessory set"
           onChange={(next) => {
             update((draft) => {

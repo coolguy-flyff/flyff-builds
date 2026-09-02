@@ -68,7 +68,9 @@ describe('GearPage', () => {
 
     expect(pets).toHaveLength(1);
     expect(store.getState().ui.selected.pets).toBe(pets[0]?.id);
-    // A new pet defaults to the first pet in data order at its maximum reachable total.
-    expect(screen.getByText(/Every reachable total, sorted descending — max \d+/)).toBeTruthy();
+    // A new pet starts empty (like sets, weapons and shields) and is flagged until one is picked.
+    expect(pets[0]?.petItemId).toBeNull();
+    expect(screen.getByText('Pick a pet stat above')).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'No pet selected' })).toBeTruthy();
   });
 });

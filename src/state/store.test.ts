@@ -40,6 +40,9 @@ describe('lists', () => {
     actions.moveEntry('weapons', copyId ?? 0, -1);
     expect(store.getState().build.weapons.map((entry) => entry.id)).toEqual([copyId, weaponId]);
 
+    actions.moveEntryTo('weapons', weaponId, copyId ?? 0);
+    expect(store.getState().build.weapons.map((entry) => entry.id)).toEqual([weaponId, copyId]);
+
     actions.updateEntry('gearSwaps', 2, (swap) => {
       swap.weaponId = weaponId;
     });

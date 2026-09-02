@@ -10,6 +10,8 @@ export const CURATED_POWERUP_IDS: readonly number[] = [
   1171, // Potion of Recklessness — Crit +10%
   3748, // Concoction of Profuse Bleeding — Crit dmg +10%
   9480, // Potion of Clarity — Casting +10%
+  1169, // Elixir of the Sorcerer — Magic attack +5%
+  7364, // Scroll of Sprint — Speed +30%
   9411, // Rainbow Cotton Candy — All +5
   7197, // White Cotton Candy — Casting +5%
   2265, // Flask of the Tiger — STR +20

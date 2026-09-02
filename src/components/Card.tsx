@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
 
 import { cx } from '@/lib/cx';
 
@@ -7,10 +7,14 @@ export interface CardProps extends HTMLAttributes<HTMLElement> {
   padding?: 'list' | 'editor' | undefined;
 }
 
-/** Top-level surface (plan D1): flat fill, radius 14, no border. */
-export function Card({ selected = false, padding = 'list', className, ...rest }: CardProps) {
+/** Top-level surface (plan D1): flat fill, radius 14, no border. Forwards its ref (drag & drop). */
+export const Card = forwardRef<HTMLElement, CardProps>(function Card(
+  { selected = false, padding = 'list', className, ...rest },
+  ref,
+) {
   return (
     <section
+      ref={ref}
       data-selected={selected ? 'true' : undefined}
       className={cx(
         'rounded-card bg-card',
@@ -21,7 +25,7 @@ export function Card({ selected = false, padding = 'list', className, ...rest }:
       {...rest}
     />
   );
-}
+});
 
 export function CardTitle({
   children,

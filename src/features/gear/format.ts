@@ -48,13 +48,16 @@ export function asStatKey(value: string): StatKey | null {
   return keys.includes(value) ? (value as StatKey) : null;
 }
 
-/** "Attack +17–22%" for ranged abilities, "HP +28%" otherwise. */
+/** "Attack +17–22%" for ranged abilities ("Incoming Damage −6–10%" for reductions), "HP +28%" otherwise. */
 export function formatAbilityLine(data: GameData, ability: Ability): string {
   let line: string;
 
   if (ability.addMax !== undefined && ability.addMax !== ability.add) {
     const unit = ability.rate ? '%' : '';
-    line = `${shortStatLabel(data, ability.parameter)} +${roundTo(ability.add, 2)}–${roundTo(ability.addMax, 2)}${unit}`;
+    const sign = ability.add < 0 ? '−' : '+';
+    const from = Math.abs(roundTo(ability.add, 2));
+    const to = Math.abs(roundTo(ability.addMax, 2));
+    line = `${shortStatLabel(data, ability.parameter)} ${sign}${from}–${to}${unit}`;
   } else {
     line = formatAbility(data, ability.parameter, ability.add, ability.rate);
   }

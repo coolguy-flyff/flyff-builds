@@ -26,9 +26,14 @@ export interface ValueBounds {
   readonly min: number;
   readonly max: number;
   readonly step: number;
+  /** The strongest roll is `min`: reductions such as incoming damage run `-6…-10`. */
+  readonly inverted: boolean;
 }
 
-/** Ranged ability (`add…addMax`) bounds; Flyffulator's default is the floored midpoint. */
+/**
+ * Ranged ability (`add…addMax`) bounds; Flyffulator's default is the floored midpoint. The data
+ * lists the weakest roll first, so a range that counts down is an inverted (reduction) range.
+ */
 export function statRangeBounds(ability: Ability): ValueBounds {
   const max = ability.addMax ?? ability.add;
 
@@ -36,7 +41,13 @@ export function statRangeBounds(ability: Ability): ValueBounds {
     min: Math.min(ability.add, max),
     max: Math.max(ability.add, max),
     step: stepFor(ability.parameter),
+    inverted: max < ability.add,
   };
+}
+
+/** The best roll within the bounds: the top of the range, or its bottom for inverted ones. */
+export function strongestValue(bounds: ValueBounds): number {
+  return bounds.inverted ? bounds.min : bounds.max;
 }
 
 export function defaultStatRangeValue(ability: Ability): number {
@@ -78,6 +89,7 @@ export function randomStatBounds(ability: Ability, lineIndex: number): ValueBoun
       min: halfStat(ability.parameter, bounds.min),
       max: halfStat(ability.parameter, bounds.max),
       step: bounds.step,
+      inverted: bounds.inverted,
     };
   }
 

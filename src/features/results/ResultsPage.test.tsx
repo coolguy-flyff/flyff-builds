@@ -6,6 +6,7 @@ import { CLASS_IDS, loadBundledGameData } from '@/data';
 import { createDefaultBuild } from '@/domain/build';
 import { requireDefined } from '@/lib/assert';
 import { createMemoryStorage } from '@/persistence';
+import { reorderByKeyboard, stubSiblingLayout } from '@/components/testing/sortable';
 import { createAppStore, StoreProvider } from '@/state';
 
 import { ResultsPage } from './ResultsPage';
@@ -95,10 +96,11 @@ describe('ResultsPage', () => {
     expect(screen.getByRole('rowheader', { name: 'Heal Rain (Lv 10)' })).toBeDefined();
   });
 
-  it('reorders swaps from the column headers, sharing the order with the swap list', () => {
+  it('reorders swaps by dragging the column headers, sharing the order with the swap list', async () => {
     const { store, firstSwapId, secondSwapId } = setup();
 
-    fireEvent.click(screen.getByLabelText('Move Swap 2 left'));
+    stubSiblingLayout('horizontal');
+    await reorderByKeyboard(screen.getByLabelText('Drag to reorder Swap 2'), 'ArrowLeft');
 
     expect(store.getState().build.gearSwaps.map((swap) => swap.id)).toEqual([
       secondSwapId,

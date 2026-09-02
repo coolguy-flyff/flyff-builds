@@ -54,10 +54,12 @@ export function StackItemPicker({
         renderOption={(item) => (
           <div className="flex items-center gap-2">
             <ItemIcon icon={item.icon} size={22} />
-            <span className="min-w-0 flex-1 truncate">{item.name}</span>
-            <span className="shrink-0 font-mono text-[11px] text-accent">
-              {formatAbilityList(data, item.abilities)}
-            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate">{item.name}</div>
+              <div className="font-mono text-[10.5px] break-words text-accent">
+                {formatAbilityList(data, item.abilities)}
+              </div>
+            </div>
           </div>
         )}
         leading={value === null ? undefined : <ItemIcon icon={value.icon} size={22} />}

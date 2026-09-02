@@ -38,6 +38,8 @@ export interface EntryRow {
   readonly icon: string | null;
   readonly nameClassName: string;
   readonly chips: readonly EntityListChip[];
+  /** Why the entry contributes nothing yet ("No weapon selected"), or null once it is complete. */
+  readonly missing: string | null;
 }
 
 const PLAIN_NAME = 'text-text';
@@ -98,6 +100,7 @@ export function describeEquipmentSet(data: GameData, entry: EquipmentSetEntry): 
       ...setAwakeChips(entry.statAwake),
       ...stackChips(data, entry.suitCards),
     ]),
+    missing: set === undefined ? 'No set selected' : null,
   };
 }
 
@@ -115,6 +118,7 @@ export function describeWeapon(data: GameData, entry: WeaponEntry): EntryRow {
       ...stackChips(data, entry.jewels),
       ...stackChips(data, entry.cards),
     ]),
+    missing: item === undefined ? 'No weapon selected' : null,
   };
 }
 
@@ -131,6 +135,7 @@ export function describeShield(data: GameData, entry: ShieldEntry): EntryRow {
       ...skillAwakeChips(data, entry),
       ...stackChips(data, entry.cards),
     ]),
+    missing: item === undefined ? 'No shield selected' : null,
   };
 }
 
@@ -160,6 +165,7 @@ export function describeAccessorySet(data: GameData, entry: AccessorySetEntry): 
     icon: ring?.icon ?? null,
     nameClassName: PLAIN_NAME,
     chips: chips.length === 0 ? [] : [chip(accessorySetShortName(set?.name ?? '')), ...chips],
+    missing: set === undefined ? 'No set selected' : null,
   };
 }
 
@@ -188,6 +194,8 @@ export function describeFashionSet(data: GameData, entry: FashionSetEntry): Entr
       ...blessings,
       ...(cloak === undefined ? [] : [chip(itemShortName(cloak.name))]),
     ]),
+    // Fashion always contributes its set speed, so it is never incomplete.
+    missing: null,
   };
 }
 
@@ -201,6 +209,7 @@ export function describePet(data: GameData, entry: PetEntry): EntryRow {
     nameClassName: PLAIN_NAME,
     chips:
       def === undefined ? [] : [chip(formatAbility(data, def.parameter, entry.total, def.rate))],
+    missing: def === undefined ? 'No pet selected' : null,
   };
 }
 

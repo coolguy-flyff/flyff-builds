@@ -21,7 +21,7 @@ import type {
   StatPage,
   WeaponEntry,
 } from '@/domain/build/schema';
-import { randomStatBounds, rangedAbilities, statRangeBounds } from '@/domain/rules';
+import { randomStatBounds, rangedAbilities, statRangeBounds, strongestValue } from '@/domain/rules';
 import { requireDefined } from '@/lib/assert';
 
 /** Game ids used by the fixtures (from the bundled data). */
@@ -72,7 +72,7 @@ export function weaponAtMax(
 
   return {
     ...base,
-    statRanges: rangedAbilities(item).map((ability) => statRangeBounds(ability).max),
+    statRanges: rangedAbilities(item).map((ability) => strongestValue(statRangeBounds(ability))),
     randomStats: base.randomStats.map((line, index) =>
       line === null
         ? null
@@ -87,7 +87,7 @@ function maxRandomStatValue(item: SlimItem, parameter: string, lineIndex: number
     `${item.name} has no random stat ${parameter}`,
   );
 
-  return randomStatBounds(ability, lineIndex).max;
+  return strongestValue(randomStatBounds(ability, lineIndex));
 }
 
 function page(id: number, stats: Pick<StatPage, 'str' | 'sta' | 'dex' | 'int'>): StatPage {
@@ -229,8 +229,8 @@ export function maximalBuild(data: GameData): BuildState {
     buffs: {
       rmBuffs: { enabled: true, excludedSkillIds: [ids.patience, ids.beefUp] },
       premiumItemIds: [ids.upcutStone, ids.greenCottonCandy, ids.lowGrilledEel],
-      personalNpcIds: [12199, 12342, 15274],
-      coupleNpcIds: [12165],
+      personalNpcIds: [12199, 12342, 11960],
+      coupleNpcIds: [13117],
       guildNpcIds: [11693, 14035, 10508],
       achievementId: ids.fwcMaster,
     },

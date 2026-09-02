@@ -19,7 +19,7 @@ const TONE_FILL: Record<SnapSliderTone, string | undefined> = {
 };
 
 export interface SnapSliderProps {
-  /** Allowed values in ascending order; the knob snaps between them. */
+  /** Allowed values from weakest to strongest; the knob snaps between them and Max picks the last. */
   options: readonly number[];
   value: number;
   onChange: (value: number) => void;

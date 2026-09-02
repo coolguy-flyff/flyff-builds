@@ -16,7 +16,7 @@ import {
 
 const data = testGameData();
 const ORACLE = 54987; // two-handed stick (Seraph)
-const NIGHTMIST_KNUCKLE = 1952; // one-handed (Assist line)
+const OBSIDIAN_KNUCKLE = 3763; // one-handed (Assist line)
 const AZURE_SHIELD = 469;
 const REAPER_SWORD = 13243; // one-handed (Mercenary line)
 const OBSIDIAN_SWORD = 2434; // one-handed (Mercenary line)
@@ -77,7 +77,7 @@ describe('offhandModel', () => {
 
   it('offers shields to a non-Slayer with a one-handed weapon', () => {
     const store = createTestStore();
-    const weaponId = addWeapon(store, NIGHTMIST_KNUCKLE);
+    const weaponId = addWeapon(store, OBSIDIAN_KNUCKLE);
     const shieldId = addShield(store, AZURE_SHIELD);
     store.getState().actions.updateEntry('gearSwaps', FIRST_SWAP, (swap) => {
       swap.weaponId = weaponId;
@@ -95,7 +95,7 @@ describe('offhandModel', () => {
     });
     expect(model.options.map((option) => option.value)).toEqual(['', String(shieldId)]);
     expect(compositionChips(data, build, firstSwap(build), nameOf)).toEqual([
-      'Nightmist Knuckle +0',
+      'Bloody Obsidian Knuckle +0',
       'Azure Shield +0',
       'statPages#1',
     ]);

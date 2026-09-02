@@ -14,6 +14,8 @@ const EXPECTED_NAMES = [
   'Potion of Recklessness',
   'Concoction of Profuse Bleeding',
   'Potion of Clarity',
+  'Elixir of the Sorcerer',
+  'Scroll of Sprint',
   'Rainbow Cotton Candy',
   'White Cotton Candy',
   'Flask of the Tiger',

@@ -5,6 +5,7 @@ import { CLASS_IDS, loadBundledGameData, requireItem, type SlimItem } from '@/da
 import {
   blessingSlotsUsed,
   defaultRandomStatValue,
+  defaultStatRangeValue,
   halfStat,
   isReachableBlessingTotal,
   isValidSetStatAwake,
@@ -24,6 +25,8 @@ import {
   statAwakeCombos,
   statAwakePartnerOptions,
   statAwakeValueOptions,
+  statRangeBounds,
+  strongestValue,
   totalStatPoints,
   ultimateJewelSlots,
   upgradeFlatBonus,
@@ -211,6 +214,18 @@ describe('random stats', () => {
     expect(halved.min).toBeCloseTo(1.7, 9);
     expect(halved.max).toBeCloseTo(4.5, 9);
     expect(halved.step).toBe(0.1);
+  });
+
+  it('runs reduction ranges the other way round: the strongest roll is the lowest number', () => {
+    const incoming = { parameter: 'incomingdamage', add: -6, addMax: -10, rate: true };
+    const attack = { parameter: 'attack', add: 3.5, addMax: 9, rate: true };
+
+    expect(statRangeBounds(incoming)).toEqual({ min: -10, max: -6, step: 1, inverted: true });
+    expect(statRangeBounds(attack).inverted).toBe(false);
+    expect(strongestValue(statRangeBounds(incoming))).toBe(-10);
+    expect(strongestValue(statRangeBounds(attack))).toBe(9);
+    expect(defaultStatRangeValue(incoming)).toBe(-8);
+    expect(randomStatBounds(incoming, 2)).toEqual({ min: -5, max: -3, step: 1, inverted: true });
   });
 });
 

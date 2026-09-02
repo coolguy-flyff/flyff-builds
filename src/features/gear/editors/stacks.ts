@@ -24,15 +24,39 @@ export function freeSlots(stacks: readonly Stack[], capacity: number): number {
   return Math.max(capacity - stackCount(stacks), 0);
 }
 
+/** Drops empty stacks and merges neighbours holding the same item (a slot edit can split one). */
+function normalizeStacks(stacks: readonly Stack[]): Stack[] {
+  const merged: Stack[] = [];
+
+  for (const stack of stacks) {
+    const last = merged[merged.length - 1];
+
+    if (stack.count <= 0) {
+      // An emptied stack simply disappears.
+    } else if (last?.itemId === stack.itemId) {
+      merged[merged.length - 1] = { itemId: stack.itemId, count: last.count + stack.count };
+    } else {
+      merged.push({ itemId: stack.itemId, count: stack.count });
+    }
+  }
+
+  return merged;
+}
+
+/** Groups consecutive units back into stacks. */
+function stacksFromUnits(units: readonly number[]): Stack[] {
+  return normalizeStacks(units.map((itemId) => ({ itemId, count: 1 })));
+}
+
 /** Sets one stack's count; a count of zero removes the stack. */
 export function setStackCount(stacks: readonly Stack[], index: number, count: number): Stack[] {
-  return stacks
-    .map((stack, position) => (position === index ? { itemId: stack.itemId, count } : stack))
-    .filter((stack) => stack.count > 0);
+  return normalizeStacks(
+    stacks.map((stack, position) => (position === index ? { itemId: stack.itemId, count } : stack)),
+  );
 }
 
 export function removeStack(stacks: readonly Stack[], index: number): Stack[] {
-  return stacks.filter((_stack, position) => position !== index);
+  return normalizeStacks(stacks.filter((_stack, position) => position !== index));
 }
 
 /** Adds units of an item, merging into its existing stack or appending a new one. */
@@ -76,41 +100,28 @@ export function slotContents(stacks: readonly Stack[], capacity: number): (numbe
   return slots;
 }
 
-function stackIndexOfUnit(stacks: readonly Stack[], unit: number): number {
-  let offset = 0;
-  let owner = -1;
-
-  for (const [index, stack] of stacks.entries()) {
-    offset += stack.count;
-
-    if (unit < offset) {
-      owner = index;
-      break;
-    }
-  }
-
-  return owner;
-}
-
-/** Changes what one slot holds by moving a unit between stacks (`null` empties the slot). */
+/**
+ * Changes what one slot holds. The new unit stays in that very slot — the stack around it splits
+ * if needed — and `null` empties the slot, the units after it closing the gap.
+ */
 export function replaceSlot(
   stacks: readonly Stack[],
   slot: number,
   itemId: number | null,
 ): Stack[] {
-  const current = stackUnits(stacks)[slot] ?? null;
+  const units = stackUnits(stacks);
   let next: Stack[] = [...stacks];
 
-  if (current !== itemId) {
-    if (current !== null) {
-      const owner = stackIndexOfUnit(stacks, slot);
-      const count = stacks[owner]?.count ?? 1;
-      next = setStackCount(next, owner, count - 1);
+  if ((units[slot] ?? null) !== itemId) {
+    const replacement = itemId === null ? [] : [itemId];
+
+    if (slot < units.length) {
+      units.splice(slot, 1, ...replacement);
+    } else {
+      units.push(...replacement);
     }
 
-    if (itemId !== null) {
-      next = addStackUnits(next, itemId, 1);
-    }
+    next = stacksFromUnits(units);
   }
 
   return next;

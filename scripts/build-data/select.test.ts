@@ -6,6 +6,7 @@ import {
   getAllChainIds,
   getClassChain,
   getThirdJobIds,
+  isEligibleShield,
   isEligibleWeapon,
   isPowerup,
   isStatCloak,
@@ -67,13 +68,19 @@ describe('class selection', () => {
 describe('item selection', () => {
   const chainIds = new Set([1, 2, 3, 4]);
 
-  it('accepts rare-and-above weapons usable by the chain, from any level', () => {
+  it('accepts rare-and-above weapons usable by the chain, from any level but skins', () => {
     expect(
       isEligibleWeapon(
         rawItem({ id: 10, category: 'weapon', level: 15, rarity: 'rare', class: 2 }),
         chainIds,
       ),
     ).toBe(true);
+    expect(
+      isEligibleWeapon(
+        rawItem({ id: 14, category: 'weapon', level: 1, rarity: 'veryrare', class: 2 }),
+        chainIds,
+      ),
+    ).toBe(false);
     expect(
       isEligibleWeapon(
         rawItem({ id: 11, category: 'weapon', level: 120, rarity: 'ultimate' }),
@@ -91,6 +98,18 @@ describe('item selection', () => {
         rawItem({ id: 13, category: 'weapon', level: 150, rarity: 'veryrare', class: 9 }),
         chainIds,
       ),
+    ).toBe(false);
+  });
+
+  it('accepts rare-and-above shields, skins excluded', () => {
+    expect(
+      isEligibleShield(rawItem({ id: 15, subcategory: 'shield', level: 120, rarity: 'rare' })),
+    ).toBe(true);
+    expect(
+      isEligibleShield(rawItem({ id: 16, subcategory: 'shield', level: 118, rarity: 'common' })),
+    ).toBe(false);
+    expect(
+      isEligibleShield(rawItem({ id: 17, subcategory: 'shield', level: 1, rarity: 'veryrare' })),
     ).toBe(false);
   });
 
@@ -137,12 +156,14 @@ describe('item selection', () => {
 });
 
 describe('armor set selection', () => {
+  const armor = { category: 'armor', level: 120, class: 4 } as const;
   const items: Record<string, RawItem> = {
-    '50': rawItem({ id: 50, category: 'armor', subcategory: 'helmet', class: 4 }),
-    '51': rawItem({ id: 51, category: 'armor', subcategory: 'suit', class: 4 }),
-    '52': rawItem({ id: 52, category: 'armor', subcategory: 'gauntlet', class: 4 }),
-    '53': rawItem({ id: 53, category: 'armor', subcategory: 'boots', class: 4 }),
-    '55': rawItem({ id: 55, category: 'armor', subcategory: 'helmet', class: 9 }),
+    '50': rawItem({ id: 50, ...armor, subcategory: 'helmet' }),
+    '51': rawItem({ id: 51, ...armor, subcategory: 'suit' }),
+    '52': rawItem({ id: 52, ...armor, subcategory: 'gauntlet' }),
+    '53': rawItem({ id: 53, ...armor, subcategory: 'boots' }),
+    '54': rawItem({ id: 54, ...armor, subcategory: 'boots', level: 1 }),
+    '55': rawItem({ id: 55, ...armor, subcategory: 'helmet', class: 9 }),
     '60': rawItem({ id: 60, category: 'jewelry', subcategory: 'ring' }),
   };
   const chainIds = new Set([1, 2, 3, 4]);
@@ -158,5 +179,7 @@ describe('armor set selection', () => {
     expect(isBundledArmorSet(set(4, [50, 51, 52, 999]), items, chainIds)).toBe(false);
     // A set for a job outside every chain (off-chain professional) is rejected.
     expect(isBundledArmorSet(set(5, [55, 51, 52, 53]), items, new Set([1, 2, 3]))).toBe(false);
+    // Level-1 parts are skins.
+    expect(isBundledArmorSet(set(6, [50, 51, 52, 54]), items, chainIds)).toBe(false);
   });
 });
