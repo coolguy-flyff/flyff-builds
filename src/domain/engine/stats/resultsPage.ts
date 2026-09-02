@@ -21,7 +21,12 @@ import {
   computeJumpHeight,
   computeMovementSpeed,
 } from './speed';
-import { computeFp, computeHp, computeMp } from './vitals';
+import {
+  computeFpBreakdown,
+  computeHpBreakdown,
+  computeMpBreakdown,
+  type VitalBreakdown,
+} from './vitals';
 
 /** One results column: every row of plan A4.2 for a resolved swap. */
 export interface ResultsPage {
@@ -32,6 +37,9 @@ export interface ResultsPage {
   readonly hp: number;
   readonly mp: number;
   readonly fp: number;
+  readonly hpBreakdown: VitalBreakdown;
+  readonly mpBreakdown: VitalBreakdown;
+  readonly fpBreakdown: VitalBreakdown;
   readonly movementSpeed: number;
   readonly jumpHeight: number;
   readonly castingSpeed: number;
@@ -71,15 +79,21 @@ export function computeResultsPage(
   const ctx = createStatContext(data, resolved);
   const rate = (parameter: string): number => ctx.total(parameter, true);
   const equipmentDefense = computeEquipmentDefenseRange(ctx);
+  const hp = computeHpBreakdown(ctx);
+  const mp = computeMpBreakdown(ctx);
+  const fp = computeFpBreakdown(ctx);
 
   return {
     str: ctx.base('str'),
     sta: ctx.base('sta'),
     dex: ctx.base('dex'),
     int: ctx.base('int'),
-    hp: computeHp(ctx),
-    mp: computeMp(ctx),
-    fp: computeFp(ctx),
+    hp: hp.total,
+    mp: mp.total,
+    fp: fp.total,
+    hpBreakdown: hp,
+    mpBreakdown: mp,
+    fpBreakdown: fp,
     movementSpeed: computeMovementSpeed(ctx),
     jumpHeight: computeJumpHeight(ctx),
     castingSpeed: computeCastingSpeed(ctx),

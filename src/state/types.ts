@@ -14,6 +14,8 @@ export interface ResultsView {
   showRawTotals: boolean;
   hiddenSwapIds: number[];
   collapsedGroups: string[];
+  /** Composition/issue chips under the swap names in the results header. */
+  showSwapDetails: boolean;
 }
 
 export type ToastKind = 'info' | 'success' | 'warning' | 'error';

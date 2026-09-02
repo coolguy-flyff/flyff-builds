@@ -81,14 +81,29 @@ afterEach(() => {
 });
 
 describe('ResultsPage', () => {
-  it('renders one column per included swap with name and composition chips', () => {
+  it('renders one column per included swap; composition chips appear behind the details toggle', () => {
     setup();
 
     expect(screen.getByRole('button', { name: '— / Oracle / Page 1' })).toBeDefined();
     expect(screen.getByRole('button', { name: 'Swap 2' })).toBeDefined();
-    expect(screen.getAllByText('Oracle +0').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Page 1').length).toBe(0);
+
+    fireEvent.click(screen.getByLabelText('Swap details'));
+
+    expect(screen.getAllByText('Oracle').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Page 1').length).toBe(2);
     expect(screen.getByRole('rowheader', { name: 'Heal Rain (Lv 10)' })).toBeDefined();
+  });
+
+  it('reorders swaps from the column headers, sharing the order with the swap list', () => {
+    const { store, firstSwapId, secondSwapId } = setup();
+
+    fireEvent.click(screen.getByLabelText('Move Swap 2 left'));
+
+    expect(store.getState().build.gearSwaps.map((swap) => swap.id)).toEqual([
+      secondSwapId,
+      firstSwapId,
+    ]);
   });
 
   it('shows different attack values and marks the higher one as best', () => {

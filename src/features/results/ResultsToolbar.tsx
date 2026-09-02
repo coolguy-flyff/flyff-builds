@@ -103,6 +103,13 @@ export function ResultsToolbar({
           onViewChange({ showRawTotals: checked });
         }}
       />
+      <ToolbarToggle
+        label="Swap details"
+        checked={view.showSwapDetails}
+        onChange={(checked) => {
+          onViewChange({ showSwapDetails: checked });
+        }}
+      />
       <div className="ml-auto flex items-center gap-2">
         <CheckListPopover
           label="Swaps"

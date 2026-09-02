@@ -181,9 +181,11 @@ describe('naming', () => {
       gearSwaps: [{ ...createGearSwap(2, 1), equipmentSetId: 5, weaponId: 6 }],
     }));
 
-    expect(autoEquipmentSetName(data, equipment)).toBe('Etranar +10 · STA +16 · HP +28%');
-    // Overall stat totals: STA 4 (awake) + 50 (5 × Amethyst 10) + 60 (10 × Land A) = 114.
-    expect(autoWeaponName(data, weapon)).toBe('Oracle +10 · STA +114 · Heal +25%');
+    expect(autoEquipmentSetName(data, equipment)).toBe('HP/STA Etranar +10');
+    // Dominant stat: STA 4 (awake) + 50 (5 × Amethyst 10) + 60 (10 × Land A) = 114.
+    expect(autoWeaponName(data, weapon)).toBe('STA Healing Oracle +10');
+    // Nothing configured and +0: just the item.
+    expect(autoWeaponName(data, withWeaponItem(data, createWeaponEntry(8), ORACLE))).toBe('Oracle');
     expect(autoGearSwapName(data, build, requireDefined(build.gearSwaps[0], 'swap'))).toBe(
       'Etranar / Oracle / Page 1',
     );
@@ -211,7 +213,17 @@ describe('naming', () => {
   it('leads fashion names with a single blessing and names swaps with every picked slot', () => {
     const fashion = { ...createFashionSetEntry(9), blessings: [{ parameter: 'sta', total: 40 }] };
 
-    expect(autoFashionSetName(data, fashion)).toBe('STA +40 Fashion 10%');
+    expect(autoFashionSetName(data, fashion)).toBe('STA Fashion');
+    // Two dominant blessings, ordered by the slots they need (STA 40 needs 8, crit 2.5 needs 1).
+    expect(
+      autoFashionSetName(data, {
+        ...fashion,
+        blessings: [
+          { parameter: 'criticalchance', total: 2.5 },
+          { parameter: 'sta', total: 40 },
+        ],
+      }),
+    ).toBe('STA/Crit Fashion');
 
     const build = buildWith((base) => ({
       ...base,
@@ -233,7 +245,7 @@ describe('naming', () => {
     }));
 
     expect(autoGearSwapName(data, build, requireDefined(build.gearSwaps[0], 'swap'))).toBe(
-      "Etranar / Oracle / Adept's / STA +40 Fashion 10% / Page 1 / Angel",
+      "Etranar / Oracle / Adept's / STA Fashion / Page 1 / Angel",
     );
   });
 });

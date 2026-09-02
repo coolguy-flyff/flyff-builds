@@ -1,7 +1,7 @@
 import { getItem, getStatName, type Ability, type GameData, type SlimItem } from '@/data';
 import { roundTo } from '@/lib/math';
 
-import { reachablePetTotals, setAwakeTotals, statAwakeTotals } from '../rules';
+import { minBlessingSlots, reachablePetTotals, setAwakeTotals, statAwakeTotals } from '../rules';
 
 import type {
   AccessorySetEntry,
@@ -18,13 +18,22 @@ import type {
 } from './schema';
 
 /**
- * Auto-generated entry names (plan A5.1, revised 2026-09-01). Names are pure functions of data +
- * entry; a custom name always wins. Segments are joined with " · " and omitted when empty.
- * Weapons and shields are named by their overall stat totals (awake + cards + jewels), with runes
- * summarised as "N Runes"; accessory sets by their upgrade signature (r1 e1 necklace e2 r2).
+ * Auto-generated entry names (plan A5.1, revised 2026-09-02). Names are pure functions of data +
+ * entry; a custom name always wins. Gear reads "<dominant stats> <item> +<upgrade>" with the
+ * upgrade omitted at +0: "HP/STA Etranar +10", "STA Healing Oracle +10", "STA/Crit Fashion";
+ * accessory sets use their upgrade signature (r1 e1 necklace e2 r2), pets "Perfect <animal>".
  */
 
-const SEPARATOR = ' · ';
+const SKILL_AWAKE_PARAMETER_PREFIX = 'skill:';
+
+/** "+10" when upgraded, nothing at +0. */
+function upgradeSuffix(upgrade: number): string | null {
+  return upgrade > 0 ? `+${upgrade}` : null;
+}
+
+function joinWords(parts: readonly (string | null | undefined)[]): string {
+  return parts.filter((part): part is string => typeof part === 'string' && part !== '').join(' ');
+}
 
 /** Compact stat labels for chips and names; falls back to the game's stat name. */
 const SHORT_STAT_LABELS: Readonly<Record<string, string>> = {
@@ -84,12 +93,6 @@ export function formatAbility(
   return `${shortStatLabel(data, parameter)} ${formatStatValue(value, rate)}`;
 }
 
-function joinSegments(segments: readonly (string | null | undefined)[]): string {
-  return segments
-    .filter((segment): segment is string => typeof segment === 'string' && segment !== '')
-    .join(SEPARATOR);
-}
-
 /** "2026 FWC Golden Etranar Set" → "Golden Etranar"; "Primordial Etranar Set" → "Primordial Etranar". */
 export function armorSetShortName(name: string): string {
   return name.replace(/^2026 FWC /, '').replace(/ Set$/, '');
@@ -145,34 +148,40 @@ export function stackTotals(data: GameData, stacks: readonly Stack[]): Ability[]
   return [...totals.values()];
 }
 
-function stackTotalsSegment(data: GameData, stacks: readonly Stack[]): string | null {
-  const totals = stackTotals(data, stacks).map((ability) =>
-    formatAbility(data, ability.parameter, ability.add, ability.rate),
-  );
-
-  return totals.length === 0 ? null : totals.join(SEPARATOR);
-}
-
 export function autoStatPageName(build: BuildState, page: StatPage): string {
   const index = build.statPages.findIndex((candidate) => candidate.id === page.id);
 
   return `Page ${index + 1}`;
 }
 
-function setAwakeSegment(entry: EquipmentSetEntry): string | null {
-  const parts = Object.entries(setAwakeTotals(entry.statAwake)).map(
-    ([stat, value]) => `${stat.toUpperCase()} +${value}`,
-  );
+/** The suit-piercing stat with the largest total ("HP" for 4 × Volcano), if any. */
+function dominantStackStat(data: GameData, stacks: readonly Stack[]): string | undefined {
+  const [top] = [...stackTotals(data, stacks)].sort((a, b) => b.add - a.add);
 
-  return parts.length === 0 ? null : parts.join(SEPARATOR);
+  return top === undefined ? undefined : shortStatLabel(data, top.parameter);
 }
 
+/** The larger of the two set-awake totals ("STA" for STA +12 / INT +8), if any. */
+function dominantSetAwakeStat(entry: EquipmentSetEntry): string | undefined {
+  const [top] = Object.entries(setAwakeTotals(entry.statAwake)).sort((a, b) => b[1] - a[1]);
+
+  return top === undefined ? undefined : top[0].toUpperCase();
+}
+
+/** "HP/STA Etranar +10": piercing stat / dominant awake stat, set, upgrade (omitted at +0). */
 export function autoEquipmentSetName(data: GameData, entry: EquipmentSetEntry): string {
   const set = entry.setId === null ? undefined : data.armorSets.get(entry.setId);
-  const base =
-    set === undefined ? 'Equipment set' : `${armorSetShortName(set.name)} +${entry.upgrade}`;
+  let name = 'Equipment set';
 
-  return joinSegments([base, setAwakeSegment(entry), stackTotalsSegment(data, entry.suitCards)]);
+  if (set !== undefined) {
+    const stats = [dominantStackStat(data, entry.suitCards), dominantSetAwakeStat(entry)]
+      .filter((stat): stat is string => stat !== undefined)
+      .join('/');
+
+    name = joinWords([stats, armorSetShortName(set.name), upgradeSuffix(entry.upgrade)]);
+  }
+
+  return name;
 }
 
 interface StatTotal {
@@ -212,7 +221,10 @@ export function weaponStatSummary(
     push(stat, value, false);
   }
 
-  if (entry.skillAwake !== null && !entry.skillAwake.parameter.startsWith('skill:')) {
+  if (
+    entry.skillAwake !== null &&
+    !entry.skillAwake.parameter.startsWith(SKILL_AWAKE_PARAMETER_PREFIX)
+  ) {
     push(entry.skillAwake.parameter, entry.skillAwake.value, true);
   }
 
@@ -245,29 +257,55 @@ export function weaponStatSummary(
   return { totals: sorted, runeCount };
 }
 
-function weaponStatSegments(data: GameData, entry: WeaponEntry | ShieldEntry): (string | null)[] {
-  const { totals, runeCount } = weaponStatSummary(data, entry);
-  const segments: (string | null)[] = totals.map((total) =>
-    formatAbility(data, total.parameter, total.add, total.rate),
-  );
+/** The skill awake as a word: the stat ("Healing") or the awakened skill's name ("Moon Beam"). */
+function skillAwakeWord(
+  data: GameData,
+  awake: { parameter: string; value: number } | null,
+): string | undefined {
+  let word: string | undefined;
 
-  segments.push(runeCount === 0 ? null : `${runeCount} Rune${runeCount === 1 ? '' : 's'}`);
+  if (awake !== null) {
+    if (awake.parameter.startsWith(SKILL_AWAKE_PARAMETER_PREFIX)) {
+      const skillId = Number(awake.parameter.slice(SKILL_AWAKE_PARAMETER_PREFIX.length));
 
-  return segments;
+      word = data.awakeSkills.get(skillId)?.name;
+    } else {
+      word = getStatName(data, awake.parameter);
+    }
+  }
+
+  return word;
+}
+
+/** "STA Healing Oracle +10": dominant stat total, skill awake, item, upgrade (omitted at +0). */
+function autoHeldItemName(
+  data: GameData,
+  entry: WeaponEntry | ShieldEntry,
+  fallback: string,
+): string {
+  const item = entry.itemId === null ? undefined : getItem(data, entry.itemId);
+  let name = fallback;
+
+  if (item !== undefined) {
+    const [dominant] = weaponStatSummary(data, entry).totals;
+
+    name = joinWords([
+      dominant === undefined ? undefined : shortStatLabel(data, dominant.parameter),
+      skillAwakeWord(data, entry.skillAwake),
+      itemShortName(item.name),
+      upgradeSuffix(entry.upgrade),
+    ]);
+  }
+
+  return name;
 }
 
 export function autoWeaponName(data: GameData, entry: WeaponEntry): string {
-  const item = entry.itemId === null ? undefined : getItem(data, entry.itemId);
-  const base = item === undefined ? 'Weapon' : `${itemShortName(item.name)} +${entry.upgrade}`;
-
-  return joinSegments([base, ...weaponStatSegments(data, entry)]);
+  return autoHeldItemName(data, entry, 'Weapon');
 }
 
 export function autoShieldName(data: GameData, entry: ShieldEntry): string {
-  const item = entry.itemId === null ? undefined : getItem(data, entry.itemId);
-  const base = item === undefined ? 'Shield' : `${itemShortName(item.name)} +${entry.upgrade}`;
-
-  return joinSegments([base, ...weaponStatSegments(data, entry)]);
+  return autoHeldItemName(data, entry, 'Shield');
 }
 
 /** "+9" → "9", "+10" → "X": one character per piece in the accessory signature. */
@@ -297,21 +335,22 @@ export function autoAccessorySetName(data: GameData, entry: AccessorySetEntry): 
   return name;
 }
 
+/** Blessing stats by the slots they need (descending), then line order: the "dominant" ones. */
+function dominantBlessingStats(data: GameData, entry: FashionSetEntry): string[] {
+  return entry.blessings
+    .map((line, index) => ({
+      label: shortStatLabel(data, line.parameter),
+      slots: minBlessingSlots(data, line.parameter, line.total) ?? 0,
+      index,
+    }))
+    .sort((a, b) => b.slots - a.slots || a.index - b.index)
+    .slice(0, 2)
+    .map((line) => line.label);
+}
+
+/** "STA Fashion", "STA/Crit Fashion" (the two dominant blessings) or just "Fashion". */
 export function autoFashionSetName(data: GameData, entry: FashionSetEntry): string {
-  const blessings = entry.blessings.map((line) =>
-    formatAbility(data, line.parameter, line.total, data.blessings[line.parameter]?.rate ?? false),
-  );
-  const [only] = blessings;
-  let name;
-
-  if (blessings.length === 1 && only !== undefined) {
-    // A single blessing leads the name: "STA +40 Fashion 10%".
-    name = `${only} Fashion ${entry.speedPercent}%`;
-  } else {
-    name = joinSegments([`Fashion ${entry.speedPercent}%`, ...blessings]);
-  }
-
-  return name;
+  return joinWords([dominantBlessingStats(data, entry).join('/'), 'Fashion']);
 }
 
 /** "Unicorn Corral" / "Rabbit Coop" -> "Unicorn" / "Rabbit". */

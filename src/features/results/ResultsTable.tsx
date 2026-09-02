@@ -1,8 +1,10 @@
 import { Chip } from '@/components/Chip';
+import { Tooltip, type TooltipPlacement } from '@/components/Tooltip';
 import { cx } from '@/lib/cx';
+import { cellDetails } from '@/results/cellDetails';
 import { bestColumns, diffValue, rowValues } from '@/results/compare';
 import { formatDiff, formatValue } from '@/results/format';
-import type { ResultsRow, ResultsRowGroup, RowValue } from '@/results/rowCatalog';
+import type { CellDetail, ResultsRow, ResultsRowGroup, RowValue } from '@/results/rowCatalog';
 
 import { headerChips, type ResultsColumn } from './columns';
 
@@ -14,16 +16,26 @@ export interface ResultsTableProps {
   /** Column whose values every other column is diffed against; `null` = no diff mode. */
   baselineSwapId: number | null;
   collapsedGroups: readonly string[];
+  /** Composition/issue chips under each swap name; off by default. */
+  showSwapDetails: boolean;
   onToggleGroup: (groupId: string) => void;
   onOpenSwap: (swapId: number) => void;
+  /** Reorders a swap past its visible neighbour (the order is shared with the Buffs & Swaps tab). */
+  onMoveSwap: (swapId: number, direction: -1 | 1) => void;
 }
 
 const STAT_COLUMN_WIDTH_PX = 200;
-const SWAP_COLUMN_MIN_WIDTH_PX = 190;
+/** Fixed swap-column width: values stay close together instead of stretching across the page. */
+const SWAP_COLUMN_WIDTH_PX = 230;
 
 const CELL = 'border-t border-white/5 px-3.5 py-1.5';
 const STICKY_LEFT = 'sticky left-0 z-10';
 const UPPERCASE_LABEL = 'font-sans text-[11px] font-semibold tracking-[0.07em] uppercase';
+const MOVE_BUTTON =
+  'shrink-0 rounded px-1 text-[11px] text-dim transition-colors hover:text-text disabled:cursor-not-allowed disabled:opacity-30';
+
+/** Groups near the top of the scroll container open their tooltips downwards. */
+const TOOLTIP_BELOW_GROUPS: ReadonlySet<string> = new Set(['base', 'vitals']);
 
 /** Sign of a diff for colouring: ranges by the sum of their bound deltas. */
 function diffDirection(diff: RowValue): number {
@@ -55,14 +67,33 @@ function issueSummary(count: number): string {
 
 function ColumnHeader({
   column,
+  position,
+  count,
+  showDetails,
   onOpenSwap,
+  onMoveSwap,
 }: {
   column: ResultsColumn;
+  position: number;
+  count: number;
+  showDetails: boolean;
   onOpenSwap: (swapId: number) => void;
+  onMoveSwap: (swapId: number, direction: -1 | 1) => void;
 }) {
   return (
     <th scope="col" className="sticky top-0 z-10 bg-row px-3.5 py-2.5 text-left align-top">
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label={`Move ${column.name} left`}
+          disabled={position === 0}
+          onClick={() => {
+            onMoveSwap(column.swapId, -1);
+          }}
+          className={MOVE_BUTTON}
+        >
+          ◀
+        </button>
         <button
           type="button"
           title={`Open ${column.name} on the Buffs & Swaps tab`}
@@ -83,19 +114,32 @@ function ColumnHeader({
             ⚠
           </span>
         )}
+        <button
+          type="button"
+          aria-label={`Move ${column.name} right`}
+          disabled={position === count - 1}
+          onClick={() => {
+            onMoveSwap(column.swapId, 1);
+          }}
+          className={cx(MOVE_BUTTON, 'ml-auto')}
+        >
+          ▶
+        </button>
       </div>
-      <div className="mt-1 flex flex-wrap gap-1">
-        {headerChips(column).map((chip, index) => (
-          <Chip
-            key={`${index}:${chip.label}`}
-            tone={chip.tone}
-            title={chip.label}
-            className="max-w-full overflow-hidden"
-          >
-            {chip.label}
-          </Chip>
-        ))}
-      </div>
+      {showDetails && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {headerChips(column).map((chip, index) => (
+            <Chip
+              key={`${index}:${chip.label}`}
+              tone={chip.tone}
+              title={chip.label}
+              className="max-w-full overflow-hidden"
+            >
+              {chip.label}
+            </Chip>
+          ))}
+        </div>
+      )}
     </th>
   );
 }
@@ -133,16 +177,57 @@ function GroupRow({
   );
 }
 
+function DetailList({ lines }: { lines: readonly CellDetail[] }) {
+  return (
+    <dl className="flex flex-col gap-0.5">
+      {lines.map((line) => (
+        <div key={line.label} className="flex justify-between gap-4">
+          <dt className="text-muted">{line.label}</dt>
+          <dd className="font-mono text-text">{line.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function CellValue({
+  text,
+  details,
+  placement,
+}: {
+  text: string;
+  details: readonly CellDetail[];
+  placement: TooltipPlacement;
+}) {
+  let content;
+
+  if (details.length === 0) {
+    content = <span>{text}</span>;
+  } else {
+    content = (
+      <Tooltip placement={placement} content={<DetailList lines={details} />}>
+        <span className="cursor-help underline decoration-white/20 decoration-dotted underline-offset-2">
+          {text}
+        </span>
+      </Tooltip>
+    );
+  }
+
+  return content;
+}
+
 function DataRow({
   row,
   columns,
   highlightBest,
   baselineIndex,
+  tooltipPlacement,
 }: {
   row: ResultsRow;
   columns: readonly ResultsColumn[];
   highlightBest: boolean;
   baselineIndex: number | null;
+  tooltipPlacement: TooltipPlacement;
 }) {
   const values = rowValues(
     row,
@@ -176,7 +261,11 @@ function DataRow({
               isBest ? 'bg-accent/7 text-accent' : 'text-text',
             )}
           >
-            {formatValue(value, row.format)}
+            <CellValue
+              text={formatValue(value, row.format)}
+              details={value === null ? [] : cellDetails(row, column.result)}
+              placement={tooltipPlacement}
+            />
             {showDiff && (
               <span
                 data-diff={formatDiff(diff, row.format)}
@@ -194,7 +283,8 @@ function DataRow({
 
 /**
  * The comparison table (plan A4.1 / D6): sticky stat column and header rows, collapsible groups,
- * best-value accents and per-cell diffs. Scrolls inside its own container, never the page.
+ * best-value accents, per-cell diffs and factor/source tooltips. Fixed column widths — the table
+ * shrink-wraps its columns and scrolls inside its own container, never the page.
  */
 export function ResultsTable({
   groups,
@@ -202,22 +292,24 @@ export function ResultsTable({
   highlightBest,
   baselineSwapId,
   collapsedGroups,
+  showSwapDetails,
   onToggleGroup,
   onOpenSwap,
+  onMoveSwap,
 }: ResultsTableProps) {
   const baselineIndex = columns.findIndex((column) => column.swapId === baselineSwapId);
   const effectiveBaselineIndex = baselineIndex === -1 ? null : baselineIndex;
 
   return (
-    <div className="max-h-[calc(100vh-220px)] overflow-auto rounded-xl bg-table">
+    <div className="min-h-0 w-fit max-w-full flex-1 overflow-auto rounded-xl bg-table">
       <table
-        className="w-full table-fixed border-separate border-spacing-0 text-[12.5px]"
-        style={{ minWidth: STAT_COLUMN_WIDTH_PX + columns.length * SWAP_COLUMN_MIN_WIDTH_PX }}
+        className="table-fixed border-separate border-spacing-0 text-[12.5px]"
+        style={{ width: STAT_COLUMN_WIDTH_PX + columns.length * SWAP_COLUMN_WIDTH_PX }}
       >
         <colgroup>
           <col style={{ width: STAT_COLUMN_WIDTH_PX }} />
           {columns.map((column) => (
-            <col key={column.swapId} />
+            <col key={column.swapId} style={{ width: SWAP_COLUMN_WIDTH_PX }} />
           ))}
         </colgroup>
         <thead>
@@ -229,15 +321,24 @@ export function ResultsTable({
                 'sticky top-0 left-0 z-20 bg-row px-3.5 py-2.5 text-left align-top text-muted',
               )}
             >
-              Stat
+              Swap
             </th>
-            {columns.map((column) => (
-              <ColumnHeader key={column.swapId} column={column} onOpenSwap={onOpenSwap} />
+            {columns.map((column, position) => (
+              <ColumnHeader
+                key={column.swapId}
+                column={column}
+                position={position}
+                count={columns.length}
+                showDetails={showSwapDetails}
+                onOpenSwap={onOpenSwap}
+                onMoveSwap={onMoveSwap}
+              />
             ))}
           </tr>
         </thead>
         {groups.map(({ group, rows }) => {
           const collapsed = collapsedGroups.includes(group.id);
+          const placement: TooltipPlacement = TOOLTIP_BELOW_GROUPS.has(group.id) ? 'bottom' : 'top';
 
           return (
             <tbody key={group.id}>
@@ -257,6 +358,7 @@ export function ResultsTable({
                     columns={columns}
                     highlightBest={highlightBest}
                     baselineIndex={effectiveBaselineIndex}
+                    tooltipPlacement={placement}
                   />
                 ))}
             </tbody>

@@ -57,6 +57,7 @@ export function AppShell() {
   const parsed = useHashRoute();
   const actions = useActions();
   const route = parsed ?? recallRoute() ?? DEFAULT_ROUTE;
+  const isResults = route.tab === 'results';
 
   useEffect(() => {
     if (parsed === null) {
@@ -67,7 +68,7 @@ export function AppShell() {
   }, [parsed, route]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg text-text">
+    <div className={cx('flex flex-col bg-bg text-text', isResults ? 'h-screen' : 'min-h-screen')}>
       <div className="sticky top-0 z-30">
         <AppHeader />
         <NavTabs route={route} />
@@ -75,7 +76,7 @@ export function AppShell() {
       <main
         className={cx(
           'w-full flex-1 px-4 pt-[18px] pb-6 md:px-6',
-          route.tab !== 'results' && 'mx-auto max-w-[1400px]',
+          isResults ? 'flex min-h-0 flex-col' : 'mx-auto max-w-[1400px]',
         )}
       >
         {renderPage(route, actions)}

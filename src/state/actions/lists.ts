@@ -27,7 +27,8 @@ export interface ListActions {
   addEntry(list: EntryListKey): number;
   duplicateEntry(list: EntryListKey, id: number): number | undefined;
   removeEntry(list: EntryListKey, id: number): boolean;
-  moveEntry(list: EntryListKey, id: number, delta: -1 | 1): void;
+  /** Moves an entry by `delta` positions (clamped to the list). */
+  moveEntry(list: EntryListKey, id: number, delta: number): void;
   setCustomName(list: EntryListKey, id: number, name: string | undefined): void;
   updateEntry<K extends EntryListKey>(
     list: K,

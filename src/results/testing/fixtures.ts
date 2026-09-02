@@ -1,4 +1,7 @@
 import type { ResultsPage } from '@/domain/engine';
+import type { VitalBreakdown } from '@/domain/engine';
+
+const ZERO_BREAKDOWN: VitalBreakdown = { base: 0, flat: 0, rate: 0, rateGain: 0, total: 0 };
 
 /**
  * Hand-built results pages for unit tests of the pure results helpers. Every number is distinct
@@ -39,6 +42,9 @@ export const BASE_PAGE: ResultsPage = {
   meleeBlock: 6.25,
   rangedBlock: 6.25,
   healingSkills: { healRain: 2254, gloriaPatri: 6408, gloriaPatriEffectIncrease: 6740 },
+  hpBreakdown: ZERO_BREAKDOWN,
+  mpBreakdown: ZERO_BREAKDOWN,
+  fpBreakdown: ZERO_BREAKDOWN,
   rawTotals: {},
 };
 

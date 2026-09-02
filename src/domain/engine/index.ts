@@ -34,4 +34,5 @@ export { resolveShieldEntry, type ShieldResolution } from './gear/shield';
 export { resolveWeaponEntry, type WeaponHand, type WeaponResolution } from './gear/weapon';
 export { computeAllResults, type SwapResult } from './results';
 export { computeResultsPage, type ResultsPage } from './stats/resultsPage';
+export type { VitalBreakdown } from './stats/vitals';
 export type { EquippedItem, ResolvedCharacter, ResolvedOffhand } from './types';

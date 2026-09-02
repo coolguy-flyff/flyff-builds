@@ -53,6 +53,20 @@ export function ResultsPage({ onOpenSwap }: ResultsPageProps) {
   );
   const footnotes = engineFootnotes(visible);
 
+  /** Moves a swap past its visible neighbour, skipping hidden/excluded swaps in between. */
+  const moveSwap = (swapId: number, direction: -1 | 1): void => {
+    const position = visible.findIndex((column) => column.swapId === swapId);
+    const neighbour = visible[position + direction];
+
+    if (position === -1 || neighbour === undefined) {
+      return;
+    }
+
+    const order = build.gearSwaps.map((swap) => swap.id);
+
+    actions.moveEntry('gearSwaps', swapId, order.indexOf(neighbour.swapId) - order.indexOf(swapId));
+  };
+
   const copyToClipboard = async (text: string, label: string): Promise<void> => {
     try {
       await copyText(text);
@@ -117,7 +131,7 @@ export function ResultsPage({ onOpenSwap }: ResultsPageProps) {
     );
   } else {
     content = (
-      <>
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
         <ResultsTable
           groups={groupRows(rows)}
           columns={visible}
@@ -129,17 +143,19 @@ export function ResultsPage({ onOpenSwap }: ResultsPageProps) {
               collapsedGroups: toggleMembership(view.collapsedGroups, groupId),
             });
           }}
+          showSwapDetails={view.showSwapDetails}
           onOpenSwap={onOpenSwap}
+          onMoveSwap={moveSwap}
         />
         {footnotes.length > 0 && (
           <p className="text-[11.5px] text-dim">{footnotes.join(FOOTNOTE_SEPARATOR)}</p>
         )}
-      </>
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       {results.length > 0 && (
         <ResultsToolbar
           view={view}

@@ -1,4 +1,6 @@
-import { getStatName, type GameData } from '@/data';
+import { getStatName, type GameData, type StatKey } from '@/data';
+
+import { formatInt, formatPercent } from './format';
 import type { HealingSkills, ResultsPage, SwapResult } from '@/domain/engine';
 
 /**
@@ -36,6 +38,21 @@ export interface ResultsGroup {
   readonly note?: string | undefined;
 }
 
+/** One line of a cell tooltip: a factor or a source and its formatted value. */
+export interface CellDetail {
+  readonly label: string;
+  readonly value: string;
+}
+
+export type CellDetails = (page: ResultsPage) => readonly CellDetail[];
+
+/** A stat total whose contributions explain a row; `statPageKey` adds the stat page line. */
+export interface SourceSpec {
+  readonly parameter: string;
+  readonly rate: boolean;
+  readonly statPageKey?: StatKey | undefined;
+}
+
 export interface ResultsRow {
   readonly id: string;
   readonly group: ResultsGroupId;
@@ -43,6 +60,10 @@ export interface ResultsRow {
   readonly format: RowFormat;
   readonly higherIsBetter: boolean;
   readonly tooltip?: string | undefined;
+  /** Precomputed factors for the cell tooltip (max HP/MP/FP). */
+  readonly details?: CellDetails | undefined;
+  /** Stat totals whose contributions the cell tooltip lists as sources. */
+  readonly sources?: readonly SourceSpec[] | undefined;
   readonly select: (page: ResultsPage) => RowValue;
 }
 
@@ -76,6 +97,34 @@ type NumericPageKey = {
 interface ScalarRowOptions {
   readonly lowerIsBetter?: boolean;
   readonly tooltip?: string;
+  readonly details?: CellDetails;
+  readonly sources?: readonly SourceSpec[];
+}
+
+function rateSource(parameter: string): readonly SourceSpec[] {
+  return [{ parameter, rate: true }];
+}
+
+function baseStatSource(stat: StatKey): readonly SourceSpec[] {
+  return [{ parameter: stat, rate: false, statPageKey: stat }];
+}
+
+/** The factors behind a max HP / MP / FP value (plan feedback 2026-09-02, results item 2). */
+function vitalDetails(
+  key: 'hpBreakdown' | 'mpBreakdown' | 'fpBreakdown',
+  short: string,
+  baseStat: string,
+): CellDetails {
+  return (page) => {
+    const breakdown = page[key];
+
+    return [
+      { label: `Base (class, level, ${baseStat})`, value: formatInt(breakdown.base) },
+      { label: `Flat ${short} bonus`, value: `+${formatInt(breakdown.flat)}` },
+      { label: `${short} % bonus`, value: `+${formatPercent(breakdown.rate)}` },
+      { label: `Gained from ${short} %`, value: `+${formatInt(breakdown.rateGain)}` },
+    ];
+  };
 }
 
 function scalarRow(
@@ -92,6 +141,8 @@ function scalarRow(
     format,
     higherIsBetter: options.lowerIsBetter !== true,
     tooltip: options.tooltip,
+    details: options.details,
+    sources: options.sources,
     select: (page) => page[key],
   };
 }
@@ -113,29 +164,49 @@ function healingRow(
 }
 
 const STATIC_ROWS: readonly ResultsRow[] = [
-  scalarRow('base', 'str', 'STR', 'int'),
-  scalarRow('base', 'sta', 'STA', 'int'),
-  scalarRow('base', 'dex', 'DEX', 'int'),
-  scalarRow('base', 'int', 'INT', 'int'),
-  scalarRow('vitals', 'hp', 'Max HP', 'int'),
-  scalarRow('vitals', 'mp', 'Max MP', 'int'),
-  scalarRow('vitals', 'fp', 'Max FP', 'int'),
-  scalarRow('speed', 'movementSpeed', 'Movement speed %', 'percent'),
-  scalarRow('speed', 'jumpHeight', 'Jump height %', 'percent'),
-  scalarRow('speed', 'castingSpeed', 'Casting speed %', 'percent'),
+  scalarRow('base', 'str', 'STR', 'int', { sources: baseStatSource('str') }),
+  scalarRow('base', 'sta', 'STA', 'int', { sources: baseStatSource('sta') }),
+  scalarRow('base', 'dex', 'DEX', 'int', { sources: baseStatSource('dex') }),
+  scalarRow('base', 'int', 'INT', 'int', { sources: baseStatSource('int') }),
+  scalarRow('vitals', 'hp', 'Max HP', 'int', { details: vitalDetails('hpBreakdown', 'HP', 'STA') }),
+  scalarRow('vitals', 'mp', 'Max MP', 'int', { details: vitalDetails('mpBreakdown', 'MP', 'INT') }),
+  scalarRow('vitals', 'fp', 'Max FP', 'int', { details: vitalDetails('fpBreakdown', 'FP', 'STA') }),
+  scalarRow('speed', 'movementSpeed', 'Movement speed %', 'percent', {
+    sources: rateSource('speed'),
+  }),
+  scalarRow('speed', 'jumpHeight', 'Jump height %', 'percent', {
+    sources: [{ parameter: 'jumpheight', rate: false }],
+  }),
+  scalarRow('speed', 'castingSpeed', 'Casting speed %', 'percent', {
+    sources: rateSource('decreasedcastingtime'),
+  }),
   scalarRow('speed', 'attackSpeed', 'Attack speed %', 'percent'),
   scalarRow('offense', 'attack', 'Attack', 'int'),
-  scalarRow('offense', 'magicAttack', 'Magic Attack %', 'percent'),
-  scalarRow('offense', 'skillDamage', 'Skill damage %', 'percent'),
-  scalarRow('offense', 'pveDamage', 'PvE damage %', 'percent'),
-  scalarRow('offense', 'pvpDamage', 'PvP damage %', 'percent'),
+  scalarRow('offense', 'magicAttack', 'Magic Attack %', 'percent', {
+    sources: rateSource('magicattack'),
+  }),
+  scalarRow('offense', 'skillDamage', 'Skill damage %', 'percent', {
+    sources: rateSource('skilldamage'),
+  }),
+  scalarRow('offense', 'pveDamage', 'PvE damage %', 'percent', {
+    sources: rateSource('pvedamage'),
+  }),
+  scalarRow('offense', 'pvpDamage', 'PvP damage %', 'percent', {
+    sources: rateSource('pvpdamage'),
+  }),
   scalarRow('offense', 'hitRate', 'Hit rate %', 'percent', {
     tooltip: 'Against a training dummy, clamped to 20–96%.',
   }),
-  scalarRow('offense', 'criticalChance', 'Critical chance %', 'percent'),
-  scalarRow('offense', 'criticalDamage', 'Critical damage %', 'percent'),
-  scalarRow('offense', 'blockPenetration', 'Block penetration %', 'percent'),
-  scalarRow('offense', 'healing', 'Healing %', 'percent'),
+  scalarRow('offense', 'criticalChance', 'Critical chance %', 'percent', {
+    sources: rateSource('criticalchance'),
+  }),
+  scalarRow('offense', 'criticalDamage', 'Critical damage %', 'percent', {
+    sources: rateSource('criticaldamage'),
+  }),
+  scalarRow('offense', 'blockPenetration', 'Block penetration %', 'percent', {
+    sources: rateSource('blockpenetration'),
+  }),
+  scalarRow('offense', 'healing', 'Healing %', 'percent', { sources: rateSource('healing') }),
   {
     id: 'defense',
     group: 'defense',
@@ -146,20 +217,31 @@ const STATIC_ROWS: readonly ResultsRow[] = [
     select: (page) => ({ min: page.defenseMin, max: page.defenseMax }),
   },
   scalarRow('defense', 'magicDefense', 'Magic defense', 'int'),
-  scalarRow('defense', 'magicResistance', 'Magic resistance %', 'percent'),
-  scalarRow('defense', 'criticalResist', 'Critical resist %', 'percent'),
+  scalarRow('defense', 'magicResistance', 'Magic resistance %', 'percent', {
+    sources: rateSource('magicdefense'),
+  }),
+  scalarRow('defense', 'criticalResist', 'Critical resist %', 'percent', {
+    sources: rateSource('criticalresist'),
+  }),
   scalarRow('defense', 'incomingDamage', 'Incoming damage %', 'percent', {
     lowerIsBetter: true,
     tooltip: 'Lower is better.',
+    sources: rateSource('incomingdamage'),
   }),
-  scalarRow('defense', 'pveDamageReduction', 'PvE damage reduction %', 'percent'),
-  scalarRow('defense', 'pvpDamageReduction', 'PvP damage reduction %', 'percent'),
-  scalarRow('defense', 'parry', 'Parry', 'int'),
+  scalarRow('defense', 'pveDamageReduction', 'PvE damage reduction %', 'percent', {
+    sources: rateSource('pvedamagereduction'),
+  }),
+  scalarRow('defense', 'pvpDamageReduction', 'PvP damage reduction %', 'percent', {
+    sources: rateSource('pvpdamagereduction'),
+  }),
+  scalarRow('defense', 'parry', 'Parry', 'int', { sources: rateSource('parry') }),
   scalarRow('defense', 'meleeBlock', 'Melee block %', 'percent', {
     tooltip: 'Against a training dummy, clamped to 6.25–92.5%.',
+    sources: rateSource('meleeblock'),
   }),
   scalarRow('defense', 'rangedBlock', 'Ranged block %', 'percent', {
     tooltip: 'Against a training dummy, clamped to 6.25–92.5%.',
+    sources: rateSource('rangedblock'),
   }),
 ];
 
@@ -185,6 +267,7 @@ function rawRow(data: GameData, parameter: string, rate: boolean): ResultsRow {
     label: rate ? `${name} %` : name,
     format: rate ? 'percent' : 'int',
     higherIsBetter: !LOWER_IS_BETTER_PARAMETERS.has(parameter),
+    sources: [{ parameter, rate }],
     select: (page) => {
       const bucket = page.rawTotals[parameter];
       let value = 0;
