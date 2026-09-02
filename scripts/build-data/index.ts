@@ -14,6 +14,7 @@ import {
 import { buildManifest } from './manifest';
 import {
   collectAwakeSkillIds,
+  collectSkillChanceSkillIds,
   projectAchievement,
   projectBlessings,
   projectClass,
@@ -63,7 +64,7 @@ const EXPECTED_COUNTS: Readonly<Record<string, number>> = {
   armorSets: 274,
   accessorySets: 4,
   statAwakes: 48,
-  awakeSkills: 137,
+  awakeSkills: 143,
   upgradeBonus: 20,
   achievements: 5,
   housingNpcs: 39,
@@ -244,11 +245,18 @@ function assemble(
     return projectSkill(skill);
   });
 
-  const awakeSkills = collectAwakeSkillIds(sources.skillAwakes).map((id) => {
+  // Skills the app only needs by name: skill-damage awakes and skill-chance item abilities.
+  const namedSkillIds = [
+    ...new Set([
+      ...collectAwakeSkillIds(sources.skillAwakes),
+      ...collectSkillChanceSkillIds(sources.items),
+    ]),
+  ].sort((a, b) => a - b);
+  const awakeSkills = namedSkillIds.map((id) => {
     const skill = sources.skills[String(id)];
 
     if (skill === undefined) {
-      throw new Error(`Awakeable skill ${id} is missing from Skills.json`);
+      throw new Error(`Named skill ${id} is missing from Skills.json`);
     }
 
     return { id, name: skill.name.en, icon: skill.icon };

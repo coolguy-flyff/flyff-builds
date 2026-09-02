@@ -21,6 +21,7 @@ import {
   STAT_KEYS,
   WEAPON_SUBCATEGORIES,
 } from '../../src/data/schema';
+import { SKILL_CHANCE_PREFIX } from '../../src/data/constants';
 
 import type {
   RawAbility,
@@ -62,6 +63,32 @@ function stripUndefined<T extends object>(value: T): T {
 }
 
 /**
+ * Skill-chance abilities are keyed by their skill and, when limited to one mode, by PvE / PvP —
+ * Lusaka's weapons carry a PvE and a PvP stun chance that must stay apart.
+ */
+function skillChanceParameter(skillId: number, ability: RawAbility): string {
+  let parameter = `${SKILL_CHANCE_PREFIX}${skillId}`;
+
+  if (ability.pve === true && ability.pvp !== true) {
+    parameter += ':pve';
+  } else if (ability.pvp === true && ability.pve !== true) {
+    parameter += ':pvp';
+  }
+
+  return parameter;
+}
+
+function projectedParameter(parameter: string, ability: RawAbility): string {
+  let result = parameter;
+
+  if (parameter === 'skillchance' && ability.skill !== undefined) {
+    result = skillChanceParameter(ability.skill, ability);
+  }
+
+  return result;
+}
+
+/**
  * Keeps only abilities that carry a numeric stat (`parameter` + `add`); status-effect entries such
  * as `{ parameter: "cure", attribute: "allpoison" }` have no stat effect. A missing `rate` means
  * flat (Flyffulator special-cases this for achievements; we normalise once here).
@@ -76,7 +103,7 @@ export function normalizeAbilities(raw: readonly RawAbility[] | undefined): Abil
 
     abilities.push(
       stripUndefined({
-        parameter: ability.parameter,
+        parameter: projectedParameter(ability.parameter, ability),
         add: ability.add,
         rate: ability.rate ?? false,
         addMax: ability.addMax,
@@ -245,6 +272,21 @@ export function collectAwakeSkillIds(raw: Record<string, RawSkillAwakeCategory>)
   for (const entry of Object.values(raw)) {
     for (const id of Object.keys(entry.skills ?? {})) {
       ids.add(Number(id));
+    }
+  }
+
+  return [...ids].sort((a, b) => a - b);
+}
+
+/** Every skill id referenced by an item's skill-chance ability, ascending (bundled by name). */
+export function collectSkillChanceSkillIds(items: Readonly<Record<string, RawItem>>): number[] {
+  const ids = new Set<number>();
+
+  for (const item of Object.values(items)) {
+    for (const ability of item.abilities ?? []) {
+      if (ability.parameter === 'skillchance' && ability.skill !== undefined) {
+        ids.add(ability.skill);
+      }
     }
   }
 

@@ -17,6 +17,9 @@ export const RawAbilitySchema = z.object({
   rate: z.boolean().optional(),
   addMax: z.number().optional(),
   skill: z.number().optional(),
+  /** Skill-chance abilities: the mode(s) the proc applies in. */
+  pve: z.boolean().optional(),
+  pvp: z.boolean().optional(),
 });
 
 export const RawItemSchema = z.object({

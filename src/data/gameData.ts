@@ -1,5 +1,6 @@
 import { requireDefined } from '@/lib/assert';
 
+import { SKILL_CHANCE_PREFIX } from './constants';
 import type {
   Ability,
   AccessorySet,
@@ -237,6 +238,30 @@ export function isAnteriorJob(data: GameData, jobId: number, otherJobId: number)
   return data.classChains.get(jobId)?.includes(otherJobId) ?? false;
 }
 
+const SKILL_CHANCE_MODE_SUFFIXES: Readonly<Record<string, string>> = {
+  pve: ' (PvE)',
+  pvp: ' (PvP)',
+};
+
+/** "Stun chance (PvE)" for `skillchance:<skillId>[:pve|:pvp]`; undefined for an unknown skill. */
+function skillChanceName(data: GameData, parameter: string): string | undefined {
+  const [skillId, mode] = parameter.slice(SKILL_CHANCE_PREFIX.length).split(':');
+  const skill = data.awakeSkills.get(Number(skillId));
+  let name: string | undefined;
+
+  if (skill !== undefined) {
+    name = `${skill.name} chance${SKILL_CHANCE_MODE_SUFFIXES[mode ?? ''] ?? ''}`;
+  }
+
+  return name;
+}
+
 export function getStatName(data: GameData, parameter: string): string {
-  return data.statNames[parameter] ?? parameter;
+  let name = data.statNames[parameter];
+
+  if (name === undefined && parameter.startsWith(SKILL_CHANCE_PREFIX)) {
+    name = skillChanceName(data, parameter);
+  }
+
+  return name ?? parameter;
 }

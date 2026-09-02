@@ -49,3 +49,10 @@ export const CLASS_IDS = {
 
 /** Level-1 weapons, shields and armor are cosmetic skins; real gear starts above this level. */
 export const SKIN_ITEM_LEVEL = 1;
+
+/**
+ * Skill-chance abilities ("Stun chance +1–3%") are bundled under `skillchance:<skillId>`, with a
+ * `:pve` / `:pvp` suffix when limited to one mode, so the modes stay separate stats. The API's own
+ * name for the bare parameter ("Death's Rush Chance") is wrong for every other skill.
+ */
+export const SKILL_CHANCE_PREFIX = 'skillchance:';

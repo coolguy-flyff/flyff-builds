@@ -8,7 +8,7 @@ import {
   HEAL_RAIN_SKILL_ID,
   UPCUT_STONE_ITEM_ID,
 } from './constants';
-import { isAnteriorJob, loadBundledGameData, requireItem } from './index';
+import { getStatName, isAnteriorJob, loadBundledGameData, requireItem } from './index';
 
 /**
  * Guards the committed tables: they must satisfy the schema and the structural invariants the
@@ -122,5 +122,18 @@ describe('bundled game data', () => {
     ]);
     expect(data.guildNpcs.length).toBe(13);
     expect(data.achievements.length).toBe(5);
+  });
+
+  it('names skill-chance abilities after their skill and mode', () => {
+    // Lusaka's Stick: one PvE and one PvP stun chance, both on skill 7599 ("Stun").
+    const stick = requireItem(data, 15880);
+    const parameters = (stick.abilities ?? []).map((ability) => ability.parameter);
+
+    expect(parameters).toContain('skillchance:7599:pve');
+    expect(parameters).toContain('skillchance:7599:pvp');
+    expect(getStatName(data, 'skillchance:7599:pve')).toBe('Stun chance (PvE)');
+    expect(getStatName(data, 'skillchance:7599:pvp')).toBe('Stun chance (PvP)');
+    expect(getStatName(data, 'skillchance:6824')).toBe('Poison chance');
+    expect(getStatName(data, 'skillchance:424242')).toBe('skillchance:424242');
   });
 });

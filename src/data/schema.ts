@@ -132,8 +132,9 @@ export const SkillAwakeTableSchema = z.record(
 );
 
 /**
- * Name + icon of a skill that can appear as a skill-damage awake (`skill:<id>` parameters in the
- * skill-awake table). Damage awakes have no stat effect yet; they are stored for future work.
+ * Name + icon of a skill referenced by name only: skill-damage awakes (`skill:<id>` parameters in
+ * the skill-awake table) and skill-chance item abilities (`skillchance:<id>` parameters). Damage
+ * awakes have no stat effect yet; they are stored for future work.
  */
 export const AwakeSkillSchema = z.object({
   id: nonNegativeInt,
