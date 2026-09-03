@@ -3,18 +3,24 @@ import { clamp } from '@/lib/math';
 import type { StatContext } from './context';
 
 /**
- * Hit rate and block are computed against Flyffulator's Training Dummy (flyffutils.js:16-43): its
- * level is hidden (treated as the player's), parry 82 and DEX 1, rank `captain` (no giant halving).
+ * Hit rate is computed against Flyffulator's Training Dummy (flyffutils.js:16-43): its level is
+ * hidden (treated as the player's) and its parry is 82.
  */
-export const TRAINING_DUMMY = Object.freeze({ parry: 82, dex: 1 });
+export const TRAINING_DUMMY = Object.freeze({ parry: 82 });
 
 /** Rows below this are not shown by the game; Flyffulator clamps hit rate to this range. */
 const HIT_RATE_MIN = 20;
 const HIT_RATE_MAX = 96;
 
-/** Displayed block chance is clamped to the game's floor/ceiling (calculations.jsx:428-434). */
-export const BLOCK_DISPLAY_MIN = 6.25;
-export const BLOCK_DISPLAY_MAX = 92.5;
+/**
+ * The game's floor and ceiling for the effective block chance (calculations.jsx:428-434). The
+ * results show block before the attacker is known, so these only appear in the row's explanation.
+ */
+export const BLOCK_EFFECTIVE_MIN = 6.25;
+export const BLOCK_EFFECTIVE_MAX = 92.5;
+
+/** The most the DEX difference against an attacker can add to block (flyffentity.js:1650-1651). */
+export const BLOCK_DEX_BONUS_MAX = 10;
 
 export interface HitRate {
   /** Raw hit probability before the `hitrate` bonus and the clamp. */
@@ -54,27 +60,27 @@ export function computeParry(ctx: StatContext): number {
   return Math.floor(ctx.base('dex') * 0.5) + ctx.total('parry', true);
 }
 
-/** Raw block rate against the dummy attacker (flyffentity.js:1635-1686, player branch). */
-export function computeBlockChance(ctx: StatContext, ranged: boolean): number {
-  const dex = ctx.base('dex');
-  const attackerLevel = ctx.level;
-  const blockLevel = ctx.level / ((ctx.level + attackerLevel) * 15);
-  const attackerDex = 15 + ((TRAINING_DUMMY.dex - 15) * ctx.level) / 100;
-  let blockDex = (dex + attackerDex + 2) * ((dex - attackerDex) / 800);
-
-  blockDex = Math.min(blockDex, 10);
-
-  const blockBase = Math.max(blockLevel + blockDex, 0);
-  const blockJob = (dex / 8) * ctx.job.block;
-  const blockBonus = ctx.total(ranged ? 'rangedblock' : 'meleeblock', true);
-  let blockRate = Math.floor(blockJob + blockBase + blockBonus);
-
-  blockRate = Math.max(blockRate, 0);
-
-  // The dummy has no block penetration: `floor(rate * (1 - 0))` is the rate itself.
-  return blockRate;
+/**
+ * Block before the attacker is known (plan feedback 2026-09-03): the attacker-independent terms
+ * of the game's block formula (flyffentity.js:1635-1686), uncapped.
+ */
+export interface BlockBreakdown {
+  /** `DEX / 8 × job factor` — the character's own DEX. */
+  readonly fromDex: number;
+  /** The melee or ranged block % from equipment and buffs (`block` counts for both). */
+  readonly fromGear: number;
+  /** `floor(fromDex + fromGear)`, at least 0. */
+  readonly total: number;
 }
 
-export function blockChancePercent(blockRate: number): number {
-  return clamp(blockRate, BLOCK_DISPLAY_MIN, BLOCK_DISPLAY_MAX);
+/**
+ * Left out on purpose because they need an attacker: the level term `L / ((L + attackerL) × 15)`,
+ * the DEX-difference term (at most +10), the halving against giants, the attacker's block
+ * penetration and the 6.25–92.5% clamp. The user applies those to this number.
+ */
+export function computeBlockBreakdown(ctx: StatContext, ranged: boolean): BlockBreakdown {
+  const fromDex = (ctx.base('dex') / 8) * ctx.job.block;
+  const fromGear = ctx.total(ranged ? 'rangedblock' : 'meleeblock', true);
+
+  return { fromDex, fromGear, total: Math.max(Math.floor(fromDex + fromGear), 0) };
 }

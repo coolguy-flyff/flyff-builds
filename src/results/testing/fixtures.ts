@@ -1,6 +1,9 @@
 import type { ResultsPage } from '@/domain/engine';
 import type { VitalBreakdown } from '@/domain/engine';
 
+/** DEX 15 / 8 × Seraph block factor 0.6 = 1.125, floored with no gear. */
+const BARE_BLOCK = { fromDex: 1.125, fromGear: 0, total: 1 };
+
 const ZERO_BREAKDOWN: VitalBreakdown = { base: 0, flat: 0, rate: 0, rateGain: 0, total: 0 };
 
 /**
@@ -39,8 +42,10 @@ export const BASE_PAGE: ResultsPage = {
   pveDamageReduction: 0,
   pvpDamageReduction: 0,
   parry: 7,
-  meleeBlock: 6.25,
-  rangedBlock: 6.25,
+  meleeBlock: 1,
+  rangedBlock: 1,
+  meleeBlockBreakdown: BARE_BLOCK,
+  rangedBlockBreakdown: BARE_BLOCK,
   healingSkills: {
     healRain: { skillOutput: 2254, healingRate: 0, total: 2254 },
     gloriaPatri: { skillOutput: 6408, healingRate: 0, total: 6408 },

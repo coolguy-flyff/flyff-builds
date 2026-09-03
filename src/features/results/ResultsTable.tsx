@@ -1,6 +1,6 @@
 import { Chip } from '@/components/Chip';
 import { DragHandle, Sortable } from '@/components/Sortable';
-import { Tooltip, type TooltipPlacement } from '@/components/Tooltip';
+import { FloatingTooltip, Tooltip, type TooltipPlacement } from '@/components/Tooltip';
 import { useSortableItem } from '@/components/useSortableItem';
 import { cx } from '@/lib/cx';
 import { cellDetails } from '@/results/cellDetails';
@@ -239,10 +239,17 @@ function DataRow({
     <tr>
       <th
         scope="row"
-        title={row.tooltip}
         className={cx(CELL, STICKY_LEFT, 'bg-table text-left font-sans font-medium text-text-2')}
       >
-        {row.label}
+        {row.tooltip === undefined ? (
+          row.label
+        ) : (
+          <FloatingTooltip content={row.tooltip}>
+            <span className="cursor-help underline decoration-white/25 decoration-dotted underline-offset-4">
+              {row.label}
+            </span>
+          </FloatingTooltip>
+        )}
       </th>
       {columns.map((column, index) => {
         const value = values[index] ?? null;

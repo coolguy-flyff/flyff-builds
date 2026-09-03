@@ -6,11 +6,11 @@ import { DEFAULT_ENGINE_OPTIONS, type EngineOptions } from '../options';
 import type { ResolvedCharacter } from '../types';
 import { computeAttack } from './attack';
 import {
-  blockChancePercent,
-  computeBlockChance,
+  computeBlockBreakdown,
   computeCriticalChance,
   computeHitRate,
   computeParry,
+  type BlockBreakdown,
 } from './combat';
 import { createStatContext } from './context';
 import { computeDefense, computeEquipmentDefenseRange, computeMagicDefense } from './defense';
@@ -63,8 +63,11 @@ export interface ResultsPage {
   readonly pveDamageReduction: number;
   readonly pvpDamageReduction: number;
   readonly parry: number;
+  /** Block before the attacker is known, uncapped (see {@link BlockBreakdown}). */
   readonly meleeBlock: number;
   readonly rangedBlock: number;
+  readonly meleeBlockBreakdown: BlockBreakdown;
+  readonly rangedBlockBreakdown: BlockBreakdown;
   /** Only for Seraphs. */
   readonly healingSkills: HealingSkills | null;
   /** Every parameter with a non-zero total, for the optional raw-totals group. */
@@ -82,6 +85,8 @@ export function computeResultsPage(
   const hp = computeHpBreakdown(ctx);
   const mp = computeMpBreakdown(ctx);
   const fp = computeFpBreakdown(ctx);
+  const meleeBlock = computeBlockBreakdown(ctx, false);
+  const rangedBlock = computeBlockBreakdown(ctx, true);
 
   return {
     str: ctx.base('str'),
@@ -117,8 +122,10 @@ export function computeResultsPage(
     pveDamageReduction: rate('pvedamagereduction'),
     pvpDamageReduction: rate('pvpdamagereduction'),
     parry: computeParry(ctx),
-    meleeBlock: blockChancePercent(computeBlockChance(ctx, false)),
-    rangedBlock: blockChancePercent(computeBlockChance(ctx, true)),
+    meleeBlock: meleeBlock.total,
+    rangedBlock: rangedBlock.total,
+    meleeBlockBreakdown: meleeBlock,
+    rangedBlockBreakdown: rangedBlock,
     healingSkills:
       resolved.job.id === CLASS_IDS.seraph ? computeHealingSkills(data, ctx, options) : null,
     rawTotals: getRawTotals(resolved),

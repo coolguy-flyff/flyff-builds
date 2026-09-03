@@ -42,4 +42,10 @@ export { resolveWeaponEntry, type WeaponHand, type WeaponResolution } from './ge
 export { computeAllResults, type SwapResult } from './results';
 export { computeResultsPage, type ResultsPage } from './stats/resultsPage';
 export type { VitalBreakdown } from './stats/vitals';
+export {
+  BLOCK_DEX_BONUS_MAX,
+  BLOCK_EFFECTIVE_MAX,
+  BLOCK_EFFECTIVE_MIN,
+  type BlockBreakdown,
+} from './stats/combat';
 export type { EquippedItem, ResolvedCharacter, ResolvedOffhand } from './types';

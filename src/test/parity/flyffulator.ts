@@ -81,7 +81,7 @@ export interface FlyffHitRate {
 }
 
 export interface FlyffEntity {
-  job: unknown;
+  job: { readonly block: number };
   level: number;
   str: number;
   sta: number;
@@ -128,7 +128,7 @@ export interface FlyffUtils {
   readonly DEFAULT_WEAPON: FlyffItemElem;
   readonly TRAINING_DUMMY: unknown;
   readonly ATTACK_FLAGS: { readonly GENERIC: number; readonly MAGIC: number };
-  getClassById(id: number): unknown;
+  getClassById(id: number): FlyffEntity['job'];
   getItemById(id: number): FlyffItemProp | undefined;
   getSkillById(id: number): FlyffSkillProp | undefined;
   getAchievementById(id: number): unknown;

@@ -1,7 +1,15 @@
 import { getStatName, type GameData, type StatKey } from '@/data';
 
+import {
+  BLOCK_DEX_BONUS_MAX,
+  BLOCK_EFFECTIVE_MAX,
+  BLOCK_EFFECTIVE_MIN,
+  type HealingSkills,
+  type ResultsPage,
+  type SwapResult,
+} from '@/domain/engine';
+
 import { formatInt, formatPercent } from './format';
-import type { HealingSkills, ResultsPage, SwapResult } from '@/domain/engine';
 
 /**
  * The rows of the results table (plan A4.2), grouped and ordered. Rows are pure selectors over a
@@ -60,9 +68,9 @@ export interface ResultsRow {
   readonly format: RowFormat;
   readonly higherIsBetter: boolean;
   readonly tooltip?: string | undefined;
-  /** Precomputed factors for the cell tooltip (max HP/MP/FP). */
+  /** Precomputed factors for the cell tooltip (max HP/MP/FP, the DEX term of block), shown first. */
   readonly details?: CellDetails | undefined;
-  /** Stat totals whose contributions the cell tooltip lists as sources. */
+  /** Stat totals whose contributions the cell tooltip lists as sources, after the factors. */
   readonly sources?: readonly SourceSpec[] | undefined;
   readonly select: (page: ResultsPage) => RowValue;
 }
@@ -256,15 +264,53 @@ const STATIC_ROWS: readonly ResultsRow[] = [
     sources: rateSource('pvpdamagereduction'),
   }),
   scalarRow('defense', 'parry', 'Parry', 'int', { sources: rateSource('parry') }),
-  scalarRow('defense', 'meleeBlock', 'Melee block %', 'percent', {
-    tooltip: 'Against a training dummy, clamped to 6.25–92.5%.',
-    sources: rateSource('meleeblock'),
-  }),
-  scalarRow('defense', 'rangedBlock', 'Ranged block %', 'percent', {
-    tooltip: 'Against a training dummy, clamped to 6.25–92.5%.',
-    sources: rateSource('rangedblock'),
-  }),
 ];
+
+/**
+ * Block is shown before the attacker is known (plan feedback 2026-09-03): the character's own
+ * DEX term plus equipment and buffs, uncapped, so the user can apply the attacker-dependent parts
+ * (DEX difference, block penetration, giant halving, the 6.25–92.5% clamp) themselves.
+ */
+const BLOCK_TOOLTIP =
+  'Pure block, not the effective chance: your DEX (job factor) plus equipment and buffs, ' +
+  'uncapped. The effective chance also adds the DEX difference against the attacker (at most ' +
+  `+${BLOCK_DEX_BONUS_MAX}%), is cut by the attacker’s block penetration, is halved against ` +
+  `giants, and is clamped to ${BLOCK_EFFECTIVE_MIN}–${BLOCK_EFFECTIVE_MAX}%.`;
+
+/**
+ * The DEX term, rounded down — the game floors the whole sum, and every gear or buff block value
+ * is whole, so this is what DEX effectively contributes. The sources follow it in the tooltip.
+ */
+function blockDetails(key: 'meleeBlockBreakdown' | 'rangedBlockBreakdown'): CellDetails {
+  return (page) => [
+    { label: 'From DEX (job factor)', value: formatPercent(Math.floor(page[key].fromDex)) },
+  ];
+}
+
+const MELEE_BLOCK_ROW = scalarRow('defense', 'meleeBlock', 'Melee block %', 'percent', {
+  tooltip: BLOCK_TOOLTIP,
+  details: blockDetails('meleeBlockBreakdown'),
+  sources: rateSource('meleeblock'),
+});
+
+const RANGED_BLOCK_ROW = scalarRow('defense', 'rangedBlock', 'Ranged block %', 'percent', {
+  tooltip: BLOCK_TOOLTIP,
+  details: blockDetails('rangedBlockBreakdown'),
+  sources: rateSource('rangedblock'),
+});
+
+/** One "Block %" row while melee and ranged block agree in every column. */
+const BLOCK_ROW: ResultsRow = {
+  ...MELEE_BLOCK_ROW,
+  id: 'block',
+  label: 'Block %',
+};
+
+function blockRows(pages: readonly ResultsPage[]): readonly ResultsRow[] {
+  const sameEverywhere = pages.every((page) => page.meleeBlock === page.rangedBlock);
+
+  return sameEverywhere ? [BLOCK_ROW] : [MELEE_BLOCK_ROW, RANGED_BLOCK_ROW];
+}
 
 const HEALING_ROWS: readonly ResultsRow[] = [
   healingRow('healRain', 'Heal Rain (Lv 10)', undefined),
@@ -334,7 +380,7 @@ export function buildRows(
   options: RowCatalogOptions,
 ): ResultsRow[] {
   const pages = results.map((result) => result.page);
-  const rows = [...STATIC_ROWS];
+  const rows = [...STATIC_ROWS, ...blockRows(pages)];
 
   if (pages.some((page) => page.healingSkills !== null)) {
     rows.push(...HEALING_ROWS);

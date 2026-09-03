@@ -92,8 +92,11 @@ lib ← data ← config ← domain ← share / persistence ← state ← compone
 Element upgrades, damage simulation, party skills, buff stacking rules and skill-damage awakes
 are out of scope. Class skills skip what a "maxed" model cannot express: scalings by equipment
 part or by another stat (Forcemaster aura effects) and caster-stat scalings without a cap. Hit
-rate and block are computed against Flyffulator's training dummy. "Max RM buffs" assumes the
-caster's INT reaches every scaling cap.
+rate is computed against Flyffulator's training dummy. Block is shown before any attacker is
+known — your DEX term plus equipment and buffs, uncapped — because the effective chance also
+depends on the attacker (DEX difference, block penetration, giants) before the game's 6.25–92.5%
+clamp; the row's tooltip spells that out. "Max RM buffs" assumes the caster's INT reaches every
+scaling cap.
 The Gloria Patri rows include the Heal synergy with Heal at level 20 (+1000 HP) — a deliberate
 addition over Flyffulator, which leaves that synergy as a TODO.
 

@@ -22,7 +22,8 @@ describe('buildRows', () => {
       'offense',
       'defense',
     ]);
-    expect(groups.map((bucket) => bucket.rows.length)).toEqual([4, 3, 4, 10, 10]);
+    // Defense ends with one "Block %" row while melee and ranged block agree in every column.
+    expect(groups.map((bucket) => bucket.rows.length)).toEqual([4, 3, 4, 10, 9]);
     expect(rows.map((row) => row.label).slice(0, 7)).toEqual([
       'STR',
       'STA',

@@ -5,10 +5,10 @@ import { formatInt } from './format';
 import type { CellDetail, ResultsRow, SourceSpec } from './rowCatalog';
 
 /**
- * The tooltip lines for one results cell: either the row's precomputed factors (max HP/MP/FP) or
- * the sources behind its stat totals — every contribution that `getStat` would count, summed per
- * origin and sorted by magnitude — plus the stat page for base stats. Empty when there is nothing
- * to show.
+ * The tooltip lines for one results cell: the row's precomputed factors (max HP/MP/FP, the DEX
+ * term of block) followed by the sources behind its stat totals — every contribution that
+ * `getStat` would count, summed per origin and sorted by magnitude — plus the stat page for base
+ * stats. Empty when there is nothing to show.
  */
 
 interface SourceSum {
@@ -68,13 +68,8 @@ function sourceLines(result: SwapResult, specs: readonly SourceSpec[]): CellDeta
 }
 
 export function cellDetails(row: ResultsRow, result: SwapResult): readonly CellDetail[] {
-  let lines: readonly CellDetail[] = [];
+  const factors = row.details === undefined ? [] : row.details(result.page);
+  const sources = row.sources === undefined ? [] : sourceLines(result, row.sources);
 
-  if (row.details !== undefined) {
-    lines = row.details(result.page);
-  } else if (row.sources !== undefined) {
-    lines = sourceLines(result, row.sources);
-  }
-
-  return lines;
+  return [...factors, ...sources];
 }

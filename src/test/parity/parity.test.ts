@@ -22,6 +22,17 @@ import { hasFlyffulator, loadFlyffulator, type FlyffEntity, type Flyffulator } f
 import { buildEntity, installContext } from './mirror';
 
 /**
+ * The attacker-independent terms of Flyffulator's block (flyffentity.js:1635-1686): the job/DEX
+ * term and the gear bonus. The results show exactly these, uncapped, before any attacker.
+ */
+function blockBeforeAttacker(entity: FlyffEntity, ranged: boolean): number {
+  const fromDex = (entity.getBaseStat('dex') / 8) * entity.job.block;
+  const fromGear = entity.getStat(ranged ? 'rangedblock' : 'meleeblock', true);
+
+  return Math.max(Math.floor(fromDex + fromGear), 0);
+}
+
+/**
  * Cross-checks every results row and a sweep of stat totals against Flyffulator's own `Entity`,
  * configured through the same build. Skipped when the Flyffulator checkout is absent
  * (`FLYFFULATOR_DIR`, default `../Flyffulator`).
@@ -157,12 +168,8 @@ describe.skipIf(!hasFlyffulator())('Flyffulator parity', () => {
         expect(page.hitRate).toBe(entity.getContextHitRate(dummy).probAdjusted);
         expect(page.criticalChance).toBe(entity.getCriticalChance());
         expect(page.parry).toBe(entity.getParry());
-        expect(page.meleeBlock).toBe(
-          fl.Utils.clamp(entity.getBlockChance(false, dummy), 6.25, 92.5),
-        );
-        expect(page.rangedBlock).toBe(
-          fl.Utils.clamp(entity.getBlockChance(true, dummy), 6.25, 92.5),
-        );
+        expect(page.meleeBlock).toBe(blockBeforeAttacker(entity, false));
+        expect(page.rangedBlock).toBe(blockBeforeAttacker(entity, true));
         expect(page.magicDefense).toBe(magicDefense(entity));
         expect(page.magicAttack).toBe(entity.getStat('magicattack', true));
         expect(page.healing).toBe(entity.getStat('healing', true));
