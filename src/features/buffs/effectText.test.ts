@@ -6,21 +6,29 @@ import {
   achievementShortName,
   effectTextOrNone,
   splitEffectText,
+  maxedSkillEffect,
   powerupSearchText,
   premiumItemEffect,
-  rmBuffEffect,
 } from './effectText';
 
 const data = loadBundledGameData();
 const BEEF_UP = 690;
 const GEBURAH_TIPHRETH = 6845;
+const HEAVENS_STEP = 55834;
 const RED_LOVE_CANDY = 12772;
 
-describe('rmBuffEffect', () => {
+describe('maxedSkillEffect', () => {
   it('shows the maxed value including the caster-INT scaling cap', () => {
-    expect(rmBuffEffect(data, requireSkill(data, BEEF_UP))).toBe('STR +40');
-    expect(rmBuffEffect(data, requireSkill(data, GEBURAH_TIPHRETH))).toBe(
+    expect(maxedSkillEffect(data, requireSkill(data, BEEF_UP), 'rmBuff')).toBe('STR +40');
+    expect(maxedSkillEffect(data, requireSkill(data, GEBURAH_TIPHRETH), 'rmBuff')).toBe(
       'Attack +20% · Aspd +15% · Cast Speed +10%',
+    );
+  });
+
+  it("includes a class skill's synergy with the source skill maxed", () => {
+    // Heaven's Step: block/parry +10% at Lv 5, +2 per Cat's Reflex level above 15 (Lv 20 → +10).
+    expect(maxedSkillEffect(data, requireSkill(data, HEAVENS_STEP), 'classSkill')).toBe(
+      'Block +20% · Parry +20%',
     );
   });
 });

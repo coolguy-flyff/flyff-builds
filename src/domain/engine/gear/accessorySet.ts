@@ -1,9 +1,19 @@
 import { requireItem, type AccessorySet, type GameData } from '@/data';
-import { requireDefined } from '@/lib/assert';
 
-import type { AccessorySetEntry } from '../../build/schema';
-import { abilityContributions, createSink, origin, type Collected } from '../abilities/collect';
-import type { ContributionOriginKind } from '../abilities/types';
+import { ACCESSORY_PIECE_KEYS, type AccessorySetEntry } from '../../build/schema';
+import {
+  accessoryPieceAbilities,
+  accessoryPieceItemId,
+  accessoryPieceSource,
+  findAccessorySet,
+} from '../../rules/accessories';
+import {
+  abilityContributions,
+  createSink,
+  origin,
+  type Collected,
+  type Sink,
+} from '../abilities/collect';
 import { ENGINE_ISSUE_CODES, engineWarning } from '../issues';
 import { memoizeByDataAndEntry } from './entryMemo';
 import { collectSetBonus } from './setBonus';
@@ -12,78 +22,77 @@ export interface AccessorySetResolution extends Collected {
   readonly set: AccessorySet | null;
 }
 
-interface AccessoryPiece {
-  readonly kind: ContributionOriginKind;
-  readonly itemId: number | undefined;
-  readonly upgrade: number;
-}
-
-/** Flyffulator's jewelry slot order (flyffentity.js:18-22). */
-function accessoryPieces(set: AccessorySet, entry: AccessorySetEntry): AccessoryPiece[] {
-  return [
-    { kind: 'ring1', itemId: set.ring, upgrade: entry.upgrades.ring1 },
-    { kind: 'earring1', itemId: set.earrings[entry.earring1], upgrade: entry.upgrades.earring1 },
-    { kind: 'necklace', itemId: set.necklaces[entry.necklace], upgrade: entry.upgrades.necklace },
-    { kind: 'earring2', itemId: set.earrings[entry.earring2], upgrade: entry.upgrades.earring2 },
-    { kind: 'ring2', itemId: set.ring, upgrade: entry.upgrades.ring2 },
-  ];
+function warnUnknownSource(sink: Sink, sourceId: number, where: string): void {
+  sink.issues.push(
+    engineWarning(
+      ENGINE_ISSUE_CODES.unknownItem,
+      `Accessory source #${sourceId} is not a set or CW jewel this piece can wear; ${where} counts as empty`,
+    ),
+  );
 }
 
 /**
- * Accessories read their abilities from `upgradeLevels[upgrade]` (flyffentity.js:1224-1236); the
- * set bonus counts every piece that resolved.
+ * Set pieces read their abilities from `upgradeLevels[upgrade]` (flyffentity.js:1224-1236); a CW
+ * jewel's tier is its own item. Each piece follows its own source (mixed sets, plan feedback
+ * 2026-09-03), and every set's bonus counts the pieces worn from it — the game discovers sets per
+ * equipped item (flyffentity.js:1918-1937). CW jewels belong to no set.
  */
 function collectAccessorySet(data: GameData, entry: AccessorySetEntry): AccessorySetResolution {
   const sink = createSink();
-  let set: AccessorySet | null = null;
+  const set = findAccessorySet(data, entry.setId);
+  const equippedPerSet = new Map<AccessorySet, number>();
 
-  if (entry.setId !== null) {
-    set = data.accessorySets.find((candidate) => candidate.id === entry.setId) ?? null;
-
-    if (set === null) {
-      sink.issues.push(
-        engineWarning(
-          ENGINE_ISSUE_CODES.unknownItem,
-          `Accessory set #${entry.setId} is not in the game data; the slot counts as empty`,
-        ),
-      );
-    }
+  if (entry.setId !== null && set === null) {
+    warnUnknownSource(sink, entry.setId, 'the slot');
   }
 
-  if (set !== null) {
-    let equipped = 0;
+  // Pieces in Flyffulator's jewelry slot order (flyffentity.js:18-22).
+  for (const piece of ACCESSORY_PIECE_KEYS) {
+    const source = accessoryPieceSource(data, entry, piece);
+    const overrideId = entry.pieceSources[piece];
 
-    for (const piece of accessoryPieces(set, entry)) {
-      if (piece.itemId === undefined) {
-        sink.issues.push(
-          engineWarning(
-            ENGINE_ISSUE_CODES.accessoryVariantUnavailable,
-            `${set.name}: no ${entry.necklace} necklace exists in this set; the slot counts as empty`,
-          ),
-        );
-
-        continue;
+    if (source === null) {
+      if (overrideId !== null) {
+        warnUnknownSource(sink, overrideId, `the ${piece} slot`);
       }
 
-      const item = requireItem(data, piece.itemId);
-      const level = requireDefined(
-        item.upgradeLevels?.[piece.upgrade],
-        `${item.name} has no upgrade level ${piece.upgrade}`,
-      );
-
-      equipped += 1;
-      sink.contributions.push(
-        ...abilityContributions(
-          level.abilities,
-          origin(piece.kind, `${item.name} +${piece.upgrade}`, {
-            detail: 'upgradeLevel',
-            itemId: item.id,
-          }),
-        ),
-      );
+      continue;
     }
 
-    collectSetBonus(sink, set.name, set.bonus, equipped, 'accessorySetBonus');
+    const itemId = accessoryPieceItemId(data, entry, piece);
+
+    if (itemId === undefined) {
+      const sourceName = source.kind === 'set' ? source.set.name : source.line.name;
+
+      sink.issues.push(
+        engineWarning(
+          ENGINE_ISSUE_CODES.accessoryVariantUnavailable,
+          `${sourceName}: no ${entry.necklace} necklace exists in this set; the slot counts as empty`,
+        ),
+      );
+
+      continue;
+    }
+
+    const item = requireItem(data, itemId);
+    const upgrade = entry.upgrades[piece];
+    const abilities = accessoryPieceAbilities(source, item, upgrade);
+
+    if (source.kind === 'set') {
+      equippedPerSet.set(source.set, (equippedPerSet.get(source.set) ?? 0) + 1);
+    }
+
+    // A CW jewel's item name already carries its tier ("Speedo +3").
+    const label = source.kind === 'set' ? `${item.name} +${upgrade}` : item.name;
+    const detail = source.kind === 'set' ? 'upgradeLevel' : 'ability';
+
+    sink.contributions.push(
+      ...abilityContributions(abilities, origin(piece, label, { detail, itemId: item.id })),
+    );
+  }
+
+  for (const [wornSet, equipped] of equippedPerSet) {
+    collectSetBonus(sink, wornSet.name, wornSet.bonus, equipped, 'accessorySetBonus');
   }
 
   return { set, contributions: sink.contributions, issues: sink.issues };

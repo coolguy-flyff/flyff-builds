@@ -1,12 +1,14 @@
 import { GeneratedDataSchema, type GeneratedData } from './schema';
 import { createGameData, type GameData } from './gameData';
 
+import accessoryLines from './generated/accessoryLines.json';
 import accessorySets from './generated/accessorySets.json';
 import achievements from './generated/achievements.json';
 import armorSets from './generated/armorSets.json';
 import awakeSkills from './generated/awakeSkills.json';
 import blessings from './generated/blessings.json';
 import classes from './generated/classes.json';
+import classSkills from './generated/classSkills.json';
 import housingNpcs from './generated/housingNpcs.json';
 import items from './generated/items.json';
 import manifest from './generated/manifest.json';
@@ -28,6 +30,7 @@ export function loadBundledGameData(): GameData {
     classes,
     armorSets,
     accessorySets,
+    accessoryLines,
     statAwakes,
     skillAwakes,
     awakeSkills,
@@ -37,6 +40,7 @@ export function loadBundledGameData(): GameData {
     housingNpcs,
     pets,
     skills,
+    classSkills,
     statNames,
     manifest,
   });

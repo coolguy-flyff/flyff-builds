@@ -147,6 +147,26 @@ function scalarRow(
   };
 }
 
+/** How a heal comes together (plan feedback 2026-09-03, item 4): formula, multiplier, gain. */
+function healingDetails(key: keyof HealingSkills): CellDetails {
+  return (page) => {
+    let lines: CellDetail[] = [];
+
+    if (page.healingSkills !== null) {
+      const heal = page.healingSkills[key];
+      const multiplier = 1 + heal.healingRate / 100;
+
+      lines = [
+        { label: 'Skill output (base, stat scaling, synergy)', value: formatInt(heal.skillOutput) },
+        { label: 'Healing % multiplier', value: `×${multiplier.toFixed(2)}` },
+        { label: 'Gain from multiplier', value: `+${formatInt(heal.total - heal.skillOutput)}` },
+      ];
+    }
+
+    return lines;
+  };
+}
+
 function healingRow(
   key: keyof HealingSkills,
   label: string,
@@ -159,7 +179,8 @@ function healingRow(
     format: 'int',
     higherIsBetter: true,
     tooltip,
-    select: (page) => (page.healingSkills === null ? null : page.healingSkills[key]),
+    details: healingDetails(key),
+    select: (page) => (page.healingSkills === null ? null : page.healingSkills[key].total),
   };
 }
 

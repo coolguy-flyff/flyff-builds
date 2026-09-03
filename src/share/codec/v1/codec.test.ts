@@ -12,7 +12,7 @@ import type { BuildState } from '@/domain/build/schema';
 
 import { ByteReader, ByteWriter } from '../../bytes';
 import { decodeErrorCode } from '../../testing/errors';
-import { maximalBuild } from '../../testing/fixtures';
+import { maximalBuild, withoutV2Fields } from '../../testing/fixtures';
 import { renumberIds } from '../../testing/ids';
 
 import { decodeV1 } from './decode';
@@ -52,12 +52,12 @@ function appended(body: Uint8Array, ...extra: number[]): Uint8Array {
 }
 
 describe('encodeV1 / decodeV1', () => {
-  it('round-trips the maximal build structurally and byte-for-byte', () => {
+  it('round-trips the maximal build structurally and byte-for-byte, minus the v2 fields', () => {
     const build = maximalBuild(data);
     const bytes = encodeV1(build);
     const decoded = decodeV1(bytes);
 
-    expect(decoded).toStrictEqual(renumberIds(build));
+    expect(decoded).toStrictEqual(withoutV2Fields(renumberIds(build)));
     expect(encodeV1(decoded)).toEqual(bytes);
   });
 

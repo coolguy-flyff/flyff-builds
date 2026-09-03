@@ -2,6 +2,7 @@ import type { SlimClass, SlimItem } from '@/data';
 
 import type { StatPage } from '../build/schema';
 import type { Contribution } from './abilities/types';
+import type { PetGraceApplied } from './gear/petGrace';
 import type { EngineIssue } from './issues';
 
 export interface EquippedItem {
@@ -31,5 +32,7 @@ export interface ResolvedCharacter {
   /** Lowest upgrade across the four armor pieces; 0 without a full set. */
   readonly armorSetUpgradeLevel: number;
   readonly hasUpcutStone: boolean;
+  /** The pet's grace buff when the results view applies it and the swap has a pet. */
+  readonly petGrace: PetGraceApplied | null;
   readonly issues: readonly EngineIssue[];
 }

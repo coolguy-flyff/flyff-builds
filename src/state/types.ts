@@ -16,6 +16,8 @@ export interface ResultsView {
   collapsedGroups: string[];
   /** Composition/issue chips under the swap names in the results header. */
   showSwapDetails: boolean;
+  /** Apply each swap's pet grace buff — a results-only what-if, not part of the build. */
+  petGrace: boolean;
 }
 
 export type ToastKind = 'info' | 'success' | 'warning' | 'error';

@@ -1,4 +1,4 @@
-import { getItem, isAnteriorJob, requireClass } from '@/data';
+import { defaultClassSkillIds, getItem, isAnteriorJob, requireClass } from '@/data';
 import { repairReferences, type BuildState } from '@/domain/build';
 import { clamp } from '@/lib/math';
 
@@ -98,6 +98,8 @@ export function createCharacterActions({ set, get, deps }: ActionContext): Chara
         draft.build.shields = draft.build.shields.filter(
           (entry) => !removed.shieldIds.has(entry.id),
         );
+        // Class skills belong to a job: start the new job from its permanent passives.
+        draft.build.buffs.classSkillIds = defaultClassSkillIds(deps.data, jobId);
         draft.build = repairReferences(draft.build).build;
       });
 

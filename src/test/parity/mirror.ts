@@ -8,17 +8,24 @@ import {
   requireItem,
   type GameData,
 } from '@/data';
-import type {
-  AccessorySetEntry,
-  BuildState,
-  EquipmentSetEntry,
-  FashionSetEntry,
-  GearSwap,
-  ShieldEntry,
-  Stack,
-  WeaponEntry,
+import {
+  ACCESSORY_PIECE_KEYS,
+  type AccessorySetEntry,
+  type BuildState,
+  type EquipmentSetEntry,
+  type FashionSetEntry,
+  type GearSwap,
+  type ShieldEntry,
+  type Stack,
+  type WeaponEntry,
 } from '@/domain/build/schema';
-import { PET_TIERS, petTierBreakdown, randomStatLineCount } from '@/domain/rules';
+import {
+  PET_TIERS,
+  accessoryPieceItemId,
+  accessoryPieceSource,
+  petTierBreakdown,
+  randomStatLineCount,
+} from '@/domain/rules';
 import { requireDefined } from '@/lib/assert';
 import { roundTo } from '@/lib/math';
 
@@ -193,32 +200,22 @@ function mirrorEquipmentSet(
   }
 }
 
+/** Each piece worn from its own set or CW jewel line; a CW jewel's tier is its own item, worn at +0. */
 function mirrorAccessorySet(
   fl: Flyffulator,
   data: GameData,
   entity: FlyffEntity,
   entry: AccessorySetEntry,
 ): void {
-  const set = data.accessorySets.find((candidate) => candidate.id === entry.setId);
+  for (const piece of ACCESSORY_PIECE_KEYS) {
+    const source = accessoryPieceSource(data, entry, piece);
+    const itemId = accessoryPieceItemId(data, entry, piece);
 
-  if (set === undefined) {
-    return;
-  }
+    if (source !== null && itemId !== undefined) {
+      const elem = itemElem(fl, itemId);
 
-  const pieces: readonly { slot: string; itemId: number | undefined; upgrade: number }[] = [
-    { slot: 'ring1', itemId: set.ring, upgrade: entry.upgrades.ring1 },
-    { slot: 'earring1', itemId: set.earrings[entry.earring1], upgrade: entry.upgrades.earring1 },
-    { slot: 'necklace', itemId: set.necklaces[entry.necklace], upgrade: entry.upgrades.necklace },
-    { slot: 'earring2', itemId: set.earrings[entry.earring2], upgrade: entry.upgrades.earring2 },
-    { slot: 'ring2', itemId: set.ring, upgrade: entry.upgrades.ring2 },
-  ];
-
-  for (const piece of pieces) {
-    if (piece.itemId !== undefined) {
-      const elem = itemElem(fl, piece.itemId);
-
-      elem.upgradeLevel = piece.upgrade;
-      entity.equipment[piece.slot] = elem;
+      elem.upgradeLevel = source.kind === 'set' ? entry.upgrades[piece] : 0;
+      entity.equipment[piece] = elem;
     }
   }
 }
@@ -349,16 +346,35 @@ function mirrorBuffs(fl: Flyffulator, entity: FlyffEntity, build: BuildState): v
 
   entity.activeItems = buffs.premiumItemIds.map((itemId) => itemElem(fl, itemId));
 
+  const activateMaxed = (skillId: number): void => {
+    const skillProp = requireDefined(fl.Utils.getSkillById(skillId), `No skill ${skillId}`);
+    const maxLevel = requireDefined(skillProp.levels.at(-1), `Skill ${skillId} has no levels`);
+
+    entity.activeBuffs.push(new fl.Skill(skillProp, skillProp.levels.length, 1));
+
+    // Synergies read the caster's learned levels; the engine assumes the source skill maxed.
+    for (const synergy of maxLevel.synergies ?? []) {
+      const source = requireDefined(
+        fl.Utils.getSkillById(synergy.skill),
+        `No skill ${synergy.skill}`,
+      );
+
+      entity.skillLevels[synergy.skill] = source.levels.length;
+    }
+  };
+
   if (buffs.rmBuffs.enabled) {
     const excluded = new Set(buffs.rmBuffs.excludedSkillIds);
 
     for (const skillId of RM_BUFF_SKILL_IDS) {
       if (!excluded.has(skillId)) {
-        const skillProp = requireDefined(fl.Utils.getSkillById(skillId), `No skill ${skillId}`);
-
-        entity.activeBuffs.push(new fl.Skill(skillProp, skillProp.levels.length, 1));
+        activateMaxed(skillId);
       }
     }
+  }
+
+  for (const skillId of buffs.classSkillIds) {
+    activateMaxed(skillId);
   }
 
   const npc = (id: number): unknown => requireDefined(fl.api.HousingNPCs[String(id)], `NPC ${id}`);

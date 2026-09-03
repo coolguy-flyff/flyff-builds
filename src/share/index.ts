@@ -5,7 +5,8 @@ import { validateBuild, type ValidatedBuild } from '@/domain/build/validate';
 import { decodeBase64Url, encodeBase64Url } from './base64url';
 import { ByteReader } from './bytes';
 import { decodeV1 } from './codec/v1/decode';
-import { encodeV1 } from './codec/v1/encode';
+import { decodeV2 } from './codec/v2/decode';
+import { encodeV2 } from './codec/v2/encode';
 import { defaultDeflater, type Deflater } from './compression';
 import {
   SHARE_ERROR_MESSAGES,
@@ -17,9 +18,10 @@ import { parseShareInput } from './url';
 
 /**
  * Share codes: `base64url([u8 version][u8 flags] + body)`. The body is the versioned layout
- * (`codec/v1/LAYOUT.md`), deflated when that is smaller (flag bit 0). Decoders of released
- * versions are kept forever and chosen by the version byte. Every decoded candidate goes through
- * `validateBuild`, so ids unknown to the current data degrade to warnings instead of failures.
+ * (`codec/v<n>/LAYOUT.md`), deflated when that is smaller (flag bit 0). Decoders of released
+ * versions are kept forever and chosen by the version byte; encoding always uses the newest.
+ * Every decoded candidate goes through `validateBuild`, so ids unknown to the current data degrade
+ * to warnings instead of failures.
  */
 
 export type { ShareErrorCode } from './errors';
@@ -43,7 +45,8 @@ export type ShareDecodeResult = ShareDecodeSuccess | ShareDecodeFailure;
 type BodyDecoder = (body: Uint8Array) => BuildState;
 
 const CODEC_VERSION_V1 = 1;
-const CURRENT_CODEC_VERSION = CODEC_VERSION_V1;
+const CODEC_VERSION_V2 = 2;
+const CURRENT_CODEC_VERSION = CODEC_VERSION_V2;
 const HEADER_BYTES = 2;
 const FLAG_DEFLATED = 0b1;
 const KNOWN_FLAGS = FLAG_DEFLATED;
@@ -53,7 +56,10 @@ const MAX_CODE_BYTES = 64 * 1024;
 const MAX_BODY_BYTES = 256 * 1024;
 
 /** Every released body layout, by version byte. Entries are never removed. */
-const DECODERS: ReadonlyMap<number, BodyDecoder> = new Map([[CODEC_VERSION_V1, decodeV1]]);
+const DECODERS: ReadonlyMap<number, BodyDecoder> = new Map([
+  [CODEC_VERSION_V1, decodeV1],
+  [CODEC_VERSION_V2, decodeV2],
+]);
 
 /**
  * Encodes the build as a share code. The build is validated first: a structurally invalid build is
@@ -71,7 +77,7 @@ export async function encodeShareCode(
     throw new ShareEncodeError(`cannot share an invalid build: ${validated.error.message}`);
   }
 
-  const body = encodeV1(validated.value.build);
+  const body = encodeV2(validated.value.build);
   const deflated = await deflater.deflateRaw(body);
   const useDeflated = deflated.length < body.length;
   const payload = useDeflated ? deflated : body;

@@ -11,6 +11,9 @@ export const ENGINE_ISSUE_CODES = {
   /** An entry references an item/set id that is not in the bundled game data. */
   unknownItem: 'unknown-item',
   unknownNpc: 'unknown-npc',
+  unknownSkill: 'unknown-skill',
+  /** An active class skill needs a higher character level than the build has; it is skipped. */
+  skillLocked: 'skill-locked',
   unknownAchievement: 'unknown-achievement',
   unknownBlessing: 'unknown-blessing',
   /** The stored offhand is incompatible with the job/mainhand and was dropped. */

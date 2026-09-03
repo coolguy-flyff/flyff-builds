@@ -1,7 +1,8 @@
-import { CLASS_IDS, requireItem, type GameData, type SlimItem } from '@/data';
+import { CLASS_IDS, defaultClassSkillIds, requireItem, type GameData, type SlimItem } from '@/data';
 import {
   createAccessorySetEntry,
   createDefaultBuild,
+  emptyPieceSources,
   createEquipmentSetEntry,
   createFashionSetEntry,
   createGearSwap,
@@ -35,7 +36,12 @@ export const FIXTURE_IDS = {
   goldenEtranarSet: 43747,
   adeptsSet: 12670,
   marksmansSet: 16509,
+  defendersSet: 16809,
   championsSet: 17716,
+  /** CW jewel lines (the id of their lowest tier): Speedo +1…+5, Pep +1…+5, a lone Meteofy. */
+  speedoLine: 2470,
+  pepLine: 4902,
+  meteofyLine: 5275,
   volcanoCard7: 2416,
   landCardA: 5666,
   fireCardA: 2517,
@@ -53,6 +59,9 @@ export const FIXTURE_IDS = {
   lowGrilledEel: 445,
   patience: 2678,
   beefUp: 690,
+  /** Seraph self-buff (block/parry) and permanent passive. */
+  heavensStep: 55834,
+  hymnDamageReduction: 47719,
   fwcMaster: 5,
 } as const;
 
@@ -92,6 +101,18 @@ function maxRandomStatValue(item: SlimItem, parameter: string, lineIndex: number
 
 function page(id: number, stats: Pick<StatPage, 'str' | 'sta' | 'dex' | 'int'>): StatPage {
   return { ...createStatPage(id), ...stats };
+}
+
+/** The build as codec v1 can express it: no per-piece accessory sets, no class skills. */
+export function withoutV2Fields(build: BuildState): BuildState {
+  return {
+    ...build,
+    accessorySets: build.accessorySets.map((entry) => ({
+      ...entry,
+      pieceSources: emptyPieceSources(),
+    })),
+    buffs: { ...build.buffs, classSkillIds: [] },
+  };
 }
 
 /**
@@ -183,14 +204,30 @@ export function maximalBuild(data: GameData): BuildState {
       earring1: 'demol',
       earring2: 'plug',
       necklace: 'mental',
-      upgrades: { ring1: 7, ring2: 8, earring1: 9, earring2: 0, necklace: 5 },
+      upgrades: { ring1: 7, ring2: 8, earring1: 9, earring2: 5, necklace: 5 },
+      // Mixed: a Defender's ring, a Speedo +5 earring and a Champion's necklace override.
+      pieceSources: {
+        ring1: null,
+        ring2: ids.defendersSet,
+        earring1: null,
+        earring2: ids.speedoLine,
+        necklace: ids.championsSet,
+      },
     },
     {
       ...createAccessorySetEntry(13, ids.championsSet),
       earring1: 'demol',
       earring2: 'demol',
       necklace: 'peision',
-      upgrades: { ring1: 10, ring2: 10, earring1: 6, earring2: 6, necklace: 10 },
+      // A single-tier Meteofy ring (its only "upgrade" is 0) and a Pep +5 necklace.
+      upgrades: { ring1: 0, ring2: 10, earring1: 6, earring2: 6, necklace: 5 },
+      pieceSources: {
+        ring1: ids.meteofyLine,
+        ring2: null,
+        earring1: null,
+        earring2: null,
+        necklace: ids.pepLine,
+      },
     },
   ];
   const fashionSets: FashionSetEntry[] = [
@@ -228,6 +265,7 @@ export function maximalBuild(data: GameData): BuildState {
     pets,
     buffs: {
       rmBuffs: { enabled: true, excludedSkillIds: [ids.patience, ids.beefUp] },
+      classSkillIds: [ids.heavensStep, ids.hymnDamageReduction],
       premiumItemIds: [ids.upcutStone, ids.greenCottonCandy, ids.lowGrilledEel],
       personalNpcIds: [12199, 12342, 11960],
       coupleNpcIds: [13117],
@@ -325,6 +363,7 @@ export function typicalBuild(data: GameData): BuildState {
     pets: [createPetEntry(8, ids.lionCage, 75)],
     buffs: {
       rmBuffs: { enabled: true, excludedSkillIds: [] },
+      classSkillIds: defaultClassSkillIds(data, CLASS_IDS.seraph),
       premiumItemIds: [ids.upcutStone],
       personalNpcIds: [12199, 12342],
       coupleNpcIds: [],

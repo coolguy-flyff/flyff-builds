@@ -46,6 +46,7 @@ function initialUi(deps: AppStoreDeps, build: BuildState): UiState {
       hiddenSwapIds: [],
       collapsedGroups: [],
       showSwapDetails: false,
+      petGrace: false,
     },
     toasts: [],
     dialog: null,

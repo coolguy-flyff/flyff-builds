@@ -14,9 +14,10 @@ Universe API) and flips the workflow:
 2. **Alternatives** — any number of equipment sets, weapons, shields, accessory sets, fashion sets,
    raised pets and stat pages live side by side.
 3. **Gear swaps** — one pick from each list plus a stat page, under a shared buff configuration
-   (max RM buffs, premium items, housing NPCs, FWC achievement).
+   (max RM buffs, the job's own class skills, premium items, housing NPCs, FWC achievement).
 4. **Results** — one column per swap: base stats, vitals, speed, offense, defense and (for Seraphs)
-   Heal Rain / Gloria Patri healing, with best-value highlighting, diff mode and exports.
+   Heal Rain / Gloria Patri healing, with best-value highlighting, diff mode, a pet-grace what-if
+   toggle and exports.
 
 Everything autosaves to the browser's local storage on every change. "Save as…" keeps immutable
 snapshots, "Reset" starts over (after an automatic snapshot), and "Share" produces a compact code
@@ -27,12 +28,23 @@ or link (`?b=<code>`) that "Import" previews before replacing the working build.
 - **Character** — job (8 third jobs), level 165–190, and stat pages (STR/STA/DEX/INT from 15,
   `2 × (level − 1)` points; values are clamped so a page can never go negative by typing).
 - **Gear** — six lists with a master–detail editor each. Item pickers search by name or stat
-  ("hp" finds Volcano cards). Ability preview shows exactly what the shorthand expands to.
-- **Buffs & Swaps** — global buffs on the left, swap cards on the right. A new swap is pre-filled
-  with the first entry of every list so results appear immediately.
+  ("hp" finds Volcano cards). Ability preview shows exactly what the shorthand expands to. An
+  accessory set is picked whole; "mix & match" is the optional extra step that lets single
+  pieces come from another set or from the standalone CW jewels (Strente, Intiret, Dexion,
+  Meteor and Meteofy rings; Speedo, Penzeru and Mighteer earrings; Pep, Socecle and Enduky
+  necklaces, each at its own +1…+5). Set bonuses then count per set, and a mix is named by its
+  parts: "Adept/CW X555X".
+- **Buffs & Swaps** — global buffs on the left, swap cards on the right. Class skills show the
+  job's buffs and passives as icon tiles (name and stats in the tooltip), each applied maxed (max
+  level, synergy skills maxed, caster-stat scalings at their cap); permanent passives start on,
+  buffs are opt-in, a skill's master variations hang off it as a numbered chain with one lit at a
+  time, and skills above the character's level are locked. A new swap is pre-filled with the
+  first entry of every list so results appear immediately.
 - **Results** — sticky table, `Diff vs`, only-differing rows, best highlighting, raw stat totals,
-  column hiding and TSV / Markdown / CSV export. Footnotes list every degradation applied
-  (ignored offhand, excess jewels, …).
+  column hiding and TSV / Markdown / CSV export. "Pet grace" applies each swap's pet grace buff
+  (20 s, 2 min cooldown, 50 pet energy) at the level its raised tiers unlock — a what-if toggle,
+  not part of the build. Footnotes list every degradation applied (ignored offhand, excess
+  jewels, …).
 
 Keyboard: steppers accept typing and arrow keys (Shift ±10, Ctrl ±100); lists use ↑/↓ and
 Enter; tabs use ←/→; dialogs trap focus and close with Esc. Gear entries, swaps and result
@@ -77,9 +89,11 @@ lib ← data ← config ← domain ← share / persistence ← state ← compone
 
 ### Not modeled
 
-Element upgrades, damage simulation, party skills, class passives/self-buffs, buff stacking
-rules and skill-damage awakes are out of scope. Hit rate and block are computed against
-Flyffulator's training dummy. "Max RM buffs" assumes the caster's INT reaches every scaling cap.
+Element upgrades, damage simulation, party skills, buff stacking rules and skill-damage awakes
+are out of scope. Class skills skip what a "maxed" model cannot express: scalings by equipment
+part or by another stat (Forcemaster aura effects) and caster-stat scalings without a cap. Hit
+rate and block are computed against Flyffulator's training dummy. "Max RM buffs" assumes the
+caster's INT reaches every scaling cap.
 The Gloria Patri rows include the Heal synergy with Heal at level 20 (+1000 HP) — a deliberate
 addition over Flyffulator, which leaves that synergy as a TODO.
 

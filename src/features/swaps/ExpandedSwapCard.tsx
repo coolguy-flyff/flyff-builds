@@ -39,13 +39,11 @@ const STAT_PAGE_ISSUE = 'swap-stat-page-invalid';
 function SwapField({
   id,
   label,
-  caption,
   error,
   children,
 }: {
   id: string;
   label: string;
-  caption?: string | null | undefined;
   error?: string | undefined;
   children: ReactNode;
 }) {
@@ -53,7 +51,6 @@ function SwapField({
     <div className="flex min-w-0 flex-col gap-1">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       {children}
-      {caption !== undefined && caption !== null && <Hint>{caption}</Hint>}
       {error !== undefined && <Hint tone="danger">{error}</Hint>}
     </div>
   );
@@ -151,11 +148,7 @@ export function ExpandedSwapCard({ swap }: { swap: GearSwap }) {
             }}
           />
         </SwapField>
-        <SwapField
-          id={fieldId('weapon')}
-          label="Weapon"
-          caption={swap.weaponId === null ? 'bare hands' : null}
-        >
+        <SwapField id={fieldId('weapon')} label="Weapon">
           <Select
             id={fieldId('weapon')}
             label="Weapon"
@@ -167,12 +160,7 @@ export function ExpandedSwapCard({ swap }: { swap: GearSwap }) {
             }}
           />
         </SwapField>
-        <SwapField
-          id={fieldId('offhand')}
-          label="Offhand"
-          caption={offhand.caption}
-          error={offhandError}
-        >
+        <SwapField id={fieldId('offhand')} label="Offhand" error={offhandError}>
           <Select
             id={fieldId('offhand')}
             label="Offhand"

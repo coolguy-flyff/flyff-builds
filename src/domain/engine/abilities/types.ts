@@ -25,7 +25,9 @@ export const CONTRIBUTION_ORIGIN_KINDS = [
   'accessorySetBonus',
   'premiumItem',
   'rmBuff',
+  'classSkill',
   'pet',
+  'petGrace',
   'housingNpc',
   'achievement',
 ] as const;

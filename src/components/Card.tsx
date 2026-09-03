@@ -30,14 +30,17 @@ export const Card = forwardRef<HTMLElement, CardProps>(function Card(
 export function CardTitle({
   children,
   right,
+  flush = false,
   className,
 }: {
   children: ReactNode;
   right?: ReactNode | undefined;
+  /** No gap below the title — for a collapsed card whose title row is all there is. */
+  flush?: boolean | undefined;
   className?: string | undefined;
 }) {
   return (
-    <div className={cx('mb-3 flex items-center gap-2', className)}>
+    <div className={cx('flex items-center gap-2', !flush && 'mb-3', className)}>
       <h2 className="text-[13px] font-semibold text-text">{children}</h2>
       {right !== undefined && <div className="ml-auto flex items-center gap-1.5">{right}</div>}
     </div>

@@ -8,7 +8,8 @@ import { EARRING_VARIANTS, NECKLACE_VARIANTS, STAT_KEYS } from '@/data/schema';
  * share-code decoding; semantic validation against game data lives in `validate.ts`.
  */
 
-export const BUILD_SCHEMA_VERSION = 1 as const;
+/** 2 (2026-09-03): class skills and per-piece accessory sets; see `migrations.ts`. */
+export const BUILD_SCHEMA_VERSION = 2 as const;
 
 export const LIMITS = {
   statPages: 16,
@@ -118,12 +119,29 @@ export const ShieldEntrySchema = z.object({
   cards: z.array(StackSchema),
 });
 
+/** The five accessory pieces in wear order (ring 1, earring 1, necklace, earring 2, ring 2). */
+export const ACCESSORY_PIECE_KEYS = ['ring1', 'earring1', 'necklace', 'earring2', 'ring2'] as const;
+
 export const AccessoryUpgradesSchema = z.object({
   ring1: upgrade,
   ring2: upgrade,
   earring1: upgrade,
   earring2: upgrade,
   necklace: upgrade,
+});
+
+/**
+ * Per-piece sources for mixed accessory sets (plan feedback 2026-09-03): the id of the accessory
+ * set or CW jewel line a piece is taken from (the API's id space is global, and the data pipeline
+ * asserts the two tables never share an id); `null` means "the entry's set". The streamlined flow
+ * never touches these; the "mix & match" step does. A CW jewel's `upgrade` is its tier ("+1"…"+5").
+ */
+export const AccessoryPieceSourcesSchema = z.object({
+  ring1: gameId.nullable(),
+  ring2: gameId.nullable(),
+  earring1: gameId.nullable(),
+  earring2: gameId.nullable(),
+  necklace: gameId.nullable(),
 });
 
 export const AccessorySetEntrySchema = z.object({
@@ -134,6 +152,7 @@ export const AccessorySetEntrySchema = z.object({
   earring2: z.enum(EARRING_VARIANTS),
   necklace: z.enum(NECKLACE_VARIANTS),
   upgrades: AccessoryUpgradesSchema,
+  pieceSources: AccessoryPieceSourcesSchema,
 });
 
 export const BlessingLineSchema = z.object({
@@ -164,6 +183,8 @@ export const RmBuffsSchema = z.object({
 
 export const BuffsStateSchema = z.object({
   rmBuffs: RmBuffsSchema,
+  /** Active class buffs, self-buffs and passives of the character's job, at max level. */
+  classSkillIds: z.array(gameId),
   premiumItemIds: z.array(gameId).max(LIMITS.premiumItems),
   personalNpcIds: z.array(gameId),
   coupleNpcIds: z.array(gameId),
@@ -226,7 +247,9 @@ export type StatPage = z.infer<typeof StatPageSchema>;
 export type EquipmentSetEntry = z.infer<typeof EquipmentSetEntrySchema>;
 export type WeaponEntry = z.infer<typeof WeaponEntrySchema>;
 export type ShieldEntry = z.infer<typeof ShieldEntrySchema>;
+export type AccessoryPieceKey = (typeof ACCESSORY_PIECE_KEYS)[number];
 export type AccessoryUpgrades = z.infer<typeof AccessoryUpgradesSchema>;
+export type AccessoryPieceSources = z.infer<typeof AccessoryPieceSourcesSchema>;
 export type AccessorySetEntry = z.infer<typeof AccessorySetEntrySchema>;
 export type BlessingLine = z.infer<typeof BlessingLineSchema>;
 export type FashionSetEntry = z.infer<typeof FashionSetEntrySchema>;

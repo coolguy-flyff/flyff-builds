@@ -66,9 +66,13 @@ export interface FlyffItemElem {
   petStats: Record<string, number | null>;
 }
 
+export interface FlyffSkillLevel {
+  readonly synergies?: readonly { readonly skill: number }[];
+}
+
 export interface FlyffSkillProp {
   readonly id: number;
-  readonly levels: readonly unknown[];
+  readonly levels: readonly FlyffSkillLevel[];
 }
 
 export interface FlyffHitRate {

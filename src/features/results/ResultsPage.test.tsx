@@ -13,6 +13,7 @@ import { ResultsPage } from './ResultsPage';
 
 const data = loadBundledGameData();
 const ORACLE = 54987;
+const LION_PET = 9941;
 
 /** Headless UI's menu tracks button movement with ResizeObserver, which jsdom does not provide. */
 class ResizeObserverStub {
@@ -251,6 +252,38 @@ describe('ResultsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Go to Buffs & Swaps' }));
 
     expect(opened).toEqual([null]);
+  });
+
+  it('applies pet grace as a results-only toggle and shows it in the composition', () => {
+    const { store, actions, firstSwapId } = setup();
+
+    act(() => {
+      const petId = actions.addEntry('pets');
+
+      actions.updateEntry('pets', petId, (pet) => {
+        pet.petItemId = LION_PET;
+        pet.total = 75;
+      });
+      actions.updateEntry('gearSwaps', firstSwapId, (swap) => {
+        swap.petId = petId;
+      });
+    });
+
+    const before = rowCells('Max HP').map((cell) => cell.textContent);
+
+    fireEvent.click(screen.getByLabelText('Pet grace'));
+    fireEvent.click(screen.getByLabelText('Swap details'));
+
+    const after = rowCells('Max HP').map((cell) => cell.textContent);
+
+    expect(store.getState().ui.results.petGrace).toBe(true);
+    expect(after[0]).not.toBe(before[0]);
+    expect(after[1]).toBe(before[1]);
+    expect(screen.getByText("Lion's Grace Lv 7")).toBeDefined();
+    // The build itself is untouched: grace lives in the view state only.
+    expect(store.getState().build.buffs.classSkillIds).toEqual(
+      createDefaultBuild(data).buffs.classSkillIds,
+    );
   });
 
   it('copies the table as TSV and reports success', async () => {

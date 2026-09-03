@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { CLASS_IDS, UPCUT_STONE_ITEM_ID, loadBundledGameData, requireSkill } from '@/data';
 
 import { getBaseStat, getStatTotal } from './abilities/totals';
-import { maxBuffContributions } from './buffs';
+import { maxedSkillContributions } from './buffs';
 import { DEFAULT_WEAPON } from './defaultWeapon';
 import { ENGINE_ISSUE_CODES } from './issues';
 import { resolveGearSwap } from './resolve';
@@ -339,9 +339,9 @@ describe('fashion, mask and pet', () => {
 
 describe('buffs', () => {
   it('maxes RM buffs with their INT scaling at the cap', () => {
-    const beefUp = maxBuffContributions(requireSkill(data, 690));
-    const geburah = maxBuffContributions(requireSkill(data, 6845));
-    const spiritFortune = maxBuffContributions(requireSkill(data, 9047));
+    const beefUp = maxedSkillContributions(requireSkill(data, 690), 'rmBuff');
+    const geburah = maxedSkillContributions(requireSkill(data, 6845), 'rmBuff');
+    const spiritFortune = maxedSkillContributions(requireSkill(data, 9047), 'rmBuff');
 
     expect(beefUp).toMatchObject([{ parameter: 'str', add: 40, rate: false }]);
     expect(geburah).toMatchObject([

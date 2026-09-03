@@ -21,10 +21,33 @@ function setup() {
 
 afterEach(cleanup);
 
+/** The RM card starts collapsed; its rows only exist once the title is clicked. */
+function expandRmBuffs(): void {
+  fireEvent.click(screen.getByRole('button', { name: /Max RM buffs/ }));
+}
+
 describe('RM buffs card', () => {
+  it('starts collapsed with the master switch and count in the title row', () => {
+    const store = setup();
+
+    expect(screen.queryByLabelText('Beef Up')).toBeNull();
+    expect(screen.getByText('12 / 12')).toBeDefined();
+    expect(screen.getByRole('button', { name: /Max RM buffs/ }).getAttribute('aria-expanded')).toBe(
+      'false',
+    );
+
+    fireEvent.click(screen.getByLabelText('Max RM buffs'));
+    expect(store.getState().build.buffs.rmBuffs.enabled).toBe(false);
+    expect(screen.getByText('0 / 12')).toBeDefined();
+
+    expandRmBuffs();
+    expect(screen.getByLabelText('Beef Up')).toBeDefined();
+  });
+
   it('disables every buff row while the master switch is off', () => {
     const store = setup();
 
+    expandRmBuffs();
     expect(screen.getByLabelText('Beef Up').getAttribute('aria-checked')).toBe('true');
 
     fireEvent.click(screen.getByLabelText('Max RM buffs'));
@@ -37,6 +60,7 @@ describe('RM buffs card', () => {
   it('toggling a row excludes and re-includes the skill', () => {
     const store = setup();
 
+    expandRmBuffs();
     fireEvent.click(screen.getByLabelText('Beef Up'));
 
     expect(store.getState().build.buffs.rmBuffs.excludedSkillIds).toEqual([BEEF_UP]);

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { RM_BUFF_SKILL_IDS, requireSkill, type GameData } from '@/data';
 import { Card, CardTitle } from '@/components/Card';
@@ -8,7 +8,7 @@ import { Tooltip } from '@/components/Tooltip';
 import { cx } from '@/lib/cx';
 import { useActions, useAppStore, useGameData } from '@/state';
 
-import { rmBuffEffect, splitEffectText } from './effectText';
+import { maxedSkillEffect, splitEffectText } from './effectText';
 
 interface RmBuffRowModel {
   readonly skillId: number;
@@ -25,7 +25,7 @@ function rmBuffRows(data: GameData): RmBuffRowModel[] {
       skillId,
       name: skill.name,
       icon: skill.icon,
-      effect: rmBuffEffect(data, skill),
+      effect: maxedSkillEffect(data, skill, 'rmBuff'),
     };
   });
 }
@@ -87,22 +87,28 @@ function RmBuffRow({
 }
 
 /**
- * RM buffs at max level (plan A3.1): a master switch plus one row per buff. Rows toggle on click
- * anywhere; the stats appear in a hover tooltip instead of inline text.
+ * RM buffs at max level (plan A3.1): a master switch plus one row per buff, collapsed by default
+ * (feedback 2026-09-03) — the title row keeps the switch and an "on / total" count, the rows
+ * unfold on demand. Rows toggle on click anywhere; the stats appear in a hover tooltip.
  */
 export function RmBuffsCard() {
   const data = useGameData();
   const rmBuffs = useAppStore((state) => state.build.buffs.rmBuffs);
   const actions = useActions();
+  const [expanded, setExpanded] = useState(false);
   const rows = useMemo(() => rmBuffRows(data), [data]);
   const excluded = new Set(rmBuffs.excludedSkillIds);
+  const activeCount = rmBuffs.enabled ? rows.length - excluded.size : 0;
 
   return (
     <Card>
       <CardTitle
+        flush={!expanded}
         right={
           <>
-            <span className="text-[11.5px] text-text-2">Max RM buffs</span>
+            <span className="mr-1 font-mono text-[11px] text-muted">
+              {activeCount} / {rows.length}
+            </span>
             <Toggle
               size="lg"
               label="Max RM buffs"
@@ -116,21 +122,35 @@ export function RmBuffsCard() {
           </>
         }
       >
-        RM buffs
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => {
+            setExpanded((value) => !value);
+          }}
+          className="flex items-center gap-1.5 hover:text-accent"
+        >
+          <span aria-hidden="true" className="text-dim">
+            {expanded ? '▾' : '▸'}
+          </span>
+          Max RM buffs
+        </button>
       </CardTitle>
-      <div className="grid grid-cols-2 gap-1.5">
-        {rows.map((row) => (
-          <RmBuffRow
-            key={row.skillId}
-            row={row}
-            active={rmBuffs.enabled && !excluded.has(row.skillId)}
-            enabled={rmBuffs.enabled}
-            onToggle={() => {
-              actions.toggleRmBuff(row.skillId);
-            }}
-          />
-        ))}
-      </div>
+      {expanded && (
+        <div className="grid grid-cols-2 gap-1.5">
+          {rows.map((row) => (
+            <RmBuffRow
+              key={row.skillId}
+              row={row}
+              active={rmBuffs.enabled && !excluded.has(row.skillId)}
+              enabled={rmBuffs.enabled}
+              onToggle={() => {
+                actions.toggleRmBuff(row.skillId);
+              }}
+            />
+          ))}
+        </div>
+      )}
     </Card>
   );
 }

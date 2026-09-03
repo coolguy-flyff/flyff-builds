@@ -2,17 +2,21 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ACCESSORY_SET_IDS, BUNDLED_SKILL_IDS } from '../../src/data/constants';
+import { ACCESSORY_SET_IDS, BUNDLED_SKILL_IDS, RM_BUFF_SKILL_IDS } from '../../src/data/constants';
 import {
   GENERATED_TABLE_FILES,
   GeneratedDataSchema,
   type GeneratedData,
+  type AccessoryLine,
   type GeneratedTableName,
   type SlimItem,
 } from '../../src/data/schema';
 
+import { selectAccessoryLines } from './accessoryLines';
+import { projectClassSkill, selectClassSkills } from './classSkills';
 import { buildManifest } from './manifest';
 import {
+  assertCappedScalings,
   collectAwakeSkillIds,
   collectSkillChanceSkillIds,
   projectAchievement,
@@ -26,6 +30,8 @@ import {
   projectStatAwake,
   projectStatNames,
   projectUpgradeBonusRow,
+  requireRawSkill,
+  type SkillLookup,
 } from './project';
 import { derivePierceTarget, resolveAccessorySet, resolveArmorSet } from './resolveSets';
 import {
@@ -56,13 +62,15 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, '..', '..');
 const DEFAULT_SOURCE_DIR = resolve(REPO_ROOT, 'data-src');
 const DEFAULT_OUT_DIR = resolve(REPO_ROOT, 'src', 'data', 'generated');
+const ACCESSORY_SET_ID_LIST: readonly number[] = Object.values(ACCESSORY_SET_IDS);
 
 /** Expected table sizes at the time of writing; drift beyond ±20 % is reported, not fatal. */
 const EXPECTED_COUNTS: Readonly<Record<string, number>> = {
-  items: 2167,
+  items: 2214,
   classes: 21,
   armorSets: 274,
   accessorySets: 4,
+  accessoryLines: 11,
   statAwakes: 48,
   awakeSkills: 143,
   upgradeBonus: 20,
@@ -70,6 +78,7 @@ const EXPECTED_COUNTS: Readonly<Record<string, number>> = {
   housingNpcs: 39,
   pets: 9,
   skills: 16,
+  classSkills: 120,
   statNames: 169,
 };
 
@@ -136,10 +145,17 @@ function readDataVersion(sourceDir: string): number | undefined {
   return dataVersion;
 }
 
-function selectItems(sources: RawSources): { items: SlimItem[]; armorSetIds: number[] } {
+interface SelectedItems {
+  items: SlimItem[];
+  armorSetIds: number[];
+  accessoryLines: AccessoryLine[];
+}
+
+function selectItems(sources: RawSources): SelectedItems {
   const thirdJobIds = getThirdJobIds(sources.classes);
   const chainIds = getAllChainIds(sources.classes, thirdJobIds);
   const selected = new Map<number, SlimItem>();
+  const accessoryLines = selectAccessoryLines(sources.items);
 
   const armorSetIds: number[] = [];
 
@@ -157,7 +173,7 @@ function selectItems(sources: RawSources): { items: SlimItem[]; armorSetIds: num
     }
   }
 
-  for (const setId of ACCESSORY_SET_IDS) {
+  for (const setId of ACCESSORY_SET_ID_LIST) {
     const set = sources.equipSets[String(setId)];
 
     if (set === undefined) {
@@ -172,6 +188,20 @@ function selectItems(sources: RawSources): { items: SlimItem[]; armorSetIds: num
       }
 
       selected.set(part.id, projectItem(part));
+    }
+  }
+
+  for (const line of accessoryLines) {
+    for (const tier of line.tiers) {
+      const item = sources.items[String(tier.itemId)];
+
+      if (item === undefined) {
+        throw new Error(
+          `Accessory line ${line.name}: item ${tier.itemId} vanished from Items.json`,
+        );
+      }
+
+      selected.set(item.id, projectItem(item));
     }
   }
 
@@ -202,6 +232,7 @@ function selectItems(sources: RawSources): { items: SlimItem[]; armorSetIds: num
   return {
     items: [...selected.values()].sort((a, b) => a.id - b.id),
     armorSetIds: armorSetIds.sort((a, b) => a - b),
+    accessoryLines,
   };
 }
 
@@ -212,7 +243,7 @@ function assemble(
   generatedAt: string,
 ): Assembled {
   const warnings: string[] = [];
-  const { items, armorSetIds } = selectItems(sources);
+  const { items, armorSetIds, accessoryLines } = selectItems(sources);
   const itemIds = new Set(items.map((item) => item.id));
 
   const armorSets = armorSetIds.map((id) => {
@@ -225,7 +256,7 @@ function assemble(
     return resolveArmorSet(set, sources.items);
   });
 
-  const accessorySets = ACCESSORY_SET_IDS.map((id) => {
+  const accessorySets = ACCESSORY_SET_ID_LIST.map((id) => {
     const set = sources.equipSets[String(id)];
 
     if (set === undefined) {
@@ -235,15 +266,30 @@ function assemble(
     return resolveAccessorySet(set, sources.items);
   });
 
-  const skills = BUNDLED_SKILL_IDS.map((id) => {
-    const skill = sources.skills[String(id)];
-
-    if (skill === undefined) {
-      throw new Error(`Skill ${id} is missing from Skills.json`);
+  // A build stores one id per accessory piece for "the set or the line it comes from", which
+  // relies on the API's global id space; make sure the two tables never share an id.
+  for (const line of accessoryLines) {
+    if (ACCESSORY_SET_ID_LIST.includes(line.id)) {
+      throw new Error(
+        `Accessory line ${line.name} (${line.id}) shares its id with an accessory set`,
+      );
     }
+  }
 
-    return projectSkill(skill);
-  });
+  const skillLookup: SkillLookup = (skillId) => sources.skills[String(skillId)];
+  const skills = BUNDLED_SKILL_IDS.map((id) =>
+    projectSkill(requireRawSkill(skillLookup, id, 'Bundled skills'), skillLookup),
+  );
+
+  for (const skill of skills) {
+    if ((RM_BUFF_SKILL_IDS as readonly number[]).includes(skill.id)) {
+      assertCappedScalings(skill);
+    }
+  }
+
+  const classSkills = selectClassSkills(sources.skills, sources.classes).map((raw) =>
+    projectClassSkill(raw, skillLookup),
+  );
 
   // Skills the app only needs by name: skill-damage awakes and skill-chance item abilities.
   const namedSkillIds = [
@@ -271,7 +317,7 @@ function assemble(
       continue;
     }
 
-    const def = projectPet(raw, item.name.en);
+    const def = projectPet(raw, item.name.en, skillLookup);
 
     if (def !== undefined) {
       pets.push(def);
@@ -293,6 +339,7 @@ function assemble(
       .sort((a, b) => a.id - b.id),
     armorSets,
     accessorySets,
+    accessoryLines,
     statAwakes: sources.statAwakes.map(projectStatAwake),
     skillAwakes: projectSkillAwakes(sources.skillAwakes),
     awakeSkills,
@@ -304,6 +351,7 @@ function assemble(
       .sort((a, b) => a.id - b.id),
     pets: pets.sort((a, b) => a.petItemId - b.petItemId),
     skills,
+    classSkills,
     statNames: projectStatNames(sources.statNames),
   };
 

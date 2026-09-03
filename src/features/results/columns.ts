@@ -1,6 +1,6 @@
 import { getItem, type GameData } from '@/data';
 import { issuesFor, type BuildState, type EntryListKey, type GearSwap } from '@/domain/build';
-import type { SwapResult } from '@/domain/engine';
+import type { PetGraceApplied, SwapResult } from '@/domain/engine';
 import type { ChipTone } from '@/components/Chip';
 import { requireDefined } from '@/lib/assert';
 import type { Selectors } from '@/state';
@@ -32,6 +32,7 @@ function compositionOf(
   build: BuildState,
   naming: ColumnNaming,
   swap: GearSwap,
+  petGrace: PetGraceApplied | null,
 ): string[] {
   const parts: string[] = [];
 
@@ -51,6 +52,10 @@ function compositionOf(
   push('accessorySets', swap.accessorySetId);
   push('fashionSets', swap.fashionSetId);
   push('pets', swap.petId);
+
+  if (petGrace !== null) {
+    parts.push(`${petGrace.name} Lv ${petGrace.level}`);
+  }
 
   if (swap.maskItemId !== null) {
     parts.push(getItem(data, swap.maskItemId)?.name ?? `Mask #${swap.maskItemId}`);
@@ -93,7 +98,7 @@ export function buildColumns(
     return {
       swapId: swap.id,
       name: naming.entryName(build, 'gearSwaps', swap.id),
-      composition: compositionOf(data, build, naming, swap),
+      composition: compositionOf(data, build, naming, swap, result.resolved.petGrace),
       issues: issuesOf(build, naming, swap, result),
       result,
     };
@@ -122,4 +127,20 @@ export function engineFootnotes(columns: readonly ResultsColumn[]): string[] {
   return columns.flatMap((column) =>
     column.result.resolved.issues.map((issue) => `⚠ ${column.name}: ${issue.message}`),
   );
+}
+
+/**
+ * What the "Pet grace" toggle applies, from the pet data (every pet shares the same timings):
+ * "Applies each swap's pet grace — a 20 s buff (2 min cooldown, 50 pet energy) at the level its
+ * raised tiers unlock."
+ */
+export function petGraceHint(data: GameData): string {
+  const grace = data.pets.find((pet) => pet.grace !== undefined)?.grace;
+  let timing = 'a short buff';
+
+  if (grace !== undefined) {
+    timing = `a ${grace.durationSeconds} s buff (${Math.round(grace.cooldownSeconds / 60)} min cooldown, ${grace.energy} pet energy)`;
+  }
+
+  return `Applies each swap's pet grace — ${timing} at the level its raised tiers unlock.`;
 }

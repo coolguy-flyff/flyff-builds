@@ -165,7 +165,7 @@ describe('errors', () => {
       ['impossible base64url length', 'AQABC', 'BAD_BASE64'],
       ['a lone version byte', encodeBase64Url(Uint8Array.from([1])), 'TRUNCATED'],
       ['a truncated body', codeOf(defaultBody.subarray(0, 10)), 'TRUNCATED'],
-      ['a future codec version', codeOf(defaultBody, 2), 'UNSUPPORTED_VERSION'],
+      ['a future codec version', codeOf(defaultBody, 3), 'UNSUPPORTED_VERSION'],
       ['reserved envelope flags', codeOf(defaultBody, 1, 0b10), 'UNSUPPORTED_VERSION'],
       ['codec version 0', codeOf(defaultBody, 0), 'CORRUPT'],
       ['trailing bytes', codeOf(Uint8Array.from([...defaultBody, 0])), 'CORRUPT'],

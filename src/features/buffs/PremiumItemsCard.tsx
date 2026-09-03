@@ -78,12 +78,15 @@ function PremiumItemTile({
   );
 }
 
+/** Name on top, stats wrapped below — like the card/jewel pickers, so long stat lists never squeeze the name out. */
 function PowerupOption({ item, effect }: { item: SlimItem; effect: string }) {
   return (
     <div className="flex items-center gap-2.5">
       <ItemIcon icon={item.icon} size={22} />
-      <span className="min-w-0 flex-1 truncate">{item.name}</span>
-      <span className="shrink-0 font-mono text-[11px] text-muted">{effect}</span>
+      <div className="min-w-0 flex-1">
+        <div className="truncate">{item.name}</div>
+        <div className="font-mono text-[10.5px] break-words text-muted">{effect}</div>
+      </div>
     </div>
   );
 }

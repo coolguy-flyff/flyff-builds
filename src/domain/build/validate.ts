@@ -1,7 +1,21 @@
-import { RM_BUFF_SKILL_IDS, getItem, isAnteriorJob, type GameData, type SlimItem } from '@/data';
+import {
+  RM_BUFF_SKILL_IDS,
+  classSkillsFor,
+  getItem,
+  isAnteriorJob,
+  type GameData,
+  type SlimItem,
+} from '@/data';
 import { clamp } from '@/lib/math';
 
 import {
+  accessoryPieceSet,
+  accessoryPieceSource,
+  accessorySlotOf,
+  clampAccessoryUpgrade,
+  findAccessoryPieceSource,
+  findAccessorySet,
+  fitsAccessoryPiece,
   hasRandomStats,
   isReachableBlessingTotal,
   isReachablePetTotal,
@@ -10,6 +24,7 @@ import {
   isValidStatAwake,
   isWithinBounds,
   maxStackCount,
+  necklaceVariantsOf,
   piercingSlots,
   randomStatBounds,
   randomStatLineCount,
@@ -23,6 +38,7 @@ import { DEFAULT_JOB_ID } from './defaults';
 import { defaultStatRangeValue } from '../rules/randomStats';
 import { repairReferences } from './references';
 import {
+  ACCESSORY_PIECE_KEYS,
   BuildStateSchema,
   LIMITS,
   type AccessorySetEntry,
@@ -365,21 +381,50 @@ function repairAccessorySet(
   repairs: Repairs,
 ): AccessorySetEntry {
   const context = `Accessory set #${entry.id}`;
-  const set =
-    entry.setId === null
-      ? undefined
-      : data.accessorySets.find((candidate) => candidate.id === entry.setId);
   let next = entry;
 
-  if (entry.setId !== null && set === undefined) {
+  if (entry.setId !== null && findAccessorySet(data, entry.setId) === null) {
     repairs.add('unknown-set', `${context}: accessory set ${entry.setId} is unknown`);
-    next = { ...entry, setId: null };
+    next = { ...next, setId: null };
   }
 
-  if (set !== undefined && entry.necklace === 'peision' && set.necklaces.peision === undefined) {
+  for (const piece of ACCESSORY_PIECE_KEYS) {
+    const sourceId = entry.pieceSources[piece];
+    const source = sourceId === null ? null : findAccessoryPieceSource(data, sourceId);
+    let problem: string | null = null;
+
+    if (sourceId !== null && source === null) {
+      problem = `${piece} source ${sourceId} is neither an accessory set nor a CW jewel`;
+    } else if (source?.kind === 'line' && !fitsAccessoryPiece(source, piece)) {
+      problem = `${source.line.name} is a ${source.line.slot}, not a ${accessorySlotOf(piece)}`;
+    }
+
+    if (problem !== null) {
+      repairs.add('unknown-set', `${context}: ${problem}`);
+      next = { ...next, pieceSources: { ...next.pieceSources, [piece]: null } };
+    }
+  }
+
+  // A CW jewel only exists at its tiers ("+1"…"+5"); a set piece's 0…10 is already structural.
+  for (const piece of ACCESSORY_PIECE_KEYS) {
+    const upgrade = next.upgrades[piece];
+    const clamped = clampAccessoryUpgrade(accessoryPieceSource(data, next, piece), upgrade);
+
+    if (clamped !== upgrade) {
+      repairs.add(
+        'upgrade-clamped',
+        `${context}: ${piece} has no +${upgrade} tier; using +${clamped}`,
+      );
+      next = { ...next, upgrades: { ...next.upgrades, [piece]: clamped } };
+    }
+  }
+
+  const necklaceSet = accessoryPieceSet(data, next, 'necklace');
+
+  if (necklaceSet !== null && !necklaceVariantsOf(necklaceSet).includes(next.necklace)) {
     repairs.add(
       'variant-unavailable',
-      `${context}: ${set.name} has no Peision necklace; using Gore`,
+      `${context}: ${necklaceSet.name} has no Peision necklace; using Gore`,
     );
     next = { ...next, necklace: 'gore' };
   }
@@ -482,6 +527,9 @@ function keepKnown(
 function repairBuffs(data: GameData, build: BuildState, repairs: Repairs): BuildState['buffs'] {
   const buffs = build.buffs;
   const rmIds = new Set<number>(RM_BUFF_SKILL_IDS);
+  const classSkillIds = new Set(
+    classSkillsFor(data, build.character.jobId).map((skill) => skill.id),
+  );
   const powerupIds = new Set(data.powerups.map((item) => item.id));
   const personalIds = new Set(data.personalNpcs.map((npc) => npc.id));
   const guildIds = new Set(data.guildNpcs.map((npc) => npc.id));
@@ -500,6 +548,8 @@ function repairBuffs(data: GameData, build: BuildState, repairs: Repairs): Build
       enabled: buffs.rmBuffs.enabled,
       excludedSkillIds: keepKnown(buffs.rmBuffs.excludedSkillIds, rmIds, 'RM buffs', repairs),
     },
+    // Skills of another job (after a job change, or a hand-edited code) are dropped, not kept idle.
+    classSkillIds: keepKnown(buffs.classSkillIds, classSkillIds, 'Class skills', repairs),
     premiumItemIds: keepKnown(buffs.premiumItemIds, powerupIds, 'Premium items', repairs),
     personalNpcIds: keepKnown(buffs.personalNpcIds, personalIds, 'Personal house', repairs),
     coupleNpcIds: keepKnown(buffs.coupleNpcIds, personalIds, 'Couple house', repairs),

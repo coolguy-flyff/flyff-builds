@@ -15,7 +15,13 @@ export { CONTRIBUTION_DETAILS, CONTRIBUTION_ORIGIN_KINDS } from './abilities/typ
 export { expandTargetStats } from './abilities/targetStats';
 export { getBaseStat, getRawTotals, getStatTotal, type StatBucket } from './abilities/totals';
 export { DEFAULT_WEAPON } from './defaultWeapon';
-export { computeHealingSkills, computeSkillHealing, type HealingSkills } from './healing/healing';
+export {
+  computeHealingSkills,
+  computeSkillHealing,
+  type HealingBreakdown,
+  type HealingSkills,
+} from './healing/healing';
+export { maxedSkillContributions } from './buffs/maxedSkill';
 export {
   ENGINE_ISSUE_CODES,
   type EngineIssue,
@@ -30,6 +36,7 @@ export { resolveAccessorySetEntry, type AccessorySetResolution } from './gear/ac
 export { resolveEquipmentSetEntry, type EquipmentSetResolution } from './gear/equipmentSet';
 export { resolveFashionSetEntry } from './gear/fashionSet';
 export { resolvePetEntry } from './gear/pet';
+export { resolvePetGrace, type PetGraceApplied } from './gear/petGrace';
 export { resolveShieldEntry, type ShieldResolution } from './gear/shield';
 export { resolveWeaponEntry, type WeaponHand, type WeaponResolution } from './gear/weapon';
 export { computeAllResults, type SwapResult } from './results';

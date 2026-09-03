@@ -3,11 +3,14 @@ import { requireDefined } from '@/lib/assert';
 import { SKILL_CHANCE_PREFIX } from './constants';
 import type {
   Ability,
+  AccessoryLine,
   AccessorySet,
+  AccessorySlot,
   Achievement,
   ArmorSet,
   AwakeSkill,
   BlessingTable,
+  ClassSkill,
   GeneratedData,
   HousingNpc,
   Manifest,
@@ -33,6 +36,8 @@ export interface GameData {
   readonly armorSets: ReadonlyMap<number, ArmorSet>;
   readonly armorSetsByJob: ReadonlyMap<number, readonly ArmorSet[]>;
   readonly accessorySets: readonly AccessorySet[];
+  /** Standalone "CW jewel" lines that can be mixed into an accessory set (table order). */
+  readonly accessoryLines: readonly AccessoryLine[];
   readonly weaponsByJob: ReadonlyMap<number, readonly SlimItem[]>;
   readonly shieldsByJob: ReadonlyMap<number, readonly SlimItem[]>;
   readonly suitCards: readonly SlimItem[];
@@ -42,7 +47,11 @@ export interface GameData {
   readonly masks: readonly SlimItem[];
   readonly pets: readonly PetDef[];
   readonly powerups: readonly SlimItem[];
+  /** Bundled skills by id: RM buffs, healing skills and every class skill. */
   readonly skills: ReadonlyMap<number, SlimSkill>;
+  readonly classSkills: ReadonlyMap<number, ClassSkill>;
+  /** jobId → the class skills of its chain, first job first, then by required level. */
+  readonly classSkillsByJob: ReadonlyMap<number, readonly ClassSkill[]>;
   readonly statAwakes: readonly StatAwakeDef[];
   readonly skillAwakes: SkillAwakeTable;
   /** Skills that can appear as `skill:<id>` damage awakes (name + icon). */
@@ -84,6 +93,32 @@ function buildClassChains(classes: ReadonlyMap<number, SlimClass>): Map<number, 
 
 function isUsableByChain(item: SlimItem, chain: readonly number[]): boolean {
   return item.class === undefined || chain.includes(item.class);
+}
+
+/**
+ * The class skills a job can learn, ordered the way a skill tree reads: first job's skills first
+ * (the chain lists the third job first, so its index is reversed), then by required level.
+ */
+function groupClassSkillsByJob(
+  thirdJobs: readonly SlimClass[],
+  classChains: ReadonlyMap<number, readonly number[]>,
+  classSkills: readonly ClassSkill[],
+): Map<number, readonly ClassSkill[]> {
+  const grouped = new Map<number, readonly ClassSkill[]>();
+
+  for (const job of thirdJobs) {
+    const chain = requireDefined(classChains.get(job.id), `No class chain for job ${job.id}`);
+    const chainOrder = (skill: ClassSkill): number => chain.length - chain.indexOf(skill.classId);
+
+    grouped.set(
+      job.id,
+      classSkills
+        .filter((skill) => chain.includes(skill.classId))
+        .sort((a, b) => chainOrder(a) - chainOrder(b) || a.level - b.level || byName(a, b)),
+    );
+  }
+
+  return grouped;
 }
 
 function groupByJob(
@@ -179,6 +214,7 @@ export function createGameData(raw: GeneratedData): GameData {
     armorSets: new Map(raw.armorSets.map((set) => [set.id, set])),
     armorSetsByJob,
     accessorySets: [...raw.accessorySets].sort(byName),
+    accessoryLines: raw.accessoryLines,
     weaponsByJob: groupByJob(thirdJobs, classChains, weapons),
     shieldsByJob: groupByJob(thirdJobs, classChains, shields),
     suitCards: cards.filter((card) => card.pierceTarget === 'suit').sort(byName),
@@ -203,7 +239,9 @@ export function createGameData(raw: GeneratedData): GameData {
       )
       .filter(grantsCombatStats)
       .sort(byName),
-    skills: new Map(raw.skills.map((skill) => [skill.id, skill])),
+    skills: new Map([...raw.skills, ...raw.classSkills].map((skill) => [skill.id, skill])),
+    classSkills: new Map(raw.classSkills.map((skill) => [skill.id, skill])),
+    classSkillsByJob: groupClassSkillsByJob(thirdJobs, classChains, raw.classSkills),
     statAwakes: raw.statAwakes,
     skillAwakes: raw.skillAwakes,
     awakeSkills: new Map(raw.awakeSkills.map((skill) => [skill.id, skill])),
@@ -236,6 +274,23 @@ export function requireSkill(data: GameData, skillId: number): SlimSkill {
 /** Whether `jobId` is `otherJobId` or descends from it (Flyffulator `isAnteriorJob`). */
 export function isAnteriorJob(data: GameData, jobId: number, otherJobId: number): boolean {
   return data.classChains.get(jobId)?.includes(otherJobId) ?? false;
+}
+
+/** The class skills a job can switch on; empty for an unknown job. */
+export function classSkillsFor(data: GameData, jobId: number): readonly ClassSkill[] {
+  return data.classSkillsByJob.get(jobId) ?? [];
+}
+
+/** A fresh build starts with the job's permanent passives on; buffs are opt-in. */
+export function defaultClassSkillIds(data: GameData, jobId: number): number[] {
+  return classSkillsFor(data, jobId)
+    .filter((skill) => skill.permanent)
+    .map((skill) => skill.id);
+}
+
+/** The CW jewel lines worn in a slot (rings: Strente…Meteofy; earrings: Speedo…; necklaces: Pep…). */
+export function accessoryLinesFor(data: GameData, slot: AccessorySlot): readonly AccessoryLine[] {
+  return data.accessoryLines.filter((line) => line.slot === slot);
 }
 
 const SKILL_CHANCE_MODE_SUFFIXES: Readonly<Record<string, string>> = {

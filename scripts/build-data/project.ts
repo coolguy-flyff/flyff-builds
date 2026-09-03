@@ -5,6 +5,7 @@ import type {
   HousingGroup,
   HousingNpc,
   PetDef,
+  PetGrace,
   Rarity,
   SkillAwakeTable,
   SlimClass,
@@ -31,6 +32,7 @@ import type {
   RawItem,
   RawPet,
   RawSkill,
+  RawSkillLevel,
   RawSkillAwakeCategory,
   RawStatAwake,
   RawUpgradeBonusRow,
@@ -355,23 +357,68 @@ export function projectHousingNpc(raw: RawHousingNpc): HousingNpc {
   };
 }
 
-export function projectPet(raw: RawPet, name: string): PetDef | undefined {
+/** Looks up a raw skill by id; the pipeline resolves cross-skill references through it. */
+export type SkillLookup = (skillId: number) => RawSkill | undefined;
+
+export function requireRawSkill(lookup: SkillLookup, skillId: number, context: string): RawSkill {
+  const skill = lookup(skillId);
+
+  if (skill === undefined) {
+    throw new ProjectionError(`${context}: skill ${skillId} is missing from Skills.json`);
+  }
+
+  return skill;
+}
+
+/**
+ * The grace buff comes from the top raise tier: every tier names the same skill, and the grace
+ * level equals the number of raised tiers, so the skill's level list is bundled whole.
+ */
+function projectPetGrace(raw: RawPet, lookup: SkillLookup): PetGrace | undefined {
+  const top = raw.tiers?.[raw.tiers.length - 1];
+  let grace: PetGrace | undefined;
+
+  if (top?.graceSkill !== undefined) {
+    const skill = requireRawSkill(lookup, top.graceSkill, `Pet ${raw.petItemId} grace`);
+    const levels = (skill.levels ?? []).map((level) => normalizeAbilities(level.abilities));
+
+    if (levels.length === 0) {
+      throw new ProjectionError(`Pet ${raw.petItemId}: grace skill ${skill.id} has no levels`);
+    }
+
+    grace = {
+      skillId: skill.id,
+      name: skill.name.en,
+      icon: skill.icon,
+      durationSeconds: top.graceSkillDuration ?? 0,
+      cooldownSeconds: top.graceSkillCooldown ?? 0,
+      energy: top.graceSkillEnergyConsumption ?? 0,
+      levels,
+    };
+  }
+
+  return grace;
+}
+
+export function projectPet(raw: RawPet, name: string, lookup: SkillLookup): PetDef | undefined {
   let def: PetDef | undefined;
 
   if (raw.parameter !== undefined && raw.values !== undefined) {
-    def = {
+    def = stripUndefined({
       petItemId: raw.petItemId,
       name,
       parameter: raw.parameter,
       rate: raw.rate ?? false,
       values: raw.values,
-    };
+      grace: projectPetGrace(raw, lookup),
+    });
   }
 
   return def;
 }
 
-export function projectSkill(raw: RawSkill): SlimSkill {
+/** The last entry of a skill's level list, i.e. its maximum level. */
+export function maxLevelOf(raw: RawSkill): RawSkillLevel {
   const levels = raw.levels ?? [];
   const max = levels[levels.length - 1];
 
@@ -379,11 +426,17 @@ export function projectSkill(raw: RawSkill): SlimSkill {
     throw new ProjectionError(`Skill ${raw.id} "${raw.name.en}" has no levels`);
   }
 
+  return max;
+}
+
+export function projectSkill(raw: RawSkill, lookup: SkillLookup): SlimSkill {
+  const max = maxLevelOf(raw);
+
   return {
     id: raw.id,
     name: raw.name.en,
     icon: raw.icon,
-    levelCount: levels.length,
+    levelCount: (raw.levels ?? []).length,
     max: {
       abilities: normalizeAbilities(max.abilities),
       scalingParameters: (max.scalingParameters ?? []).map((scale) =>
@@ -405,6 +458,9 @@ export function projectSkill(raw: RawSkill): SlimSkill {
       synergies: (max.synergies ?? []).map((synergy) => ({
         parameter: synergy.parameter,
         skill: synergy.skill,
+        sourceLevelCount: (
+          requireRawSkill(lookup, synergy.skill, `Skill ${raw.id} synergy`).levels ?? []
+        ).length,
         minLevel: synergy.minLevel,
         add: synergy.add ?? true,
         scale: synergy.scale,
@@ -413,6 +469,26 @@ export function projectSkill(raw: RawSkill): SlimSkill {
       })),
     },
   };
+}
+
+/**
+ * The RM buff card assumes every caster-stat scaling has a cap to sit at; a scaling without one
+ * would need the caster's live stat, which the app does not model.
+ */
+export function assertCappedScalings(skill: SlimSkill): void {
+  const parameters = new Set(skill.max.abilities.map((ability) => ability.parameter));
+
+  for (const scale of skill.max.scalingParameters) {
+    if (
+      parameters.has(scale.parameter) &&
+      scale.stat !== undefined &&
+      scale.maximum === undefined
+    ) {
+      throw new ProjectionError(
+        `Skill ${skill.id} "${skill.name}" scales ${scale.parameter} by ${scale.stat} without a maximum`,
+      );
+    }
+  }
 }
 
 export function projectStatNames(raw: Record<string, { en: string }>): Record<string, string> {

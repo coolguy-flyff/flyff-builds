@@ -32,6 +32,9 @@ const ADEPTS_SET = 12670;
 const MARKSMANS_SET = 16509;
 const DEFENDERS_SET = 16809;
 const CHAMPIONS_SET = 17716;
+/** CW jewel lines, by their "+1" item: Speedo (earring, block %) and Pep (necklace, HP). */
+const SPEEDO_LINE = 2470;
+const PEP_LINE = 4902;
 const VOLCANO_CARD_7 = 2416;
 const VOLCANO_CARD_4 = 4635;
 const LIGHTNING_CARD_7 = 576;
@@ -51,6 +54,13 @@ const GRILLED_EEL = 6049;
 const POTION_OF_RECKLESSNESS = 1171;
 const HASTE = 9852;
 const GEBURAH_TIPHRETH = 6845;
+const HEAVENS_STEP = 55834;
+const KYRIE_ELEISON_EFFECT_INCREASE = 54836;
+const HYMN_DAMAGE_REDUCTION = 47719;
+const BERSERK = 4369;
+const SWORD_MASTERY = 4927;
+const AMBIDEXTROUS = 55233;
+const MASTER_OF_SWORD = 41788;
 
 const ALL_TEN = { ring1: 10, ring2: 10, earring1: 10, earring2: 10, necklace: 10 };
 
@@ -68,7 +78,12 @@ export const PARITY_FIXTURES: readonly ParityFixture[] = [
     name: 'etranar-oracle',
     expectedIssueCodes: [],
     create: (data) => {
-      const build = createTestBuild(data, { stats: { sta: 300, int: 108 }, rmBuffs: true });
+      const build = createTestBuild(data, {
+        stats: { sta: 300, int: 108 },
+        rmBuffs: true,
+        // Heaven's Step carries a Cat's Reflex synergy; Kyrie (Effect Increase) is a variation.
+        classSkillIds: [HEAVENS_STEP, KYRIE_ELEISON_EFFECT_INCREASE, HYMN_DAMAGE_REDUCTION],
+      });
 
       addEquipmentSet(build, {
         setId: ETRANAR_SET,
@@ -196,12 +211,21 @@ export const PARITY_FIXTURES: readonly ParityFixture[] = [
       const build = createTestBuild(data, { stats: { str: 200, sta: 208 } });
 
       addWeapon(build, { itemId: MAW_OF_JUDGEMENT_UNIQUE, upgrade: 3 });
+      // Mixed: a Speedo +5 earring and a Pep +5 necklace among Marksman's pieces (3 of 5, so
+      // no set bonus either).
       addAccessorySet(build, {
         setId: MARKSMANS_SET,
         earring1: 'demol',
         earring2: 'plug',
         necklace: 'mental',
-        upgrades: { ring1: 3, ring2: 10, earring1: 0, earring2: 7, necklace: 5 },
+        upgrades: { ring1: 3, ring2: 10, earring1: 0, earring2: 5, necklace: 5 },
+        pieceSources: {
+          ring1: null,
+          ring2: null,
+          earring1: null,
+          earring2: SPEEDO_LINE,
+          necklace: PEP_LINE,
+        },
       });
       addFashionSet(build, { speedPercent: 0, blessings: [], cloakItemId: null });
 
@@ -217,6 +241,8 @@ export const PARITY_FIXTURES: readonly ParityFixture[] = [
         level: 185,
         stats: { str: 200, dex: 183 },
         rmBuffs: true,
+        // A self-buff, a weapon mastery (sword attack) and two third-job passives.
+        classSkillIds: [BERSERK, SWORD_MASTERY, AMBIDEXTROUS, MASTER_OF_SWORD],
       });
 
       build.buffs = {

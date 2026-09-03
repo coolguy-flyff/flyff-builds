@@ -63,7 +63,6 @@ describe('offhandModel', () => {
       disabled: true,
       mismatch: true,
       value: IGNORED_VALUE,
-      caption: '2H weapon — no offhand',
     });
     expect(model.options.map((option) => option.label)).toEqual([
       '— none —',
@@ -91,7 +90,6 @@ describe('offhandModel', () => {
       disabled: false,
       mismatch: false,
       value: String(shieldId),
-      caption: null,
     });
     expect(model.options.map((option) => option.value)).toEqual(['', String(shieldId)]);
     expect(compositionChips(data, build, firstSwap(build), nameOf)).toEqual([

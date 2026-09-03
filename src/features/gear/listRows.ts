@@ -4,6 +4,7 @@ import {
   formatAbility,
   itemShortName,
   stackTotals,
+  type AccessoryPieceKey,
   type AccessorySetEntry,
   type BuildState,
   type EquipmentSetEntry,
@@ -17,7 +18,13 @@ import {
   type StatAwake,
   type WeaponEntry,
 } from '@/domain/build';
-import { setAwakeTotals, statAwakeTotals } from '@/domain/rules';
+import {
+  accessoryParts,
+  accessoryPieceSource,
+  setAwakeTotals,
+  statAwakeTotals,
+  type AccessoryPart,
+} from '@/domain/rules';
 import type { EntityListChip } from '@/components/EntityList';
 import { rarityClassName } from '@/components/rarity';
 
@@ -139,33 +146,80 @@ export function describeShield(data: GameData, entry: ShieldEntry): EntryRow {
   };
 }
 
-export function describeAccessorySet(data: GameData, entry: AccessorySetEntry): EntryRow {
-  const set = data.accessorySets.find((candidate) => candidate.id === entry.setId);
-  const ring = set === undefined ? undefined : getItem(data, set.ring);
+/** "Defender's", "Speedo" — a part as the chips name it. */
+function accessoryPartName(part: AccessoryPart): string {
+  return part.source.kind === 'set'
+    ? accessorySetShortName(part.source.set.name)
+    : part.source.line.name;
+}
+
+function accessoryPartIcon(data: GameData, part: AccessoryPart): string | null {
+  return part.source.kind === 'set'
+    ? (getItem(data, part.source.set.ring)?.icon ?? null)
+    : part.source.line.icon;
+}
+
+/** "Plug", "Gore" — or the line's name for a CW jewel, which has no set variant ("Speedo", "Pep"). */
+function accessoryVariantLabel(
+  data: GameData,
+  entry: AccessorySetEntry,
+  piece: AccessoryPieceKey,
+  variant: string,
+): string {
+  const source = accessoryPieceSource(data, entry, piece);
+
+  return source?.kind === 'line' ? source.line.name : capitalize(variant);
+}
+
+/** "+10" and the necklace type for a uniform upgrade, else the per-slot breakdown. */
+function accessoryUpgradeChips(data: GameData, entry: AccessorySetEntry): EntityListChip[] {
   const { ring1, ring2, earring1, earring2, necklace } = entry.upgrades;
   const allEqual = [ring2, earring1, earring2, necklace].every((upgrade) => upgrade === ring1);
+  const variant = (piece: AccessoryPieceKey, value: string): string =>
+    accessoryVariantLabel(data, entry, piece, value);
   let chips: EntityListChip[];
 
-  if (set === undefined) {
-    chips = [];
-  } else if (allEqual) {
-    chips = [chip(`+${ring1}`), chip(capitalize(entry.necklace))];
+  if (allEqual) {
+    chips = [chip(`+${ring1}`), chip(variant('necklace', entry.necklace))];
   } else {
     chips = [
       chip(`R ${ring1}/${ring2}`),
       chip(
-        `E ${capitalize(entry.earring1)} ${earring1} / ${capitalize(entry.earring2)} ${earring2}`,
+        `E ${variant('earring1', entry.earring1)} ${earring1} / ${variant('earring2', entry.earring2)} ${earring2}`,
       ),
-      chip(`N ${capitalize(entry.necklace)} ${necklace}`),
+      chip(`N ${variant('necklace', entry.necklace)} ${necklace}`),
     ];
+  }
+
+  return chips;
+}
+
+export function describeAccessorySet(data: GameData, entry: AccessorySetEntry): EntryRow {
+  const parts = accessoryParts(data, entry);
+  const [firstPart] = parts;
+  const ownSet = parts.find(
+    (part) => part.source.kind === 'set' && part.source.set.id === entry.setId,
+  );
+  const mixedIn = parts.filter((part) => part !== ownSet);
+  const chips: EntityListChip[] = [];
+
+  if (firstPart !== undefined) {
+    if (ownSet !== undefined) {
+      chips.push(chip(accessoryPartName(ownSet)));
+    }
+
+    chips.push(
+      ...accessoryUpgradeChips(data, entry),
+      ...mixedIn.map((part) => chip(`${part.pieces.length}× ${accessoryPartName(part)}`)),
+    );
   }
 
   return {
     id: entry.id,
-    icon: ring?.icon ?? null,
+    icon: firstPart === undefined ? null : accessoryPartIcon(data, firstPart),
     nameClassName: PLAIN_NAME,
-    chips: chips.length === 0 ? [] : [chip(accessorySetShortName(set?.name ?? '')), ...chips],
-    missing: set === undefined ? 'No set selected' : null,
+    chips,
+    missing: firstPart === undefined ? 'No set selected' : null,
   };
 }
 

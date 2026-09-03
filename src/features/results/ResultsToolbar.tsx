@@ -2,6 +2,7 @@ import { CheckListPopover } from '@/components/CheckListPopover';
 import { DropdownMenu } from '@/components/DropdownMenu';
 import { Select, type SelectOption } from '@/components/Select';
 import { Toggle } from '@/components/Toggle';
+import { Tooltip } from '@/components/Tooltip';
 import type { ExportFormat } from '@/results/export';
 import type { ResultsView } from '@/state';
 
@@ -19,6 +20,8 @@ export interface ResultsToolbarProps {
   columns: readonly ToolbarColumn[];
   /** The baseline actually applied (a hidden baseline counts as none). */
   baselineSwapId: number | null;
+  /** What the pet grace toggle applies (duration, cooldown, energy), for its tooltip. */
+  petGraceHint: string;
   onViewChange: (patch: Partial<ResultsView>) => void;
   onColumnVisibility: (swapId: number, visible: boolean) => void;
   onExport: (format: ExportFormat) => void;
@@ -55,6 +58,7 @@ export function ResultsToolbar({
   view,
   columns,
   baselineSwapId,
+  petGraceHint,
   onViewChange,
   onColumnVisibility,
   onExport,
@@ -110,6 +114,15 @@ export function ResultsToolbar({
           onViewChange({ showSwapDetails: checked });
         }}
       />
+      <Tooltip placement="bottom" content={petGraceHint}>
+        <ToolbarToggle
+          label="Pet grace"
+          checked={view.petGrace}
+          onChange={(checked) => {
+            onViewChange({ petGrace: checked });
+          }}
+        />
+      </Tooltip>
       <div className="ml-auto flex items-center gap-2">
         <CheckListPopover
           label="Swaps"

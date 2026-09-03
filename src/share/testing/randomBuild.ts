@@ -1,10 +1,10 @@
 import {
   EARRING_VARIANTS,
-  NECKLACE_VARIANTS,
   RM_BUFF_SKILL_IDS,
   STAT_KEYS,
+  accessoryLinesFor,
+  classSkillsFor,
   type GameData,
-  type NecklaceVariant,
   type SlimItem,
 } from '@/data';
 import {
@@ -19,6 +19,7 @@ import {
 } from '@/domain/build/defaults';
 import { withWeaponItem, withWeaponUpgrade } from '@/domain/build/derive';
 import {
+  ACCESSORY_PIECE_KEYS,
   BUILD_SCHEMA_VERSION,
   LIMITS,
   MAX_UPGRADE_LEVEL,
@@ -39,6 +40,11 @@ import {
   type WeaponEntry,
 } from '@/domain/build/schema';
 import {
+  accessoryPieceSet,
+  accessoryPieceSource,
+  accessorySlotOf,
+  clampAccessoryUpgrade,
+  necklaceVariantsOf,
   piercingSlots,
   randomStatBounds,
   rangedAbilities,
@@ -244,23 +250,27 @@ function randomShield(rng: Rng, data: GameData, id: number, jobId: number): Shie
 
 function randomAccessorySet(rng: Rng, data: GameData, id: number): AccessorySetEntry {
   const set = pickOptional(rng, data.accessorySets, 0.85);
-  const necklaces: readonly NecklaceVariant[] =
-    set?.necklaces.peision === undefined ? ['gore', 'mental'] : NECKLACE_VARIANTS;
-
-  return {
+  const entry: AccessorySetEntry = {
     ...createAccessorySetEntry(id, set?.id ?? null),
     ...customName(rng),
     earring1: pick(rng, EARRING_VARIANTS),
     earring2: pick(rng, EARRING_VARIANTS),
-    necklace: pick(rng, necklaces),
-    upgrades: {
-      ring1: int(rng, 0, MAX_UPGRADE_LEVEL),
-      ring2: int(rng, 0, MAX_UPGRADE_LEVEL),
-      earring1: int(rng, 0, MAX_UPGRADE_LEVEL),
-      earring2: int(rng, 0, MAX_UPGRADE_LEVEL),
-      necklace: int(rng, 0, MAX_UPGRADE_LEVEL),
-    },
   };
+
+  for (const piece of ACCESSORY_PIECE_KEYS) {
+    // One piece in five is mixed in from another set or a CW jewel line of the piece's slot.
+    const sources = [...data.accessorySets, ...accessoryLinesFor(data, accessorySlotOf(piece))];
+
+    entry.pieceSources[piece] = pickOptional(rng, sources, 0.2)?.id ?? null;
+    entry.upgrades[piece] = clampAccessoryUpgrade(
+      accessoryPieceSource(data, entry, piece),
+      int(rng, 0, MAX_UPGRADE_LEVEL),
+    );
+  }
+
+  entry.necklace = pick(rng, necklaceVariantsOf(accessoryPieceSet(data, entry, 'necklace')));
+
+  return entry;
 }
 
 function randomFashionSet(rng: Rng, data: GameData, id: number): FashionSetEntry {
@@ -368,6 +378,7 @@ export function randomBuild(data: GameData, seed: number): BuildState {
     pets,
     buffs: {
       rmBuffs: { enabled: coin(rng), excludedSkillIds: subset(rng, RM_BUFF_SKILL_IDS, 4) },
+      classSkillIds: subset(rng, classSkillsFor(data, job.id), 8).map((skill) => skill.id),
       premiumItemIds: subset(rng, data.powerups, 6).map((item) => item.id),
       personalNpcIds: subset(rng, data.personalNpcs, 4).map((npc) => npc.id),
       coupleNpcIds: subset(rng, data.personalNpcs, 3).map((npc) => npc.id),

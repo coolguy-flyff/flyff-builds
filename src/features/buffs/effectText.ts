@@ -7,7 +7,7 @@ import {
   type SlimSkill,
 } from '@/data';
 import { formatAbility } from '@/domain/build';
-import { maxBuffContributions } from '@/domain/engine/buffs/rmBuffs';
+import { maxedSkillContributions, type ContributionOriginKind } from '@/domain/engine';
 
 /**
  * Text helpers for the buff sources shown on the Buffs tab. Every effect line goes through the
@@ -37,11 +37,16 @@ export function effectTextOrNone(data: GameData, abilities: readonly Ability[]):
   return text === '' ? NO_EFFECT_TEXT : text;
 }
 
-/** The maxed RM buff effect: max level plus caster-INT scaling at its cap, e.g. "STR +40". */
-export function rmBuffEffect(data: GameData, skill: SlimSkill): string {
-  return maxBuffContributions(skill)
-    .map((line) => formatAbility(data, line.parameter, line.add, line.rate))
-    .join(EFFECT_SEPARATOR);
+/**
+ * The maxed effect of a buff or passive: max level, synergies maxed, caster-stat scaling at its
+ * cap — e.g. "STR +40" for Beef Up, "Block +20% · Parry +20%" for Heaven's Step.
+ */
+export function maxedSkillEffect(
+  data: GameData,
+  skill: SlimSkill,
+  kind: ContributionOriginKind,
+): string {
+  return effectTextOrNone(data, maxedSkillContributions(skill, kind));
 }
 
 /** Upcut Stone has no abilities in the data: its ×1.2 lives in the attack formula. */

@@ -117,11 +117,21 @@ export const RawHousingNpcSchema = z.object({
   abilities: z.array(RawAbilitySchema),
 });
 
+export const RawPetTierSchema = z.object({
+  graceSkill: z.number().optional(),
+  graceSkillLevel: z.number().optional(),
+  graceSkillCooldown: z.number().optional(),
+  graceSkillDuration: z.number().optional(),
+  graceSkillEnergyConsumption: z.number().optional(),
+});
+
 export const RawPetSchema = z.object({
   petItemId: z.number(),
   parameter: z.string().optional(),
   rate: z.boolean().optional(),
   values: z.array(z.number()).optional(),
+  /** Raise tiers F→S; each names the grace skill and the grace level it unlocks. */
+  tiers: z.array(RawPetTierSchema).optional(),
 });
 
 export const RawScalingParameterSchema = z.object({
@@ -144,19 +154,29 @@ export const RawSynergySchema = z.object({
   pvp: z.boolean().optional(),
 });
 
+export const RawSkillLevelSchema = z.object({
+  abilities: z.array(RawAbilitySchema).optional(),
+  scalingParameters: z.array(RawScalingParameterSchema).optional(),
+  synergies: z.array(RawSynergySchema).optional(),
+  duration: z.number().optional(),
+  /** Present on attack skills only. */
+  minAttack: z.number().optional(),
+});
+
 export const RawSkillSchema = z.object({
   id: z.number(),
   name: LocalizedName,
   icon: z.string(),
-  levels: z
-    .array(
-      z.object({
-        abilities: z.array(RawAbilitySchema).optional(),
-        scalingParameters: z.array(RawScalingParameterSchema).optional(),
-        synergies: z.array(RawSynergySchema).optional(),
-      }),
-    )
-    .optional(),
+  /** Teaching class; absent for item/NPC/system skills. */
+  class: z.number().optional(),
+  /** Character level required to learn the skill. */
+  level: z.number().optional(),
+  passive: z.boolean().optional(),
+  debuff: z.boolean().optional(),
+  target: z.string().optional(),
+  /** Master variations point at the base skill they specialise. */
+  inheritSkill: z.number().optional(),
+  levels: z.array(RawSkillLevelSchema).optional(),
 });
 
 const RawSourcesSchema = z.object({
@@ -184,6 +204,7 @@ export type RawUpgradeBonusRow = z.infer<typeof RawUpgradeBonusRowSchema>;
 export type RawAchievement = z.infer<typeof RawAchievementSchema>;
 export type RawHousingNpc = z.infer<typeof RawHousingNpcSchema>;
 export type RawPet = z.infer<typeof RawPetSchema>;
+export type RawSkillLevel = z.infer<typeof RawSkillLevelSchema>;
 export type RawSkill = z.infer<typeof RawSkillSchema>;
 export type RawSources = z.infer<typeof RawSourcesSchema>;
 

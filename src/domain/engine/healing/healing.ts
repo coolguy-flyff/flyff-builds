@@ -66,12 +66,11 @@ function statScale(ctx: StatContext, spec: HealingSkillSpec, realScaleLevel: num
 }
 
 /**
- * Additive synergy with another skill assumed maxed, the flat-per-level reading Flyffulator uses
- * for buff synergies (flyffentity.js:1378-1380).
+ * Additive synergy with another skill assumed maxed, the floored flat-per-level reading the game
+ * and Flyffulator use for buff synergies (flyffentity.js:1378-1380).
  */
-function synergyBonus(data: GameData, synergy: Synergy): number {
-  const sourceLevel = requireSkill(data, synergy.skill).levelCount;
-  const bonusLevels = sourceLevel - synergy.minLevel;
+function synergyBonus(synergy: Synergy): number {
+  const bonusLevels = synergy.sourceLevelCount - synergy.minLevel;
   let bonus = 0;
 
   if (synergy.parameter === HEALED_PARAMETER && synergy.pve && synergy.add && bonusLevels > 0) {
@@ -81,37 +80,52 @@ function synergyBonus(data: GameData, synergy: Synergy): number {
   return bonus;
 }
 
+/** A heal per cast, split the way the tooltip explains it (plan feedback 2026-09-03, item 4). */
+export interface HealingBreakdown {
+  /** The skill's own formula: base value, stat scaling and synergy — before the Healing % bonus. */
+  readonly skillOutput: number;
+  /** The Healing % total the output is multiplied by (×1.80 for +80 %). */
+  readonly healingRate: number;
+  readonly total: number;
+}
+
+const NO_HEALING: HealingBreakdown = Object.freeze({ skillOutput: 0, healingRate: 0, total: 0 });
+
 export function computeSkillHealing(
-  data: GameData,
   ctx: StatContext,
   spec: HealingSkillSpec,
   options: EngineOptions,
-): number {
+): HealingBreakdown {
   const skillLevel = spec.skill.levelCount;
   const healed = spec.skill.max.abilities.find((ability) => ability.parameter === HEALED_PARAMETER);
-  let add = healed?.add ?? 0;
+  let skillOutput = healed?.add ?? 0;
+  let breakdown = NO_HEALING;
 
-  if (add <= 0) {
-    return 0;
-  }
+  if (skillOutput > 0) {
+    skillOutput += statScale(ctx, spec, skillLevel - 1);
 
-  add += statScale(ctx, spec, skillLevel - 1);
-
-  if (options.applyHealSynergy) {
-    for (const synergy of spec.skill.max.synergies) {
-      add += synergyBonus(data, synergy);
+    if (options.applyHealSynergy) {
+      for (const synergy of spec.skill.max.synergies) {
+        skillOutput += synergyBonus(synergy);
+      }
     }
+
+    const healingRate = ctx.total('healing', true);
+
+    breakdown = {
+      skillOutput,
+      healingRate,
+      total: Math.floor(skillOutput + (skillOutput * healingRate) / 100),
+    };
   }
 
-  add += (add * ctx.total('healing', true)) / 100;
-
-  return Math.floor(add);
+  return breakdown;
 }
 
 export interface HealingSkills {
-  readonly healRain: number;
-  readonly gloriaPatri: number;
-  readonly gloriaPatriEffectIncrease: number;
+  readonly healRain: HealingBreakdown;
+  readonly gloriaPatri: HealingBreakdown;
+  readonly gloriaPatriEffectIncrease: HealingBreakdown;
 }
 
 /** The three Seraph rows: Heal Rain, Gloria Patri and its Effect Increase variation. */
@@ -124,19 +138,12 @@ export function computeHealingSkills(
 
   return {
     healRain: computeSkillHealing(
-      data,
       ctx,
       { skill: requireSkill(data, HEAL_RAIN_SKILL_ID), statScaleSkillLevel: 1 },
       options,
     ),
-    gloriaPatri: computeSkillHealing(
-      data,
-      ctx,
-      { skill: gloriaPatri, statScaleSkillLevel: 1 },
-      options,
-    ),
+    gloriaPatri: computeSkillHealing(ctx, { skill: gloriaPatri, statScaleSkillLevel: 1 }, options),
     gloriaPatriEffectIncrease: computeSkillHealing(
-      data,
       ctx,
       {
         skill: requireSkill(data, GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID),

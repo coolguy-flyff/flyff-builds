@@ -1,0 +1,13 @@
+[
+  {"id":5371,"name":"Strente","slot":"ring","icon":"genjewrinhigrin01.png","tiers":[{"upgrade":1,"itemId":5371},{"upgrade":2,"itemId":7084},{"upgrade":3,"itemId":6383},{"upgrade":4,"itemId":19088},{"upgrade":5,"itemId":16880}]},
+  {"id":5963,"name":"Intiret","slot":"ring","icon":"genjewrinhigrin02.png","tiers":[{"upgrade":1,"itemId":5963},{"upgrade":2,"itemId":9864},{"upgrade":3,"itemId":1727},{"upgrade":4,"itemId":12603},{"upgrade":5,"itemId":11721}]},
+  {"id":7582,"name":"Dexion","slot":"ring","icon":"genjewrinhigrin03.png","tiers":[{"upgrade":1,"itemId":7582},{"upgrade":2,"itemId":3534},{"upgrade":3,"itemId":7258},{"upgrade":4,"itemId":10871},{"upgrade":5,"itemId":16083}]},
+  {"id":1045,"name":"Meteor","slot":"ring","icon":"genjewrinhigrin03.png","tiers":[{"upgrade":0,"itemId":1045}]},
+  {"id":5275,"name":"Meteofy","slot":"ring","icon":"genjewrinhigrin02.png","tiers":[{"upgrade":0,"itemId":5275}]},
+  {"id":2470,"name":"Speedo","slot":"earring","icon":"genjewearhigear03.png","tiers":[{"upgrade":1,"itemId":2470},{"upgrade":2,"itemId":5328},{"upgrade":3,"itemId":3698},{"upgrade":4,"itemId":17719},{"upgrade":5,"itemId":16412}]},
+  {"id":6524,"name":"Penzeru","slot":"earring","icon":"genjewearhigear02.png","tiers":[{"upgrade":1,"itemId":6524},{"upgrade":2,"itemId":2262},{"upgrade":3,"itemId":1559},{"upgrade":4,"itemId":15159},{"upgrade":5,"itemId":11538}]},
+  {"id":2066,"name":"Mighteer","slot":"earring","icon":"genjewearhigear01.png","tiers":[{"upgrade":1,"itemId":2066},{"upgrade":2,"itemId":9165},{"upgrade":3,"itemId":4707},{"upgrade":4,"itemId":18494},{"upgrade":5,"itemId":10394}]},
+  {"id":4902,"name":"Pep","slot":"necklace","icon":"genjewnechignec01.png","tiers":[{"upgrade":1,"itemId":4902},{"upgrade":2,"itemId":198},{"upgrade":3,"itemId":5642},{"upgrade":4,"itemId":19848},{"upgrade":5,"itemId":12457}]},
+  {"id":787,"name":"Socecle","slot":"necklace","icon":"genjewnechignec02.png","tiers":[{"upgrade":1,"itemId":787},{"upgrade":2,"itemId":4283},{"upgrade":3,"itemId":63},{"upgrade":4,"itemId":12303},{"upgrade":5,"itemId":16686}]},
+  {"id":6999,"name":"Enduky","slot":"necklace","icon":"genjewnechignec03.png","tiers":[{"upgrade":1,"itemId":6999},{"upgrade":2,"itemId":1433},{"upgrade":3,"itemId":734},{"upgrade":4,"itemId":11381},{"upgrade":5,"itemId":19738}]}
+]

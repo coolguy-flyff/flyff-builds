@@ -1,3 +1,4 @@
+export * from './accessories';
 export * from './blessings';
 export * from './offhand';
 export * from './pets';

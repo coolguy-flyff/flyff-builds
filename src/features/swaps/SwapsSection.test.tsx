@@ -43,7 +43,6 @@ describe('offhand rule', () => {
     renderWithStore(<SwapsSection />, store);
 
     expect(screen.getByLabelText('Offhand')).toHaveProperty('disabled', true);
-    expect(screen.getByText('2H weapon — no offhand')).toBeDefined();
     expect(screen.getByText('Offhand ignored: two-handed weapon equipped')).toBeDefined();
   });
 

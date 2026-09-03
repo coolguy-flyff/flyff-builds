@@ -37,15 +37,39 @@ export const BUNDLED_SKILL_IDS = [
 ] as const;
 
 /** The four "full ultimate" accessory sets (EquipSets.json ids). */
-export const ACCESSORY_SET_IDS = [12670, 16509, 16809, 17716] as const;
+export const ACCESSORY_SET_IDS = {
+  adepts: 12670,
+  marksmans: 16509,
+  defenders: 16809,
+  champions: 17716,
+} as const;
+
+/**
+ * The standalone "CW jewel" accessory lines that can be mixed into an accessory set, by slot.
+ * Each name is an item family in Items.json ("Speedo +1" … "Speedo +5"; "Meteofy" alone); the
+ * pipeline resolves them to {@link AccessoryLine}s in this order.
+ */
+export const ACCESSORY_LINE_NAMES = {
+  ring: ['Strente', 'Intiret', 'Dexion', 'Meteor', 'Meteofy'],
+  earring: ['Speedo', 'Penzeru', 'Mighteer'],
+  necklace: ['Pep', 'Socecle', 'Enduky'],
+} as const;
 
 export const CLASS_IDS = {
   vagrant: 9686,
+  assist: 8962,
+  ringmaster: 9389,
   blade: 2246,
   templar: 29955,
   slayer: 35369,
   seraph: 26141,
 } as const;
+
+/**
+ * Classes whose buffs the "Max RM buffs" card already covers; their skills are left out of the
+ * class-skill lists of Seraphs and Forcemasters.
+ */
+export const RM_BUFF_CLASS_IDS: readonly number[] = [CLASS_IDS.assist, CLASS_IDS.ringmaster];
 
 /** Level-1 weapons, shields and armor are cosmetic skins; real gear starts above this level. */
 export const SKIN_ITEM_LEVEL = 1;

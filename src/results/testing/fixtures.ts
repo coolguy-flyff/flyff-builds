@@ -41,7 +41,11 @@ export const BASE_PAGE: ResultsPage = {
   parry: 7,
   meleeBlock: 6.25,
   rangedBlock: 6.25,
-  healingSkills: { healRain: 2254, gloriaPatri: 6408, gloriaPatriEffectIncrease: 6740 },
+  healingSkills: {
+    healRain: { skillOutput: 2254, healingRate: 0, total: 2254 },
+    gloriaPatri: { skillOutput: 6408, healingRate: 0, total: 6408 },
+    gloriaPatriEffectIncrease: { skillOutput: 6740, healingRate: 0, total: 6740 },
+  },
   hpBreakdown: ZERO_BREAKDOWN,
   mpBreakdown: ZERO_BREAKDOWN,
   fpBreakdown: ZERO_BREAKDOWN,

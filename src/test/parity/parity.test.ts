@@ -12,6 +12,7 @@ import {
   resolveGearSwap,
   type ResolvedCharacter,
 } from '@/domain/engine';
+import { DEFAULT_ENGINE_OPTIONS } from '@/domain/engine/options';
 import { createStatContext } from '@/domain/engine/stats/context';
 import { computeDefense, computeEquipmentDefenseRange } from '@/domain/engine/stats/defense';
 import { requireDefined } from '@/lib/assert';
@@ -87,7 +88,7 @@ const SWEEP_PARAMETERS = [
   'exprate',
 ] as const;
 
-const NO_SYNERGY = { applyHealSynergy: false };
+const NO_SYNERGY = { ...DEFAULT_ENGINE_OPTIONS, applyHealSynergy: false };
 
 interface Subject {
   readonly resolved: ResolvedCharacter;
@@ -198,9 +199,9 @@ describe.skipIf(!hasFlyffulator())('Flyffulator parity', () => {
           return;
         }
 
-        expect(page.healingSkills.healRain).toBe(healing(HEAL_RAIN_SKILL_ID));
-        expect(page.healingSkills.gloriaPatri).toBe(healing(GLORIA_PATRI_SKILL_ID));
-        expect(page.healingSkills.gloriaPatriEffectIncrease).toBe(
+        expect(page.healingSkills.healRain.total).toBe(healing(HEAL_RAIN_SKILL_ID));
+        expect(page.healingSkills.gloriaPatri.total).toBe(healing(GLORIA_PATRI_SKILL_ID));
+        expect(page.healingSkills.gloriaPatriEffectIncrease.total).toBe(
           healing(GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID),
         );
       });

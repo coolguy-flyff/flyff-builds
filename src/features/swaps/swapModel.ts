@@ -106,8 +106,6 @@ export interface OffhandModel {
   readonly options: readonly SelectOption[];
   readonly value: string;
   readonly disabled: boolean;
-  /** Dim caption under the select ("2H weapon — no offhand", "second weapon (dual wield)"). */
-  readonly caption: string | null;
   /** The stored offhand is of another kind than the job/mainhand allow; the engine drops it. */
   readonly mismatch: boolean;
 }
@@ -141,11 +139,9 @@ export function offhandModel(
     value = toSelectValue(stored.id);
   }
 
-  let caption: string | null = null;
-
   switch (kind) {
     case 'none':
-      caption = '2H weapon — no offhand';
+      // A two-handed mainhand: nothing to offer, the select stays disabled.
       break;
     case 'shield':
       pushEntryOptions(
@@ -156,12 +152,11 @@ export function offhandModel(
       );
       break;
     case 'weapon':
-      caption = 'second weapon (dual wield)';
       pushEntryOptions(options, 'weapons', secondWeaponIds(data, build, swap), nameOf);
       break;
   }
 
-  return { kind, options, value, disabled: kind === 'none', caption, mismatch };
+  return { kind, options, value, disabled: kind === 'none', mismatch };
 }
 
 /** The offhand to store for a select value; `null` for none and for the read-only ignored row. */

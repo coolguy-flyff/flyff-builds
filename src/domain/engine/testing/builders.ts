@@ -32,6 +32,8 @@ export interface TestBuildOptions {
   readonly stats?: Partial<Omit<StatPage, 'id' | 'customName'>>;
   /** RM buffs default to off so pins stay hand-computable. */
   readonly rmBuffs?: boolean;
+  /** Class skills default to none (a fresh build would start with the job's passives). */
+  readonly classSkillIds?: readonly number[];
 }
 
 export function createTestBuild(data: GameData, options: TestBuildOptions = {}): BuildState {
@@ -41,6 +43,7 @@ export function createTestBuild(data: GameData, options: TestBuildOptions = {}):
   build.character = { jobId: options.jobId ?? CLASS_IDS.seraph, level: options.level ?? 190 };
   Object.assign(page, options.stats);
   build.buffs.rmBuffs.enabled = options.rmBuffs ?? false;
+  build.buffs.classSkillIds = [...(options.classSkillIds ?? [])];
 
   return build;
 }

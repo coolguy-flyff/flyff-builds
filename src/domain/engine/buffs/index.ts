@@ -1,9 +1,10 @@
 import type { GameData } from '@/data';
-import { memoByRef } from '@/lib/memo';
+import { memoByRef, memoByRefAndKey } from '@/lib/memo';
 
 import type { BuffsState } from '../../build/schema';
 import { createSink, type Collected } from '../abilities/collect';
 import { collectAchievement } from './achievements';
+import { collectClassSkills } from './classSkills';
 import { collectHousingNpcs } from './housing';
 import { collectPremiumItems } from './premiumItems';
 import { rmBuffContributions } from './rmBuffs';
@@ -14,13 +15,15 @@ export interface BuffsResolution extends Collected {
 
 /**
  * The global buff configuration shared by every swap, in Flyffulator's aggregation order: active
- * items, buffs, housing NPCs, achievements (flyffentity.js:1328-1512).
+ * items, buffs (RM buffs, then the character's own class skills), housing NPCs, achievements
+ * (flyffentity.js:1328-1512).
  */
-function collectBuffs(data: GameData, buffs: BuffsState): BuffsResolution {
+function collectBuffs(data: GameData, buffs: BuffsState, level: number): BuffsResolution {
   const sink = createSink();
   const hasUpcutStone = collectPremiumItems(data, buffs.premiumItemIds, sink);
 
   sink.contributions.push(...rmBuffContributions(data, buffs.rmBuffs));
+  collectClassSkills(data, buffs.classSkillIds, level, sink);
   collectHousingNpcs(data, buffs, sink);
   collectAchievement(data, buffs.achievementId, sink);
 
@@ -28,11 +31,13 @@ function collectBuffs(data: GameData, buffs: BuffsState): BuffsResolution {
 }
 
 const memo = memoByRef((data: GameData) =>
-  memoByRef((buffs: BuffsState) => collectBuffs(data, buffs)),
+  memoByRefAndKey((buffs: BuffsState, level: number) => collectBuffs(data, buffs, level)),
 );
 
-export function resolveBuffs(data: GameData, buffs: BuffsState): BuffsResolution {
-  return memo(data)(buffs);
+/** The buffs as they apply at the character's level (class skills above it are locked). */
+export function resolveBuffs(data: GameData, buffs: BuffsState, level: number): BuffsResolution {
+  return memo(data)(buffs, level);
 }
 
-export { maxBuffContributions, rmBuffContributions } from './rmBuffs';
+export { maxedSkillContributions } from './maxedSkill';
+export { rmBuffContributions } from './rmBuffs';

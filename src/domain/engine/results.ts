@@ -25,7 +25,7 @@ export function computeAllResults(
       continue;
     }
 
-    const resolved = resolveGearSwap(data, build, swap);
+    const resolved = resolveGearSwap(data, build, swap, options);
 
     results.push({ swapId: swap.id, resolved, page: computeResultsPage(data, resolved, options) });
   }

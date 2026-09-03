@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import type { BuildState } from '@/domain/build';
-import { computeAllResults } from '@/domain/engine';
+import { computeAllResults, DEFAULT_ENGINE_OPTIONS, type EngineOptions } from '@/domain/engine';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { memoByRef } from '@/lib/memo';
@@ -10,7 +10,7 @@ import { buildExportTable, renderExport, type ExportFormat } from '@/results/exp
 import { buildRows, groupRows } from '@/results/rowCatalog';
 import { useActions, useAppStore, useBuild, useGameData, useSelectors } from '@/state';
 
-import { buildColumns, engineFootnotes, visibleColumns } from './columns';
+import { buildColumns, engineFootnotes, petGraceHint, visibleColumns } from './columns';
 import {
   copyText,
   CSV_FILENAME,
@@ -37,9 +37,13 @@ export function ResultsPage({ onOpenSwap }: ResultsPageProps) {
   const selectors = useSelectors();
   const actions = useActions();
   const view = useAppStore((state) => state.ui.results);
+  const options = useMemo(
+    (): EngineOptions => ({ ...DEFAULT_ENGINE_OPTIONS, petGrace: view.petGrace }),
+    [view.petGrace],
+  );
   const resultsOf = useMemo(
-    () => memoByRef((current: BuildState) => computeAllResults(data, current)),
-    [data],
+    () => memoByRef((current: BuildState) => computeAllResults(data, current, options)),
+    [data, options],
   );
   const results = resultsOf(build);
   const columns = buildColumns(data, build, selectors, results);
@@ -154,6 +158,7 @@ export function ResultsPage({ onOpenSwap }: ResultsPageProps) {
               hidden: !visible.includes(column),
             }))}
             baselineSwapId={baselineSwapId}
+            petGraceHint={petGraceHint(data)}
             onViewChange={(patch) => {
               actions.updateResultsView(patch);
             }}

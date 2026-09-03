@@ -12,9 +12,11 @@ import { resolveEquipmentSetEntry } from './gear/equipmentSet';
 import { resolveFashionSetEntry } from './gear/fashionSet';
 import { collectMask } from './gear/mask';
 import { resolvePetEntry } from './gear/pet';
+import { resolvePetGrace } from './gear/petGrace';
 import { resolveShieldEntry } from './gear/shield';
 import { resolveWeaponEntry } from './gear/weapon';
 import { ENGINE_ISSUE_CODES, engineError, type EngineIssue } from './issues';
+import { DEFAULT_ENGINE_OPTIONS, type EngineOptions } from './options';
 import type { EquippedItem, ResolvedCharacter, ResolvedOffhand } from './types';
 
 interface Identified {
@@ -156,6 +158,7 @@ export function resolveGearSwap(
   data: GameData,
   build: BuildState,
   swap: GearSwap,
+  options: EngineOptions = DEFAULT_ENGINE_OPTIONS,
 ): ResolvedCharacter {
   const job = requireClass(data, build.character.jobId);
   const level = build.character.level;
@@ -188,8 +191,9 @@ export function resolveGearSwap(
   const fashion = fashionEntry === null ? null : resolveFashionSetEntry(data, fashionEntry);
   const petEntry = findEntry(build.pets, swap.petId, 'Pet', issues);
   const pet = petEntry === null ? null : resolvePetEntry(data, petEntry);
+  const grace = petEntry !== null && options.petGrace ? resolvePetGrace(data, petEntry) : null;
   const mask = collectMask(data, swap.maskItemId);
-  const buffs = resolveBuffs(data, build.buffs);
+  const buffs = resolveBuffs(data, build.buffs, build.character.level);
 
   // Grouped by source in Flyffulator's slot order (flyffentity.js:14-33), then the swap-wide
   // sources in its aggregation order (flyffentity.js:1328-1512).
@@ -201,6 +205,7 @@ export function resolveGearSwap(
     fashion,
     mask,
     pet,
+    grace,
     buffs,
   ];
 
@@ -228,6 +233,7 @@ export function resolveGearSwap(
     armorPieces,
     armorSetUpgradeLevel: equipment !== null && equipment.set !== null ? equipment.upgrade : 0,
     hasUpcutStone: buffs.hasUpcutStone,
+    petGrace: grace?.grace ?? null,
     issues,
   };
 }

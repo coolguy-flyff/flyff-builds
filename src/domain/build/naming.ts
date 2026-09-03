@@ -1,7 +1,22 @@
-import { getItem, getStatName, type Ability, type GameData, type SlimItem } from '@/data';
+import {
+  ACCESSORY_SET_IDS,
+  getItem,
+  getStatName,
+  type Ability,
+  type AccessorySet,
+  type GameData,
+  type SlimItem,
+} from '@/data';
 import { roundTo } from '@/lib/math';
 
-import { minBlessingSlots, reachablePetTotals, setAwakeTotals, statAwakeTotals } from '../rules';
+import {
+  accessoryParts,
+  type AccessoryPart,
+  minBlessingSlots,
+  reachablePetTotals,
+  setAwakeTotals,
+  statAwakeTotals,
+} from '../rules';
 
 import type {
   AccessorySetEntry,
@@ -320,16 +335,61 @@ export function accessoryUpgradeSignature(entry: AccessorySetEntry): string {
   return [ring1, earring1, necklace, earring2, ring2].map(upgradeDigit).join('');
 }
 
+/** Set abbreviations for mixed names (plan feedback 2026-09-03, item 4). */
+const ACCESSORY_SET_ABBREVIATIONS: Readonly<Record<number, string>> = {
+  [ACCESSORY_SET_IDS.adepts]: 'Adept',
+  [ACCESSORY_SET_IDS.marksmans]: 'MM',
+  [ACCESSORY_SET_IDS.defenders]: 'Def',
+  [ACCESSORY_SET_IDS.champions]: 'Champ',
+};
+
+/** Two or more CW jewel lines in one mix read as one collective part. */
+const CW_JEWELS_LABEL = 'CW';
+
+/** "Adept", "MM", "Def", "Champ" — falls back to the short name for a set the table doesn't know. */
+export function accessorySetAbbreviation(set: AccessorySet): string {
+  return ACCESSORY_SET_ABBREVIATIONS[set.id] ?? accessorySetShortName(set.name);
+}
+
+/**
+ * "Adept/CW", "Adept/Speedo", "Def/MM": one label per part in part order (the entry's set first);
+ * two or more CW jewel lines collapse into "CW" where the first of them sits.
+ */
+function accessoryMixLabel(parts: readonly AccessoryPart[]): string {
+  const lineCount = parts.filter((part) => part.source.kind === 'line').length;
+  const labels: string[] = [];
+
+  for (const part of parts) {
+    if (part.source.kind === 'set') {
+      labels.push(accessorySetAbbreviation(part.source.set));
+    } else if (lineCount === 1) {
+      labels.push(part.source.line.name);
+    } else if (!labels.includes(CW_JEWELS_LABEL)) {
+      labels.push(CW_JEWELS_LABEL);
+    }
+  }
+
+  return labels.join('/');
+}
+
+/**
+ * "Adept's X0700" for a full set, "Clean Adept's" at +0; a mix reads "Adept/CW X555X" — the parts
+ * by abbreviation, then the same per-piece upgrade signature in wear order.
+ */
 export function autoAccessorySetName(data: GameData, entry: AccessorySetEntry): string {
-  const set = data.accessorySets.find((candidate) => candidate.id === entry.setId);
+  const parts = accessoryParts(data, entry);
+  const [first] = parts;
   let name = 'Accessory set';
 
-  if (set !== undefined) {
-    const short = accessorySetShortName(set.name);
+  if (first !== undefined) {
+    const label =
+      parts.length === 1 && first.source.kind === 'set'
+        ? accessorySetShortName(first.source.set.name)
+        : accessoryMixLabel(parts);
     const signature = accessoryUpgradeSignature(entry);
 
     // All pieces at +0 read better as "Clean Adept's" than "Adept's 00000".
-    name = signature === '00000' ? `Clean ${short}` : `${short} ${signature}`;
+    name = signature === '00000' ? `Clean ${label}` : `${label} ${signature}`;
   }
 
   return name;

@@ -8,6 +8,14 @@ export interface EngineOptions {
    * this synergy as a TODO (flyffdamagecalculator.js:56).
    */
   readonly applyHealSynergy: boolean;
+  /**
+   * Apply each swap's pet grace buff (plan feedback 2026-09-03, item 3) — a short, on-demand buff
+   * the results view toggles rather than a standing part of the build.
+   */
+  readonly petGrace: boolean;
 }
 
-export const DEFAULT_ENGINE_OPTIONS: EngineOptions = Object.freeze({ applyHealSynergy: true });
+export const DEFAULT_ENGINE_OPTIONS: EngineOptions = Object.freeze({
+  applyHealSynergy: true,
+  petGrace: false,
+});

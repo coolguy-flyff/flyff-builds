@@ -1,8 +1,9 @@
-import { CLASS_IDS, type GameData, requireClass } from '@/data';
+import { CLASS_IDS, defaultClassSkillIds, type GameData, requireClass } from '@/data';
 
 import {
   BUILD_SCHEMA_VERSION,
   MIN_BASE_STAT,
+  type AccessoryPieceSources,
   type AccessorySetEntry,
   type BuildState,
   type EquipmentSetEntry,
@@ -42,6 +43,11 @@ export function createShieldEntry(id: number): ShieldEntry {
   return { id, itemId: null, upgrade: 0, statAwake: [null, null], skillAwake: null, cards: [] };
 }
 
+/** No per-piece overrides: every piece follows the entry's set. */
+export function emptyPieceSources(): AccessoryPieceSources {
+  return { ring1: null, ring2: null, earring1: null, earring2: null, necklace: null };
+}
+
 export function createAccessorySetEntry(id: number, setId: number | null): AccessorySetEntry {
   return {
     id,
@@ -50,6 +56,7 @@ export function createAccessorySetEntry(id: number, setId: number | null): Acces
     earring2: 'plug',
     necklace: 'gore',
     upgrades: { ring1: 0, ring2: 0, earring1: 0, earring2: 0, necklace: 0 },
+    pieceSources: emptyPieceSources(),
   };
 }
 
@@ -76,7 +83,10 @@ export function createGearSwap(id: number, statPageId: number): GearSwap {
   };
 }
 
-/** Fresh state: Seraph 190, one empty stat page, RM buffs on, one empty swap (plan A0.4). */
+/**
+ * Fresh state: Seraph 190, one empty stat page, RM buffs and the job's permanent passives on, one
+ * empty swap (plan A0.4).
+ */
 export function createDefaultBuild(data: GameData): BuildState {
   const job = requireClass(data, DEFAULT_JOB_ID);
   const statPage = createStatPage(1);
@@ -95,6 +105,7 @@ export function createDefaultBuild(data: GameData): BuildState {
     pets: [],
     buffs: {
       rmBuffs: { enabled: true, excludedSkillIds: [] },
+      classSkillIds: defaultClassSkillIds(data, job.id),
       premiumItemIds: [],
       personalNpcIds: [],
       coupleNpcIds: [],

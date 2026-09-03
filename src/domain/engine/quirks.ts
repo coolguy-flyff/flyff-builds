@@ -75,14 +75,17 @@ export const FLYFFULATOR_QUIRKS = {
   },
   buffScalingAtCap: {
     description:
-      'Max RM buffs assume the caster’s INT reaches every scaling cap, i.e. ' +
-      '`min(bufferInt · scale, maximum)` collapses to `maximum`.',
-    reference: 'flyffentity.js:1397-1424',
+      'Maxed buffs assume the caster’s stat reaches every scaling cap, i.e. ' +
+      '`min(bufferStat · scale, maximum)` collapses to `maximum`; a scaling without a cap is ' +
+      'skipped, as is the first-scaling-only rule per parameter.',
+    reference: 'flyffentity.js:1386-1424',
   },
-  buffSynergiesNeedSkillLevels: {
+  buffSynergiesFlatPerLevel: {
     description:
-      'Buff synergies read the caster’s skill levels, which Flyffulator never sets for RM buffs; ' +
-      'they contribute nothing and the engine skips them.',
+      'Buff synergies add `floor(scale · (sourceLevel − minLevel))` per ability; the engine feeds ' +
+      'them the source skill’s maximum level where Flyffulator reads the caster’s learned levels. ' +
+      'The floor matches the game (Heaven’s Step (Critical Resistance) shows 7%, not 7.5%, in ' +
+      'game — confirmed 2026-09-03).',
     reference: 'flyffentity.js:1367-1384',
   },
 } as const satisfies Record<string, FlyffulatorQuirk>;

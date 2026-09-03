@@ -11,7 +11,8 @@ const PLACEMENT_CLASSES: Record<TooltipPlacement, string> = {
 
 /**
  * Hover/focus tooltip (plan D7 menu-panel style): a real positioned panel, not the browser's
- * `title` bubble. Pure CSS — visible while the wrapper is hovered or holds focus.
+ * `title` bubble. Pure CSS — visible while the wrapper is hovered or holds keyboard focus (`focus-visible`, so a
+ * mouse click does not pin it open).
  */
 export function Tooltip({
   content,
@@ -30,7 +31,7 @@ export function Tooltip({
       <span
         role="tooltip"
         className={cx(
-          'pointer-events-none absolute left-1/2 z-40 w-max max-w-[340px] -translate-x-1/2 rounded-sub border border-white/15 bg-backdrop px-3 py-2 text-left text-[11.5px] leading-relaxed whitespace-normal text-text-2 opacity-0 shadow-panel transition-opacity delay-100 group-focus-within/tip:opacity-100 group-hover/tip:opacity-100',
+          'pointer-events-none absolute left-1/2 z-40 w-max max-w-[340px] -translate-x-1/2 rounded-sub border border-white/15 bg-backdrop px-3 py-2 text-left text-[11.5px] leading-relaxed whitespace-normal text-text-2 opacity-0 shadow-panel transition-opacity delay-100 group-has-[:focus-visible]/tip:opacity-100 group-hover/tip:opacity-100',
           PLACEMENT_CLASSES[placement],
         )}
       >

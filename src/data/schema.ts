@@ -25,6 +25,7 @@ export const CLASS_TYPES = ['beginner', 'expert', 'professional', 'specialist'] 
 export const ARMOR_PARTS = ['helmet', 'suit', 'gauntlet', 'boots'] as const;
 export const EARRING_VARIANTS = ['plug', 'demol'] as const;
 export const NECKLACE_VARIANTS = ['gore', 'mental', 'peision'] as const;
+export const ACCESSORY_SLOTS = ['ring', 'earring', 'necklace'] as const;
 
 const nonNegativeInt = z.number().int().nonnegative();
 
@@ -115,6 +116,26 @@ export const AccessorySetSchema = z.object({
   bonus: z.array(SetBonusSchema),
 });
 
+/** One item of an accessory line: "Speedo +3" is the tier at upgrade 3 (a lone "Meteofy" is upgrade 0). */
+export const AccessoryLineTierSchema = z.object({
+  upgrade: nonNegativeInt,
+  itemId: nonNegativeInt,
+});
+
+/**
+ * A standalone accessory line — the Clockworks "CW jewels" (Speedo +1…+5, Strente +1…+5,
+ * Meteofy, …) that can replace single pieces of an accessory set. Each "+N" is its own item in
+ * the game data, so a line is the ordered list of those items; `id` is the lowest tier's item id.
+ */
+export const AccessoryLineSchema = z.object({
+  id: nonNegativeInt,
+  name: z.string().min(1),
+  slot: z.enum(ACCESSORY_SLOTS),
+  icon: z.string().min(1),
+  /** Ascending, contiguous upgrades. */
+  tiers: z.array(AccessoryLineTierSchema).min(1),
+});
+
 export const StatAwakeDefSchema = z.object({
   title: z.string().min(1),
   minimumLevel: nonNegativeInt,
@@ -176,12 +197,27 @@ export const HousingNpcSchema = z.object({
   abilities: z.array(AbilitySchema),
 });
 
+/**
+ * The pet's grace skill: a short buff the pet casts on demand (Pets.json tier data + Skills.json).
+ * `levels[n − 1]` holds the abilities at grace level n, which equals the number of raised tiers.
+ */
+export const PetGraceSchema = z.object({
+  skillId: nonNegativeInt,
+  name: z.string().min(1),
+  icon: z.string().min(1),
+  durationSeconds: nonNegativeInt,
+  cooldownSeconds: nonNegativeInt,
+  energy: nonNegativeInt,
+  levels: z.array(z.array(AbilitySchema)).min(1),
+});
+
 export const PetDefSchema = z.object({
   petItemId: nonNegativeInt,
   name: z.string().min(1),
   parameter: z.string().min(1),
   rate: z.boolean(),
   values: z.array(z.number()).length(9),
+  grace: PetGraceSchema.optional(),
 });
 
 export const ScalingParameterSchema = z.object({
@@ -197,6 +233,8 @@ export const ScalingParameterSchema = z.object({
 export const SynergySchema = z.object({
   parameter: z.string().min(1),
   skill: nonNegativeInt,
+  /** Level count of `skill`, so "synergy source maxed" needs no lookup at runtime. */
+  sourceLevelCount: z.number().int().positive(),
   minLevel: nonNegativeInt,
   add: z.boolean(),
   scale: z.number(),
@@ -216,6 +254,26 @@ export const SlimSkillSchema = z.object({
   }),
 });
 
+/** `classBuff` targets others too (party / single), `selfBuff` only the caster. */
+export const CLASS_SKILL_KINDS = ['classBuff', 'selfBuff', 'passive'] as const;
+
+/**
+ * A buff or passive of a third-job class chain that grants stats (plan feedback 2026-09-03):
+ * everything the app needs to list it under its job and to apply it at max level.
+ */
+export const ClassSkillSchema = SlimSkillSchema.extend({
+  /** The class that teaches the skill (any class of the chain, Vagrant included). */
+  classId: nonNegativeInt,
+  /** Character level required to learn it; orders the rows within a class. */
+  level: nonNegativeInt,
+  kind: z.enum(CLASS_SKILL_KINDS),
+  /** Master variations share the id of their base skill and are mutually exclusive. */
+  familyId: nonNegativeInt,
+  /** Always active once learned (the data encodes permanent passives as one-hour buffs). */
+  permanent: z.boolean(),
+  durationSeconds: z.number().optional(),
+});
+
 export const ManifestSchema = z.object({
   generatedAt: z.string().min(1),
   generator: z.string().min(1),
@@ -231,6 +289,7 @@ export const GeneratedDataSchema = z.object({
   classes: z.array(SlimClassSchema),
   armorSets: z.array(ArmorSetSchema),
   accessorySets: z.array(AccessorySetSchema),
+  accessoryLines: z.array(AccessoryLineSchema),
   statAwakes: z.array(StatAwakeDefSchema),
   skillAwakes: SkillAwakeTableSchema,
   awakeSkills: z.array(AwakeSkillSchema),
@@ -240,6 +299,7 @@ export const GeneratedDataSchema = z.object({
   housingNpcs: z.array(HousingNpcSchema),
   pets: z.array(PetDefSchema),
   skills: z.array(SlimSkillSchema),
+  classSkills: z.array(ClassSkillSchema),
   statNames: z.record(z.string(), z.string()),
   manifest: ManifestSchema,
 });
@@ -250,6 +310,7 @@ export const GENERATED_TABLE_FILES = {
   classes: 'classes.json',
   armorSets: 'armorSets.json',
   accessorySets: 'accessorySets.json',
+  accessoryLines: 'accessoryLines.json',
   statAwakes: 'statAwakes.json',
   skillAwakes: 'skillAwakes.json',
   awakeSkills: 'awakeSkills.json',
@@ -259,6 +320,7 @@ export const GENERATED_TABLE_FILES = {
   housingNpcs: 'housingNpcs.json',
   pets: 'pets.json',
   skills: 'skills.json',
+  classSkills: 'classSkills.json',
   statNames: 'statNames.json',
   manifest: 'manifest.json',
 } as const satisfies Record<keyof z.infer<typeof GeneratedDataSchema>, string>;
@@ -272,6 +334,7 @@ export type HousingGroup = (typeof HOUSING_GROUPS)[number];
 export type ArmorPart = (typeof ARMOR_PARTS)[number];
 export type EarringVariant = (typeof EARRING_VARIANTS)[number];
 export type NecklaceVariant = (typeof NECKLACE_VARIANTS)[number];
+export type AccessorySlot = (typeof ACCESSORY_SLOTS)[number];
 
 export type Ability = z.infer<typeof AbilitySchema>;
 export type UpgradeLevel = z.infer<typeof UpgradeLevelSchema>;
@@ -280,6 +343,8 @@ export type SlimClass = z.infer<typeof SlimClassSchema>;
 export type SetBonus = z.infer<typeof SetBonusSchema>;
 export type ArmorSet = z.infer<typeof ArmorSetSchema>;
 export type AccessorySet = z.infer<typeof AccessorySetSchema>;
+export type AccessoryLineTier = z.infer<typeof AccessoryLineTierSchema>;
+export type AccessoryLine = z.infer<typeof AccessoryLineSchema>;
 export type StatAwakeDef = z.infer<typeof StatAwakeDefSchema>;
 export type SkillAwakeTable = z.infer<typeof SkillAwakeTableSchema>;
 export type AwakeSkill = z.infer<typeof AwakeSkillSchema>;
@@ -287,10 +352,13 @@ export type UpgradeBonusRow = z.infer<typeof UpgradeBonusRowSchema>;
 export type BlessingTable = z.infer<typeof BlessingTableSchema>;
 export type Achievement = z.infer<typeof AchievementSchema>;
 export type HousingNpc = z.infer<typeof HousingNpcSchema>;
+export type PetGrace = z.infer<typeof PetGraceSchema>;
 export type PetDef = z.infer<typeof PetDefSchema>;
 export type ScalingParameter = z.infer<typeof ScalingParameterSchema>;
 export type Synergy = z.infer<typeof SynergySchema>;
 export type SlimSkill = z.infer<typeof SlimSkillSchema>;
+export type ClassSkillKind = (typeof CLASS_SKILL_KINDS)[number];
+export type ClassSkill = z.infer<typeof ClassSkillSchema>;
 export type Manifest = z.infer<typeof ManifestSchema>;
 export type GeneratedData = z.infer<typeof GeneratedDataSchema>;
 export type GeneratedTableName = keyof GeneratedData;
