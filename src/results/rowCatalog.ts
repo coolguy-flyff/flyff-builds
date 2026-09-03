@@ -165,7 +165,7 @@ function healingDetails(key: keyof HealingSkills): CellDetails {
       const multiplier = 1 + heal.healingRate / 100;
 
       lines = [
-        { label: 'Skill output (base, stat scaling, synergy)', value: formatInt(heal.skillOutput) },
+        { label: 'Skill output', value: formatInt(heal.skillOutput) },
         { label: 'Healing % multiplier', value: `×${multiplier.toFixed(2)}` },
         { label: 'Gain from multiplier', value: `+${formatInt(heal.total - heal.skillOutput)}` },
       ];
