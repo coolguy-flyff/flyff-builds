@@ -7,10 +7,11 @@ import type { ResolvedCharacter } from '../types';
 import { computeAttack } from './attack';
 import {
   computeBlockBreakdown,
-  computeCriticalChance,
+  computeCriticalChanceBreakdown,
   computeHitRate,
   computeParry,
   type BlockBreakdown,
+  type CriticalChanceBreakdown,
 } from './combat';
 import { createStatContext } from './context';
 import { computeDefense, computeEquipmentDefenseRange, computeMagicDefense } from './defense';
@@ -44,6 +45,7 @@ export interface ResultsPage {
   readonly jumpHeight: number;
   readonly castingSpeed: number;
   readonly attackSpeed: number;
+  readonly actionSpeed: number;
   readonly attack: number;
   readonly magicAttack: number;
   readonly skillDamage: number;
@@ -51,6 +53,7 @@ export interface ResultsPage {
   readonly pvpDamage: number;
   readonly hitRate: number;
   readonly criticalChance: number;
+  readonly criticalChanceBreakdown: CriticalChanceBreakdown;
   readonly criticalDamage: number;
   readonly blockPenetration: number;
   readonly healing: number;
@@ -87,6 +90,7 @@ export function computeResultsPage(
   const fp = computeFpBreakdown(ctx);
   const meleeBlock = computeBlockBreakdown(ctx, false);
   const rangedBlock = computeBlockBreakdown(ctx, true);
+  const criticalChance = computeCriticalChanceBreakdown(ctx);
 
   return {
     str: ctx.base('str'),
@@ -103,13 +107,15 @@ export function computeResultsPage(
     jumpHeight: computeJumpHeight(ctx),
     castingSpeed: computeCastingSpeed(ctx),
     attackSpeed: attackSpeedPercent(computeAttackSpeedFactor(ctx)),
+    actionSpeed: rate('actionspeed'),
     attack: computeAttack(ctx),
     magicAttack: rate('magicattack'),
     skillDamage: rate('skilldamage'),
     pveDamage: rate('pvedamage'),
     pvpDamage: rate('pvpdamage'),
     hitRate: computeHitRate(ctx).probAdjusted,
-    criticalChance: computeCriticalChance(ctx),
+    criticalChance: criticalChance.total,
+    criticalChanceBreakdown: criticalChance,
     criticalDamage: rate('criticaldamage'),
     blockPenetration: rate('blockpenetration'),
     healing: rate('healing'),

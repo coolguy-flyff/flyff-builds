@@ -47,5 +47,6 @@ export {
   BLOCK_EFFECTIVE_MAX,
   BLOCK_EFFECTIVE_MIN,
   type BlockBreakdown,
+  type CriticalChanceBreakdown,
 } from './stats/combat';
 export type { EquippedItem, ResolvedCharacter, ResolvedOffhand } from './types';

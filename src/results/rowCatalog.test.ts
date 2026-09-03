@@ -4,11 +4,18 @@ import { loadBundledGameData } from '@/data';
 import { createDefaultBuild } from '@/domain/build';
 import { computeAllResults } from '@/domain/engine';
 
+import { requireDefined } from '@/lib/assert';
+
+import { cellDetails } from './cellDetails';
 import { buildRows, groupLabel, groupRows, RESULTS_GROUPS } from './rowCatalog';
 import { makePage, withPage } from './testing/fixtures';
 
 const data = loadBundledGameData();
 const NO_RAW = { showRawTotals: false };
+
+function labelsOf(...pages: ReturnType<typeof makePage>[]): string[] {
+  return buildRows(data, pages.map(withPage), NO_RAW).map((row) => row.label);
+}
 
 describe('buildRows', () => {
   it('lists the static groups in catalogue order with the A4.2 rows', () => {
@@ -22,8 +29,9 @@ describe('buildRows', () => {
       'offense',
       'defense',
     ]);
-    // Defense ends with one "Block %" row while melee and ranged block agree in every column.
-    expect(groups.map((bucket) => bucket.rows.length)).toEqual([4, 3, 4, 10, 9]);
+    // The bare page has every plain % total at 0 and jump height at 100, so those rows are left
+    // out; defense ends with one "Block %" row while melee and ranged block agree everywhere.
+    expect(groups.map((bucket) => bucket.rows.length)).toEqual([4, 3, 2, 2, 4]);
     expect(rows.map((row) => row.label).slice(0, 7)).toEqual([
       'STR',
       'STA',
@@ -48,10 +56,44 @@ describe('buildRows', () => {
   });
 
   it('marks incoming damage as lower-is-better and everything else as higher-is-better', () => {
-    const rows = buildRows(data, [withPage(makePage())], NO_RAW);
+    const rows = buildRows(data, [withPage(makePage({ incomingDamage: 5 }))], NO_RAW);
     const lowerIsBetter = rows.filter((row) => !row.higherIsBetter).map((row) => row.id);
 
     expect(lowerIsBetter).toEqual(['incomingDamage']);
+  });
+
+  it('leaves out rows that sit at their idle value in every column (feedback 2026-09-04)', () => {
+    const idle = makePage();
+
+    expect(labelsOf(idle, idle)).not.toContain('Skill damage %');
+    expect(labelsOf(idle, idle)).not.toContain('Incoming damage %');
+    expect(labelsOf(idle, idle)).not.toContain('Jump height %');
+    expect(labelsOf(idle, idle)).not.toContain('Action speed %');
+    // One column with a value brings the row back for every column.
+    expect(labelsOf(idle, makePage({ skillDamage: 10, jumpHeight: 150, actionSpeed: 15 }))).toEqual(
+      expect.arrayContaining(['Skill damage %', 'Jump height %', 'Action speed %']),
+    );
+    // Rows with a DEX term are never idle.
+    expect(labelsOf(idle)).toEqual(expect.arrayContaining(['Critical chance %', 'Parry']));
+  });
+
+  it('shows neither attack speed nor hit rate', () => {
+    expect(labelsOf(makePage({ attackSpeed: 80, hitRate: 96 }))).not.toContain('Attack speed %');
+    expect(labelsOf(makePage({ attackSpeed: 80, hitRate: 96 }))).not.toContain('Hit rate %');
+  });
+
+  it('explains critical chance as the DEX term plus its sources', () => {
+    // A fresh Seraph with max RM buffs: DEX 15 + 40 (Cannon Ball) = 55 → floor(5.5 × 1) = 5.
+    const [result] = computeAllResults(data, createDefaultBuild(data));
+    const swap = requireDefined(result, 'first swap');
+    const row = requireDefined(
+      buildRows(data, [swap], NO_RAW).find((candidate) => candidate.id === 'criticalChance'),
+      'critical chance row',
+    );
+
+    expect(row.tooltip).toContain('DEX ÷ 10 × job factor');
+    expect(row.select(swap.page)).toBe(5);
+    expect(cellDetails(row, swap)).toEqual([{ label: 'From DEX (job factor)', value: '5%' }]);
   });
 
   it('adds the healing group only when a column has healing skills', () => {

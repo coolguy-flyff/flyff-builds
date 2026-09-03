@@ -163,6 +163,7 @@ describe.skipIf(!hasFlyffulator())('Flyffulator parity', () => {
         expect(page.movementSpeed).toBe(entity.getMovementSpeed());
         expect(page.jumpHeight).toBe((entity.getStat('jumpheight', false) + 200) / 2);
         expect(page.castingSpeed).toBe(100 + entity.getStat('decreasedcastingtime', true));
+        expect(page.actionSpeed).toBe(entity.getStat('actionspeed', true));
         expect(page.attackSpeed).toBe(Math.floor(entity.getAttackSpeed() * 100) / 2);
         expect(page.attack).toBe(entity.getAttack());
         expect(page.hitRate).toBe(entity.getContextHitRate(dummy).probAdjusted);

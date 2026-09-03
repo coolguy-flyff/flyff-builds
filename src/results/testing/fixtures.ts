@@ -23,6 +23,7 @@ export const BASE_PAGE: ResultsPage = {
   jumpHeight: 100,
   castingSpeed: 100,
   attackSpeed: 42,
+  actionSpeed: 0,
   attack: 217,
   magicAttack: 0,
   skillDamage: 0,
@@ -30,6 +31,8 @@ export const BASE_PAGE: ResultsPage = {
   pvpDamage: 0,
   hitRate: 20,
   criticalChance: 1,
+  // DEX 15 / 10 × Seraph factor 1 = 1.5, floored.
+  criticalChanceBreakdown: { fromDex: 1, fromGear: 0, total: 1 },
   criticalDamage: 0,
   blockPenetration: 0,
   healing: 0,

@@ -28,7 +28,7 @@ export interface ResultsTableProps {
 
 const STAT_COLUMN_WIDTH_PX = 200;
 /** Fixed swap-column width: values stay close together instead of stretching across the page. */
-const SWAP_COLUMN_WIDTH_PX = 230;
+const SWAP_COLUMN_WIDTH_PX = 229;
 
 const CELL = 'border-t border-white/5 px-3.5 py-1.5';
 const STICKY_LEFT = 'sticky left-0 z-10';

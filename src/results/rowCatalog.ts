@@ -68,10 +68,15 @@ export interface ResultsRow {
   readonly format: RowFormat;
   readonly higherIsBetter: boolean;
   readonly tooltip?: string | undefined;
-  /** Precomputed factors for the cell tooltip (max HP/MP/FP, the DEX term of block), shown first. */
+  /** Precomputed factors for the cell tooltip (max HP/MP/FP, the DEX terms), shown first. */
   readonly details?: CellDetails | undefined;
   /** Stat totals whose contributions the cell tooltip lists as sources, after the factors. */
   readonly sources?: readonly SourceSpec[] | undefined;
+  /**
+   * What a column shows when nothing contributes to the row (0 for a plain stat total, 100 for
+   * jump height); the row is left out while every column sits at it.
+   */
+  readonly idleValue?: number | undefined;
   readonly select: (page: ResultsPage) => RowValue;
 }
 
@@ -107,6 +112,7 @@ interface ScalarRowOptions {
   readonly tooltip?: string;
   readonly details?: CellDetails;
   readonly sources?: readonly SourceSpec[];
+  readonly idleValue?: number;
 }
 
 function rateSource(parameter: string): readonly SourceSpec[] {
@@ -151,9 +157,37 @@ function scalarRow(
     tooltip: options.tooltip,
     details: options.details,
     sources: options.sources,
+    idleValue: options.idleValue,
     select: (page) => page[key],
   };
 }
+
+/** A row that is one stat total in %: its sources explain it, and it hides while 0 everywhere. */
+function rateRow(
+  group: ResultsGroupId,
+  key: NumericPageKey,
+  label: string,
+  parameter: string,
+  options: Pick<ScalarRowOptions, 'lowerIsBetter' | 'tooltip'> = {},
+): ResultsRow {
+  return scalarRow(group, key, label, 'percent', {
+    ...options,
+    sources: rateSource(parameter),
+    idleValue: 0,
+  });
+}
+
+/**
+ * Critical chance is the character's DEX term plus equipment and buffs (flyffentity.js:1608-1628);
+ * the job factor is 4 for Harlequin, 2 for Crackshooter and 1 for every other job.
+ */
+const CRITICAL_CHANCE_TOOLTIP =
+  'DEX ÷ 10 × job factor, rounded down, plus critical chance from equipment and buffs. ' +
+  'The job factor is 4 for Harlequin, 2 for Crackshooter and 1 for every other job.';
+
+const criticalChanceDetails: CellDetails = (page) => [
+  { label: 'From DEX (job factor)', value: formatPercent(page.criticalChanceBreakdown.fromDex) },
+];
 
 /** How a heal comes together (plan feedback 2026-09-03, item 4): formula, multiplier, gain. */
 function healingDetails(key: keyof HealingSkills): CellDetails {
@@ -167,7 +201,7 @@ function healingDetails(key: keyof HealingSkills): CellDetails {
       lines = [
         { label: 'Skill output', value: formatInt(heal.skillOutput) },
         { label: 'Healing % multiplier', value: `×${multiplier.toFixed(2)}` },
-        { label: 'Gain from multiplier', value: `+${formatInt(heal.total - heal.skillOutput)}` },
+        { label: 'Gained from multiplier', value: `+${formatInt(heal.total - heal.skillOutput)}` },
       ];
     }
 
@@ -205,37 +239,27 @@ const STATIC_ROWS: readonly ResultsRow[] = [
   }),
   scalarRow('speed', 'jumpHeight', 'Jump height %', 'percent', {
     sources: [{ parameter: 'jumpheight', rate: false }],
+    idleValue: 100,
   }),
   scalarRow('speed', 'castingSpeed', 'Casting speed %', 'percent', {
     sources: rateSource('decreasedcastingtime'),
   }),
-  scalarRow('speed', 'attackSpeed', 'Attack speed %', 'percent'),
+  rateRow('speed', 'actionSpeed', 'Action speed %', 'actionspeed'),
+  // Attack speed and hit rate are computed but not shown (feedback 2026-09-04): hit rate means
+  // little without a real target's parry, and neither helps to compare gear.
   scalarRow('offense', 'attack', 'Attack', 'int'),
-  scalarRow('offense', 'magicAttack', 'Magic Attack %', 'percent', {
-    sources: rateSource('magicattack'),
-  }),
-  scalarRow('offense', 'skillDamage', 'Skill damage %', 'percent', {
-    sources: rateSource('skilldamage'),
-  }),
-  scalarRow('offense', 'pveDamage', 'PvE damage %', 'percent', {
-    sources: rateSource('pvedamage'),
-  }),
-  scalarRow('offense', 'pvpDamage', 'PvP damage %', 'percent', {
-    sources: rateSource('pvpdamage'),
-  }),
-  scalarRow('offense', 'hitRate', 'Hit rate %', 'percent', {
-    tooltip: 'Against a training dummy, clamped to 20–96%.',
-  }),
+  rateRow('offense', 'magicAttack', 'Magic Attack %', 'magicattack'),
+  rateRow('offense', 'skillDamage', 'Skill damage %', 'skilldamage'),
+  rateRow('offense', 'pveDamage', 'PvE damage %', 'pvedamage'),
+  rateRow('offense', 'pvpDamage', 'PvP damage %', 'pvpdamage'),
   scalarRow('offense', 'criticalChance', 'Critical chance %', 'percent', {
+    tooltip: CRITICAL_CHANCE_TOOLTIP,
+    details: criticalChanceDetails,
     sources: rateSource('criticalchance'),
   }),
-  scalarRow('offense', 'criticalDamage', 'Critical damage %', 'percent', {
-    sources: rateSource('criticaldamage'),
-  }),
-  scalarRow('offense', 'blockPenetration', 'Block penetration %', 'percent', {
-    sources: rateSource('blockpenetration'),
-  }),
-  scalarRow('offense', 'healing', 'Healing %', 'percent', { sources: rateSource('healing') }),
+  rateRow('offense', 'criticalDamage', 'Critical damage %', 'criticaldamage'),
+  rateRow('offense', 'blockPenetration', 'Block penetration %', 'blockpenetration'),
+  rateRow('offense', 'healing', 'Healing %', 'healing'),
   {
     id: 'defense',
     group: 'defense',
@@ -246,25 +270,21 @@ const STATIC_ROWS: readonly ResultsRow[] = [
     select: (page) => ({ min: page.defenseMin, max: page.defenseMax }),
   },
   scalarRow('defense', 'magicDefense', 'Magic defense', 'int'),
-  scalarRow('defense', 'magicResistance', 'Magic resistance %', 'percent', {
-    sources: rateSource('magicdefense'),
-  }),
-  scalarRow('defense', 'criticalResist', 'Critical resist %', 'percent', {
-    sources: rateSource('criticalresist'),
-  }),
-  scalarRow('defense', 'incomingDamage', 'Incoming damage %', 'percent', {
+  rateRow('defense', 'magicResistance', 'Magic resistance %', 'magicdefense'),
+  rateRow('defense', 'criticalResist', 'Critical resist %', 'criticalresist'),
+  rateRow('defense', 'incomingDamage', 'Incoming damage %', 'incomingdamage', {
     lowerIsBetter: true,
     tooltip: 'Lower is better.',
-    sources: rateSource('incomingdamage'),
   }),
-  scalarRow('defense', 'pveDamageReduction', 'PvE damage reduction %', 'percent', {
-    sources: rateSource('pvedamagereduction'),
-  }),
-  scalarRow('defense', 'pvpDamageReduction', 'PvP damage reduction %', 'percent', {
-    sources: rateSource('pvpdamagereduction'),
-  }),
+  rateRow('defense', 'pveDamageReduction', 'PvE damage reduction %', 'pvedamagereduction'),
+  rateRow('defense', 'pvpDamageReduction', 'PvP damage reduction %', 'pvpdamagereduction'),
   scalarRow('defense', 'parry', 'Parry', 'int', { sources: rateSource('parry') }),
 ];
+
+/** Rows nothing contributes to in any column stay out of the table (feedback 2026-09-04). */
+function isIdleEverywhere(row: ResultsRow, pages: readonly ResultsPage[]): boolean {
+  return row.idleValue !== undefined && pages.every((page) => row.select(page) === row.idleValue);
+}
 
 /**
  * Block is shown before the attacker is known (plan feedback 2026-09-03): the character's own
@@ -373,14 +393,17 @@ function rawRows(data: GameData, pages: readonly ResultsPage[]): ResultsRow[] {
   return rows.sort((a, b) => a.label.localeCompare(b.label));
 }
 
-/** The concrete rows for the current columns: static groups, healing when any column has it, raw totals on request. */
+/**
+ * The concrete rows for the current columns: the static groups minus the rows idle in every
+ * column, healing when any column has it, raw totals on request.
+ */
 export function buildRows(
   data: GameData,
   results: readonly Pick<SwapResult, 'page'>[],
   options: RowCatalogOptions,
 ): ResultsRow[] {
   const pages = results.map((result) => result.page);
-  const rows = [...STATIC_ROWS, ...blockRows(pages)];
+  const rows = [...STATIC_ROWS, ...blockRows(pages)].filter((row) => !isIdleEverywhere(row, pages));
 
   if (pages.some((page) => page.healingSkills !== null)) {
     rows.push(...HEALING_ROWS);

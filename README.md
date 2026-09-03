@@ -41,7 +41,8 @@ or link (`?b=<code>`) that "Import" previews before replacing the working build.
   time, and skills above the character's level are locked. A new swap is pre-filled with the
   first entry of every list so results appear immediately.
 - **Results** — sticky table, `Diff vs`, only-differing rows, best highlighting, raw stat totals,
-  column hiding and TSV / Markdown / CSV export. "Pet grace" applies each swap's pet grace buff
+  column hiding and TSV / Markdown / CSV export. Rows nothing contributes to in any column (a %
+  total at 0 everywhere, jump height at 100%) are left out. "Pet grace" applies each swap's pet grace buff
   (20 s, 2 min cooldown, 50 pet energy) at the level its raised tiers unlock — a what-if toggle,
   not part of the build. Footnotes list every degradation applied (ignored offhand, excess
   jewels, …).
@@ -91,8 +92,9 @@ lib ← data ← config ← domain ← share / persistence ← state ← compone
 
 Element upgrades, damage simulation, party skills, buff stacking rules and skill-damage awakes
 are out of scope. Class skills skip what a "maxed" model cannot express: scalings by equipment
-part or by another stat (Forcemaster aura effects) and caster-stat scalings without a cap. Hit
-rate is computed against Flyffulator's training dummy. Block is shown before any attacker is
+part or by another stat (Forcemaster aura effects) and caster-stat scalings without a cap. Attack
+speed and hit rate are not shown (hit rate means little without a real target's parry). Critical
+chance is DEX ÷ 10 × job factor, rounded down, plus equipment and buffs. Block is shown before any attacker is
 known — your DEX term plus equipment and buffs, uncapped — because the effective chance also
 depends on the attacker (DEX difference, block penetration, giants) before the game's 6.25–92.5%
 clamp; the row's tooltip spells that out. "Max RM buffs" assumes the caster's INT reaches every

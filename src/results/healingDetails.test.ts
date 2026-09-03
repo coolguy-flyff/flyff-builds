@@ -27,7 +27,7 @@ describe('healing row details (feedback 2026-09-03, item 4)', () => {
     expect(requireDefined(gloriaPatri.details, 'details')(page)).toEqual([
       { label: 'Skill output', value: '6,408' },
       { label: 'Healing % multiplier', value: '×1.80' },
-      { label: 'Gain from multiplier', value: '+5,126' },
+      { label: 'Gained from multiplier', value: '+5,126' },
     ]);
     expect(
       requireDefined(gloriaPatri.details, 'details')(makePage({ healingSkills: null })),

@@ -45,14 +45,21 @@ export function computeHitRate(ctx: StatContext): HitRate {
   };
 }
 
-/** flyffentity.js:1608-1628 at full health, no party Precision (FLYFFULATOR_QUIRKS.criticalChanceNotFloored) */
-export function computeCriticalChance(ctx: StatContext): number {
-  let chance = ctx.base('dex') / 10;
+/** Critical chance at full health with no party Precision (flyffentity.js:1608-1628). */
+export interface CriticalChanceBreakdown {
+  /** `floor(DEX / 10 × job factor)` — the character's own DEX. */
+  readonly fromDex: number;
+  /** The critical chance % from equipment and buffs. */
+  readonly fromGear: number;
+  /** `fromDex + fromGear`, at least 0 (FLYFFULATOR_QUIRKS.criticalChanceNotFloored). */
+  readonly total: number;
+}
 
-  chance = Math.floor(chance * ctx.job.critical);
-  chance += ctx.total('criticalchance', true);
+export function computeCriticalChanceBreakdown(ctx: StatContext): CriticalChanceBreakdown {
+  const fromDex = Math.floor((ctx.base('dex') / 10) * ctx.job.critical);
+  const fromGear = ctx.total('criticalchance', true);
 
-  return Math.max(chance, 0);
+  return { fromDex, fromGear, total: Math.max(fromDex + fromGear, 0) };
 }
 
 /** flyffentity.js:915-924 */
