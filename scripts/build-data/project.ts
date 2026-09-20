@@ -7,6 +7,7 @@ import type {
   PetDef,
   PetGrace,
   Rarity,
+  ScalingPart,
   SkillAwakeTable,
   SlimClass,
   SlimItem,
@@ -18,6 +19,7 @@ import type {
 import {
   CLASS_TYPES,
   RARITIES,
+  SCALING_PARTS,
   SEXES,
   STAT_KEYS,
   WEAPON_SUBCATEGORIES,
@@ -58,7 +60,11 @@ function isStatKey(value: string): value is StatKey {
   return (STAT_KEYS as readonly string[]).includes(value);
 }
 
-function stripUndefined<T extends object>(value: T): T {
+function isScalingPart(value: string): value is ScalingPart {
+  return (SCALING_PARTS as readonly string[]).includes(value);
+}
+
+export function stripUndefined<T extends object>(value: T): T {
   const entries = Object.entries(value).filter(([, v]) => v !== undefined);
 
   return Object.fromEntries(entries) as T;
@@ -429,6 +435,22 @@ export function maxLevelOf(raw: RawSkill): RawSkillLevel {
   return max;
 }
 
+function projectScalingPart(raw: RawSkill, part: string | undefined): ScalingPart | undefined {
+  let projected: ScalingPart | undefined;
+
+  if (part !== undefined) {
+    if (!isScalingPart(part)) {
+      throw new ProjectionError(
+        `Skill ${raw.id} "${raw.name.en}" scales by unknown part "${part}"`,
+      );
+    }
+
+    projected = part;
+  }
+
+  return projected;
+}
+
 export function projectSkill(raw: RawSkill, lookup: SkillLookup): SlimSkill {
   const max = maxLevelOf(raw);
 
@@ -448,6 +470,7 @@ export function projectSkill(raw: RawSkill, lookup: SkillLookup): SlimSkill {
               : isStatKey(scale.stat) || scale.stat === 'hp'
                 ? scale.stat
                 : undefined,
+          part: projectScalingPart(raw, scale.part),
           scale: scale.scale,
           maximum: scale.maximum,
           add: scale.add ?? true,

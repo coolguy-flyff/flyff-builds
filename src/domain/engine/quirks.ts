@@ -20,7 +20,7 @@ export const FLYFFULATOR_QUIRKS = {
   statScaleIgnoresMaximum: {
     description:
       '`getStatScale` never caps the referenced stat: the guard reads `scale.max` (a typo for ' +
-      '`scale.maximum`), so healing scaling is uncapped.',
+      '`scale.maximum`), so skill stat scaling is uncapped.',
     reference: 'flyffentity.js:1793',
   },
   defenseRateScalesMagicDefense: {
@@ -87,6 +87,25 @@ export const FLYFFULATOR_QUIRKS = {
       'The floor matches the game (Heaven’s Step (Critical Resistance) shows 7%, not 7.5%, in ' +
       'game — confirmed 2026-09-03).',
     reference: 'flyffentity.js:1367-1384',
+  },
+  attackSynergiesUnfloored: {
+    description:
+      'Skill attack synergies add `bonusLevels · scale / 100` (or multiply by `1 + that`) ' +
+      'without flooring, unlike the buff synergies above; the engine keeps both readings apart.',
+    reference: 'flyffentity.js:1701-1734',
+  },
+  skillPowerSampleBounds: {
+    description:
+      'A skill’s power is rolled as `floor(min + r · (max − min + 1))` on fractional bounds, so ' +
+      'the lowest roll is `floor(min)` and the highest `ceil(max)`; the engine shows those bounds.',
+    reference: 'flyffdamagecalculator.js:1143-1145',
+  },
+  skillWeaponCheckIgnoresShield: {
+    description:
+      '`canUseSkill` compares a skill’s weapon requirement with the mainhand only, so skills ' +
+      'needing a shield never qualify there; the engine requires a shield in the offhand instead ' +
+      '(a deliberate deviation).',
+    reference: 'flyffentity.js:611-621',
   },
 } as const satisfies Record<string, FlyffulatorQuirk>;
 

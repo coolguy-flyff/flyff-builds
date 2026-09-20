@@ -220,9 +220,13 @@ export const PetDefSchema = z.object({
   grace: PetGraceSchema.optional(),
 });
 
+/** Equipment parts a skill can scale by (the average attack, or defense, of the item worn there). */
+export const SCALING_PARTS = ['righthandweapon', 'lefthandweapon', 'shield'] as const;
+
 export const ScalingParameterSchema = z.object({
   parameter: z.string().min(1),
   stat: z.enum([...STAT_KEYS, 'hp']).optional(),
+  part: z.enum(SCALING_PARTS).optional(),
   scale: z.number(),
   maximum: z.number().optional(),
   add: z.boolean(),
@@ -274,6 +278,33 @@ export const ClassSkillSchema = SlimSkillSchema.extend({
   durationSeconds: z.number().optional(),
 });
 
+/**
+ * An attack skill the damage rows compare (plan §3), at its maximum level: the base skill or one
+ * of its master variations, with the per-level attack values and multipliers the formula needs.
+ */
+export const DamageSkillSchema = SlimSkillSchema.extend({
+  classId: nonNegativeInt,
+  /** Character level required to learn it. */
+  level: nonNegativeInt,
+  /** Magic skills scale with Magic Attack % and meet the target's magic defense. */
+  magic: z.boolean(),
+  /** Element of a magic skill (`fire`, `fireearth`, …) for the element-mastery bonus. */
+  elementType: z.string().optional(),
+  /** Weapon the skill needs in the mainhand (`bow`, `wandorstaff`, …) or `shield` in the offhand. */
+  weapon: z.string().optional(),
+  attack: z.object({ min: z.number(), max: z.number() }),
+  /** Product of the skill's unconditional damage multipliers (1 when it has none). */
+  multiplier: z.number().positive(),
+  /** First numeric `arbitraryData` entry (Hit of Penya's damage percentage). */
+  arbitraryValue: z.number().optional(),
+  /** The base skill's id — its own id for a base skill. */
+  familyId: nonNegativeInt,
+  /** Level count of the base skill (the formula level of a master variation). */
+  baseLevelCount: z.number().int().positive(),
+  /** Hits per cast; hand-curated, 1 unless known otherwise. */
+  hits: z.number().int().positive(),
+});
+
 export const ManifestSchema = z.object({
   generatedAt: z.string().min(1),
   generator: z.string().min(1),
@@ -300,6 +331,7 @@ export const GeneratedDataSchema = z.object({
   pets: z.array(PetDefSchema),
   skills: z.array(SlimSkillSchema),
   classSkills: z.array(ClassSkillSchema),
+  damageSkills: z.array(DamageSkillSchema),
   statNames: z.record(z.string(), z.string()),
   manifest: ManifestSchema,
 });
@@ -321,6 +353,7 @@ export const GENERATED_TABLE_FILES = {
   pets: 'pets.json',
   skills: 'skills.json',
   classSkills: 'classSkills.json',
+  damageSkills: 'damageSkills.json',
   statNames: 'statNames.json',
   manifest: 'manifest.json',
 } as const satisfies Record<keyof z.infer<typeof GeneratedDataSchema>, string>;
@@ -354,11 +387,13 @@ export type Achievement = z.infer<typeof AchievementSchema>;
 export type HousingNpc = z.infer<typeof HousingNpcSchema>;
 export type PetGrace = z.infer<typeof PetGraceSchema>;
 export type PetDef = z.infer<typeof PetDefSchema>;
+export type ScalingPart = (typeof SCALING_PARTS)[number];
 export type ScalingParameter = z.infer<typeof ScalingParameterSchema>;
 export type Synergy = z.infer<typeof SynergySchema>;
 export type SlimSkill = z.infer<typeof SlimSkillSchema>;
 export type ClassSkillKind = (typeof CLASS_SKILL_KINDS)[number];
 export type ClassSkill = z.infer<typeof ClassSkillSchema>;
+export type DamageSkill = z.infer<typeof DamageSkillSchema>;
 export type Manifest = z.infer<typeof ManifestSchema>;
 export type GeneratedData = z.infer<typeof GeneratedDataSchema>;
 export type GeneratedTableName = keyof GeneratedData;

@@ -10,9 +10,11 @@ import { MAX_U8_COUNT, readOptionalId, writeOptionalId } from '../v1/fields';
 import {
   readAccessorySetV1,
   readBuffsV1,
+  readNoPvpTargets,
   readVarintList,
   writeAccessorySetV1,
   writeBuffsV1,
+  writeNoPvpTargets,
   writeVarintList,
   type RecordCodecs,
 } from '../v1/layout';
@@ -60,4 +62,6 @@ export const V2_RECORDS: RecordCodecs = {
   readAccessorySet: readAccessorySetV2,
   writeBuffs: writeBuffsV2,
   readBuffs: readBuffsV2,
+  writePvpTargets: writeNoPvpTargets,
+  readPvpTargets: readNoPvpTargets,
 };

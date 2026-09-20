@@ -1,3 +1,4 @@
+import { PVP_TARGET_BOUNDS, PVP_TARGET_STAT_KEYS } from '@/config/pvpTargets';
 import {
   RM_BUFF_SKILL_IDS,
   classSkillsFor,
@@ -6,7 +7,7 @@ import {
   type GameData,
   type SlimItem,
 } from '@/data';
-import { clamp } from '@/lib/math';
+import { clamp, roundTo } from '@/lib/math';
 
 import {
   accessoryPieceSet,
@@ -47,6 +48,7 @@ import {
   type EquipmentSetEntry,
   type FashionSetEntry,
   type PetEntry,
+  type PvpTarget,
   type RandomStatLine,
   type ShieldEntry,
   type Stack,
@@ -558,6 +560,33 @@ function repairBuffs(data: GameData, build: BuildState, repairs: Repairs): Build
   };
 }
 
+/** The name a custom target gets when its own is blank. */
+export const DEFAULT_PVP_TARGET_NAME = 'Custom target';
+/** Percentages are kept to one decimal: finer values are noise the codec does not carry. */
+const PVP_TARGET_PERCENT_DECIMALS = 1;
+
+function repairPvpTarget(entry: PvpTarget, repairs: Repairs): PvpTarget {
+  const context = `PvP target #${entry.id}`;
+  let next = entry;
+
+  if (entry.name.trim() === '') {
+    repairs.add('target-renamed', `${context}: unnamed target called "${DEFAULT_PVP_TARGET_NAME}"`);
+    next = { ...next, name: DEFAULT_PVP_TARGET_NAME };
+  }
+
+  for (const key of PVP_TARGET_STAT_KEYS) {
+    const bounds = PVP_TARGET_BOUNDS[key];
+    const value = clamp(roundTo(entry[key], PVP_TARGET_PERCENT_DECIMALS), bounds.min, bounds.max);
+
+    if (value !== entry[key]) {
+      repairs.add('target-clamped', `${context}: ${key} adjusted to ${value}`);
+      next = { ...next, [key]: value };
+    }
+  }
+
+  return next;
+}
+
 function highestId(build: BuildState): number {
   let highest = 0;
 
@@ -570,6 +599,7 @@ function highestId(build: BuildState): number {
     build.fashionSets,
     build.pets,
     build.gearSwaps,
+    build.pvpTargets,
   ]) {
     for (const entry of entries) {
       highest = Math.max(highest, entry.id);
@@ -623,6 +653,7 @@ export function repairBuild(data: GameData, input: BuildState): ValidatedBuild {
 
       return next;
     }),
+    pvpTargets: input.pvpTargets.map((entry) => repairPvpTarget(entry, repairs)),
   };
 
   const { build: referenced, dangling } = repairReferences(repaired);

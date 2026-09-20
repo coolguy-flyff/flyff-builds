@@ -62,7 +62,8 @@ export interface FlyffItemElem {
   statRanges: FlyffRolledAbility[];
   randomStats: (FlyffRolledAbility | null)[];
   statAwake: ({ parameter: string; value: number } | null)[];
-  skillAwake: { id: string; parameter: string; add: number } | null;
+  /** `skill` names the awakened skill of a skill-damage awake (DC:583-586). */
+  skillAwake: { id: string; parameter: string; add: number; skill?: number } | null;
   petStats: Record<string, number | null>;
 }
 
@@ -72,6 +73,9 @@ export interface FlyffSkillLevel {
 
 export interface FlyffSkillProp {
   readonly id: number;
+  readonly magic?: boolean;
+  readonly inheritSkill?: number;
+  readonly masterVariations?: readonly number[];
   readonly levels: readonly FlyffSkillLevel[];
 }
 
@@ -81,7 +85,7 @@ export interface FlyffHitRate {
 }
 
 export interface FlyffEntity {
-  job: { readonly block: number };
+  job: { readonly block: number; readonly critical: number };
   level: number;
   str: number;
   sta: number;
@@ -115,19 +119,40 @@ export interface FlyffEntity {
   getBlockChance(ranged: boolean, attacker: FlyffEntity): number;
 }
 
+export interface FlyffContextSettings {
+  playerHealthPercent: number;
+  targetHealthPercent: number;
+  missingEnabled: boolean;
+  blockingEnabled: boolean;
+  lifestealEnabled: boolean;
+  swordcrossEnabled: boolean;
+}
+
 export interface FlyffContext {
   player: FlyffEntity;
   attacker: FlyffEntity;
   defender: FlyffEntity;
   attackFlags: number;
-  skill: unknown;
-  readonly settings: { playerHealthPercent: number; targetHealthPercent: number };
+  skill: FlyffSkillProp | null;
+  readonly settings: FlyffContextSettings;
+}
+
+export interface FlyffMonsterProp {
+  readonly levelHidden: boolean;
+  readonly level: number;
+  readonly defense: number;
+  readonly [key: string]: unknown;
 }
 
 export interface FlyffUtils {
   readonly DEFAULT_WEAPON: FlyffItemElem;
-  readonly TRAINING_DUMMY: unknown;
-  readonly ATTACK_FLAGS: { readonly GENERIC: number; readonly MAGIC: number };
+  readonly TRAINING_DUMMY: FlyffMonsterProp;
+  readonly ATTACK_FLAGS: {
+    readonly GENERIC: number;
+    readonly MAGIC: number;
+    readonly MELEESKILL: number;
+    readonly MAGICSKILL: number;
+  };
   getClassById(id: number): FlyffEntity['job'];
   getItemById(id: number): FlyffItemProp | undefined;
   getSkillById(id: number): FlyffSkillProp | undefined;
@@ -143,12 +168,14 @@ export interface FlyffApi {
 
 export interface Flyffulator {
   readonly api: FlyffApi;
-  readonly Entity: new (monsterProp: unknown) => FlyffEntity;
+  readonly Entity: new (monsterProp: FlyffMonsterProp | null) => FlyffEntity;
   readonly ItemElem: new (itemProp: FlyffItemProp) => FlyffItemElem;
   readonly Skill: new (skillProp: FlyffSkillProp, level: number, stacks?: number) => unknown;
   readonly Context: FlyffContext;
   readonly Utils: FlyffUtils;
   readonly getHealing: (skillProp: FlyffSkillProp) => number;
+  /** One attack of `Context.attacker` on `Context.defender`; `handFlag` 1 = right, 2 = left hand. */
+  readonly getDamage: (handFlag: number) => number;
 }
 
 export function hasFlyffulator(): boolean {
@@ -197,7 +224,9 @@ export async function loadFlyffulator(): Promise<Flyffulator> {
     importModule<{ default: Flyffulator['Skill'] }>('src/flyff/flyffskill.js'),
     importModule<{ default: FlyffContext }>('src/flyff/flyffcontext.js'),
     importModule<FlyffUtils>('src/flyff/flyffutils.js'),
-    importModule<{ getHealing: Flyffulator['getHealing'] }>('src/flyff/flyffdamagecalculator.js'),
+    importModule<{ getHealing: Flyffulator['getHealing']; getDamage: Flyffulator['getDamage'] }>(
+      'src/flyff/flyffdamagecalculator.js',
+    ),
   ]);
 
   return {
@@ -208,5 +237,6 @@ export async function loadFlyffulator(): Promise<Flyffulator> {
     Context: context.default,
     Utils: utils,
     getHealing: calculator.getHealing,
+    getDamage: calculator.getDamage,
   };
 }

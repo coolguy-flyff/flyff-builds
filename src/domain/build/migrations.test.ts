@@ -28,6 +28,15 @@ function v1Build(): Record<string, unknown> {
   };
 }
 
+/** A schema-2 build as persisted before 2026-09-05: no custom PvP targets. */
+function v2Build(): Record<string, unknown> {
+  const current: Record<string, unknown> = { ...createDefaultBuild(data), schemaVersion: 2 };
+
+  delete current.pvpTargets;
+
+  return current;
+}
+
 describe('migrateToCurrent', () => {
   it('upgrades a schema-1 build to the current schema without changing what it computes', () => {
     const migrated = migrateToCurrent(v1Build());
@@ -47,6 +56,19 @@ describe('migrateToCurrent', () => {
       earring2: null,
       necklace: null,
     });
+    expect(validated.value.build.pvpTargets).toEqual([]);
+  });
+
+  it('upgrades a schema-2 build with an empty list of custom PvP targets', () => {
+    const validated = validateBuild(data, migrateToCurrent(v2Build()));
+
+    if (!validated.ok) {
+      throw new Error(validated.error.message);
+    }
+
+    expect(validated.value.warnings).toEqual([]);
+    expect(validated.value.build.schemaVersion).toBe(BUILD_SCHEMA_VERSION);
+    expect(validated.value.build.pvpTargets).toEqual([]);
   });
 
   it('leaves a current build untouched', () => {
@@ -57,9 +79,10 @@ describe('migrateToCurrent', () => {
 
   it('tolerates malformed input and leaves it to validation', () => {
     expect(migrateToCurrent({ schemaVersion: 1, buffs: 'nope', accessorySets: 3 })).toEqual({
-      schemaVersion: 2,
+      schemaVersion: 3,
       buffs: 'nope',
       accessorySets: 3,
+      pvpTargets: [],
     });
     expect(migrateToCurrent(null)).toBeNull();
   });

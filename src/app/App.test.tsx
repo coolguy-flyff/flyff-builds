@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createMemoryStorage, STORAGE_KEYS } from '@/persistence';
@@ -50,5 +50,62 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Results/ }));
 
     expect(window.location.hash).toBe('#/results');
+  });
+});
+
+describe('Reset', () => {
+  /** Changes the level so a reset has something to undo, then opens the header's Start over dialog. */
+  function openResetDialog(): void {
+    fireEvent.click(screen.getByLabelText('Decrease Character level'));
+    fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Reset' }));
+  }
+
+  const snapshotCheckbox = (): HTMLInputElement =>
+    screen.getByRole('checkbox', { name: 'Keep the current build as a snapshot' });
+
+  it('offers cancel and start over, with the snapshot checked by default', () => {
+    const { store } = mount();
+
+    openResetDialog();
+
+    expect(screen.getByText('Start over?')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Start over' })).toBeDefined();
+    expect(snapshotCheckbox().checked).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(store.getState().build.character.level).toBe(189);
+    expect(store.getState().ui.dialog).toBeNull();
+  });
+
+  it('keeps the previous build as an automatic snapshot while the box is checked', () => {
+    const { store } = mount();
+
+    openResetDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'Start over' }));
+
+    const { build, ui } = store.getState();
+
+    expect(build.character.level).toBe(190);
+    expect(ui.dialog).toBeNull();
+    expect(ui.snapshots.map((snapshot) => snapshot.automatic)).toEqual([true]);
+    expect(ui.toasts.map((toast) => toast.message)).toEqual([
+      'Build reset — the previous build was kept as a snapshot.',
+    ]);
+  });
+
+  it('leaves no snapshot behind once the box is unchecked', () => {
+    const { store } = mount();
+
+    openResetDialog();
+    fireEvent.click(snapshotCheckbox());
+    fireEvent.click(screen.getByRole('button', { name: 'Start over' }));
+
+    const { build, ui } = store.getState();
+
+    expect(build.character.level).toBe(190);
+    expect(ui.dialog).toBeNull();
+    expect(ui.snapshots).toEqual([]);
+    expect(ui.toasts.map((toast) => toast.message)).toEqual(['Build reset.']);
   });
 });

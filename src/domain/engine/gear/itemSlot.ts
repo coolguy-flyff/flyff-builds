@@ -134,8 +134,8 @@ export function collectRandomStats(
 
 /**
  * Skill awakes are rate-only and match their exact parameter
- * (FLYFFULATOR_QUIRKS.exactSkillAwakeMatch). Skill-damage awakes (`skill:<id>`) only affect one
- * skill's damage, which is not modeled — they contribute nothing to the results.
+ * (FLYFFULATOR_QUIRKS.exactSkillAwakeMatch). Skill-damage awakes land under their `skill:<id>`
+ * pseudo-stat, which only that skill's damage formula reads.
  */
 export function collectSkillAwake(
   sink: Sink,
@@ -143,7 +143,7 @@ export function collectSkillAwake(
   awake: SkillAwake | null,
   kind: ContributionOriginKind,
 ): void {
-  if (awake !== null && !awake.parameter.startsWith('skill:')) {
+  if (awake !== null) {
     sink.contributions.push(
       contribution(
         awake.parameter,

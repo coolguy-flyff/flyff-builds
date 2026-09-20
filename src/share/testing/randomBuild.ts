@@ -1,3 +1,4 @@
+import { PVP_TARGET_BOUNDS, type PvpTargetStatKey } from '@/config/pvpTargets';
 import {
   EARRING_VARIANTS,
   RM_BUFF_SKILL_IDS,
@@ -13,6 +14,7 @@ import {
   createFashionSetEntry,
   createGearSwap,
   createPetEntry,
+  createPvpTarget,
   createShieldEntry,
   createStatPage,
   createWeaponEntry,
@@ -31,6 +33,7 @@ import {
   type GearSwap,
   type Offhand,
   type PetEntry,
+  type PvpTarget,
   type RandomStatLine,
   type ShieldEntry,
   type SkillAwake,
@@ -294,6 +297,28 @@ function randomPet(rng: Rng, data: GameData, id: number): PetEntry {
   return { ...createPetEntry(id, def?.petItemId ?? null, total), ...customName(rng) };
 }
 
+const MAX_RANDOM_TARGET_DEFENSE = 30_000;
+const PERCENT_TENTHS = 10;
+
+/** A percentage on the codec's 0.1 grid, anywhere inside the stat's bounds. */
+function randomPercent(rng: Rng, key: PvpTargetStatKey): number {
+  const bounds = PVP_TARGET_BOUNDS[key];
+  const tenths = int(rng, 0, (bounds.max - bounds.min) * PERCENT_TENTHS);
+
+  return roundTo(bounds.min + tenths / PERCENT_TENTHS, 1);
+}
+
+function randomPvpTarget(rng: Rng, id: number): PvpTarget {
+  return createPvpTarget(id, coin(rng, 0.7) ? pick(rng, NAMES) : 'Target', {
+    defense: int(rng, 0, MAX_RANDOM_TARGET_DEFENSE),
+    magicDefense: int(rng, 0, MAX_RANDOM_TARGET_DEFENSE),
+    magicResistance: randomPercent(rng, 'magicResistance'),
+    criticalResist: randomPercent(rng, 'criticalResist'),
+    pvpDamageReduction: randomPercent(rng, 'pvpDamageReduction'),
+    incomingDamage: randomPercent(rng, 'incomingDamage'),
+  });
+}
+
 function randomOffhand(
   rng: Rng,
   shields: readonly ShieldEntry[],
@@ -365,6 +390,8 @@ export function randomBuild(data: GameData, seed: number): BuildState {
   }));
   gearSwaps.push(createGearSwap(nextId(), pick(rng, statPages).id));
 
+  const pvpTargets = randomList(rng, LIMITS.pvpTargets, nextId, (id) => randomPvpTarget(rng, id));
+
   return {
     schemaVersion: BUILD_SCHEMA_VERSION,
     nextId: lastId + 1,
@@ -386,5 +413,6 @@ export function randomBuild(data: GameData, seed: number): BuildState {
       achievementId: pickOptional(rng, data.achievements, 0.5)?.id ?? null,
     },
     gearSwaps,
+    pvpTargets,
   };
 }

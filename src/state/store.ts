@@ -3,12 +3,14 @@ import { immer } from 'zustand/middleware/immer';
 import { createStore, type Mutate, type StoreApi } from 'zustand/vanilla';
 
 import type { BuildState } from '@/domain/build';
+import { DUMMY_TARGET_CHOICE } from '@/domain/engine';
 import { listSnapshots } from '@/persistence';
 
 import { createBuffActions, type BuffActions } from './actions/buffs';
 import { createCharacterActions, type CharacterActions } from './actions/character';
 import { createGearActions, type GearActions } from './actions/gear';
 import { createListActions, type ListActions } from './actions/lists';
+import { createPvpTargetActions, type PvpTargetActions } from './actions/pvpTargets';
 import { createSessionActions, type SessionActions } from './actions/session';
 import { emptySelection, type ActionContext } from './actions/shared';
 import { createStatPageActions, type StatPageActions } from './actions/statPages';
@@ -20,6 +22,7 @@ export type AppActions = CharacterActions &
   StatPageActions &
   GearActions &
   BuffActions &
+  PvpTargetActions &
   SessionActions &
   UiActions;
 
@@ -47,6 +50,10 @@ function initialUi(deps: AppStoreDeps, build: BuildState): UiState {
       collapsedGroups: [],
       showSwapDetails: false,
       petGrace: false,
+      petOverride: 'own',
+      damageTarget: DUMMY_TARGET_CHOICE,
+      partySkill: 'none',
+      skillVariations: {},
     },
     toasts: [],
     dialog: null,
@@ -79,6 +86,7 @@ export function createAppStore(deps: AppStoreDeps, initialBuild: BuildState): Ap
           ...createStatPageActions(context),
           ...createGearActions(context),
           ...createBuffActions(context),
+          ...createPvpTargetActions(context),
           ...createSessionActions(context, (kind, message, details) =>
             ui.pushToast(kind, message, details),
           ),

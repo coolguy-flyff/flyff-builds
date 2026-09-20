@@ -28,10 +28,12 @@ describe('buildRows', () => {
       'speed',
       'offense',
       'defense',
+      'damage',
     ]);
     // The bare page has every plain % total at 0 and jump height at 100, so those rows are left
-    // out; defense ends with one "Block %" row while melee and ranged block agree everywhere.
-    expect(groups.map((bucket) => bucket.rows.length)).toEqual([4, 3, 2, 2, 4]);
+    // out; defense ends with one "Block %" row while melee and ranged block agree everywhere;
+    // damage has the basic attack, its crit and its overcrit (no left hand, no skills).
+    expect(groups.map((bucket) => bucket.rows.length)).toEqual([4, 3, 2, 2, 4, 3]);
     expect(rows.map((row) => row.label).slice(0, 7)).toEqual([
       'STR',
       'STA',
@@ -83,7 +85,7 @@ describe('buildRows', () => {
   });
 
   it('explains critical chance as the DEX term plus its sources', () => {
-    // A fresh Seraph with max RM buffs: DEX 15 + 40 (Cannon Ball) = 55 → floor(5.5 × 1) = 5.
+    // A fresh Seraph with max RM buffs: DEX 15 + 40 (Cannon Ball) = 55 → floor(5.5) × 1 = 5.
     const [result] = computeAllResults(data, createDefaultBuild(data));
     const swap = requireDefined(result, 'first swap');
     const row = requireDefined(
@@ -91,7 +93,7 @@ describe('buildRows', () => {
       'critical chance row',
     );
 
-    expect(row.tooltip).toContain('DEX ÷ 10 × job factor');
+    expect(row.tooltip).toContain('Job factor per full 10 DEX');
     expect(row.select(swap.page)).toBe(5);
     expect(cellDetails(row, swap)).toEqual([{ label: 'From DEX (job factor)', value: '5%' }]);
   });
@@ -108,6 +110,7 @@ describe('buildRows', () => {
     const healing = groupRows(rows).find((bucket) => bucket.group.id === 'healing');
 
     expect(healing?.group.note).toContain('Heal synergy');
+    expect(RESULTS_GROUPS.find((group) => group.id === 'damage')?.tooltip).toContain('per hit');
     expect(healing?.rows.map((row) => row.label)).toEqual([
       'Heal Rain (Lv 10)',
       'Gloria Patri (Lv 5)',
@@ -115,7 +118,7 @@ describe('buildRows', () => {
     ]);
     expect(healing?.rows[0]?.tooltip).toBeUndefined();
     expect(healing?.rows[1]?.tooltip).toContain('Heal');
-    expect(healing?.rows[1]?.select(seraph)).toBe(6408);
+    expect(healing?.rows[1]?.select(seraph)).toBe(6432);
     expect(healing?.rows[1]?.select(other)).toBeNull();
   });
 

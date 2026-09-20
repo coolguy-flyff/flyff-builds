@@ -61,6 +61,13 @@ const BERSERK = 4369;
 const SWORD_MASTERY = 4927;
 const AMBIDEXTROUS = 55233;
 const MASTER_OF_SWORD = 41788;
+const FWC_GOLDEN_CURTANA = 35517;
+const AZURE_SHIELD = 469;
+const ROIKAS_STAFF = 40229;
+const BLOODY_OBSIDIAN_KNUCKLE = 3763;
+const ARCANIST = 36983;
+const FORCEMASTER = 43403;
+const MENTALIST = 54571;
 
 const ALL_TEN = { ring1: 10, ring2: 10, earring1: 10, earring2: 10, necklace: 10 };
 
@@ -311,6 +318,81 @@ export const PARITY_FIXTURES: readonly ParityFixture[] = [
         cloakItemId: STAR_SIGN_CLOAK,
       });
       addPet(build, TIGER_PET, 75);
+
+      return { build, swap: firstSwap(build) };
+    },
+  },
+  {
+    // Damage rows: a `shield` part scaling (Shield Crush) and additive attack synergies.
+    name: 'templar-shield',
+    expectedIssueCodes: [],
+    create: (data) => {
+      const build = createTestBuild(data, {
+        jobId: CLASS_IDS.templar,
+        stats: { str: 200, sta: 200 },
+        rmBuffs: true,
+      });
+
+      addWeapon(build, { itemId: FWC_GOLDEN_CURTANA, upgrade: 10 });
+      addShield(build, { itemId: AZURE_SHIELD, upgrade: 10 });
+      addAccessorySet(build, {
+        setId: CHAMPIONS_SET,
+        earring1: 'plug',
+        earring2: 'demol',
+        necklace: 'gore',
+        upgrades: ALL_TEN,
+      });
+
+      return { build, swap: firstSwap(build) };
+    },
+  },
+  {
+    // Damage rows: magic skills with element masteries and Magic Attack %; no basic attacks.
+    name: 'arcanist-staff',
+    expectedIssueCodes: [],
+    create: (data) => {
+      const build = createTestBuild(data, { jobId: ARCANIST, stats: { int: 300 }, rmBuffs: true });
+
+      addWeapon(build, { itemId: ROIKAS_STAFF, upgrade: 10 });
+      addAccessorySet(build, {
+        setId: ADEPTS_SET,
+        earring1: 'plug',
+        earring2: 'plug',
+        necklace: 'mental',
+        upgrades: ALL_TEN,
+      });
+
+      return { build, swap: firstSwap(build) };
+    },
+  },
+  {
+    // Damage rows: Asal's bonus and Nen Sphere's mainhand-weapon scaling, with Upcut Stone.
+    name: 'forcemaster-knuckle',
+    expectedIssueCodes: [],
+    create: (data) => {
+      const build = createTestBuild(data, { jobId: FORCEMASTER, stats: { str: 300 } });
+
+      addWeapon(build, { itemId: BLOODY_OBSIDIAN_KNUCKLE, upgrade: 10 });
+      build.buffs = { ...build.buffs, premiumItemIds: [UPCUT_STONE_ITEM_ID] };
+
+      return { build, swap: firstSwap(build) };
+    },
+  },
+  {
+    // Damage rows: a wand mainhand (no basic rows) and Spirit Bomb's doubled attack.
+    name: 'mentalist-wand',
+    expectedIssueCodes: [],
+    create: (data) => {
+      const build = createTestBuild(data, { jobId: MENTALIST, stats: { int: 300 } });
+      const wand = (data.weaponsByJob.get(MENTALIST) ?? []).find(
+        (item) => item.subcategory === 'wand',
+      );
+
+      if (wand === undefined) {
+        throw new Error('No Mentalist wand in the bundle');
+      }
+
+      addWeapon(build, { itemId: wand.id, upgrade: 10 });
 
       return { build, swap: firstSwap(build) };
     },

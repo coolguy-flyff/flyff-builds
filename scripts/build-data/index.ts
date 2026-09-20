@@ -2,7 +2,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ACCESSORY_SET_IDS, BUNDLED_SKILL_IDS, RM_BUFF_SKILL_IDS } from '../../src/data/constants';
+import {
+  ACCESSORY_SET_IDS,
+  BUNDLED_SKILL_IDS,
+  DAMAGE_SKILL_HITS,
+  DAMAGE_SKILL_IDS,
+  RM_BUFF_SKILL_IDS,
+} from '../../src/data/constants';
 import {
   GENERATED_TABLE_FILES,
   GeneratedDataSchema,
@@ -14,6 +20,7 @@ import {
 
 import { selectAccessoryLines } from './accessoryLines';
 import { projectClassSkill, selectClassSkills } from './classSkills';
+import { projectDamageSkills } from './damageSkills';
 import { buildManifest } from './manifest';
 import {
   assertCappedScalings,
@@ -78,7 +85,8 @@ const EXPECTED_COUNTS: Readonly<Record<string, number>> = {
   housingNpcs: 39,
   pets: 9,
   skills: 16,
-  classSkills: 120,
+  classSkills: 128,
+  damageSkills: 233,
   statNames: 169,
 };
 
@@ -290,6 +298,7 @@ function assemble(
   const classSkills = selectClassSkills(sources.skills, sources.classes).map((raw) =>
     projectClassSkill(raw, skillLookup),
   );
+  const damageSkills = projectDamageSkills(skillLookup, DAMAGE_SKILL_IDS, DAMAGE_SKILL_HITS);
 
   // Skills the app only needs by name: skill-damage awakes and skill-chance item abilities.
   const namedSkillIds = [
@@ -352,6 +361,7 @@ function assemble(
     pets: pets.sort((a, b) => a.petItemId - b.petItemId),
     skills,
     classSkills,
+    damageSkills,
     statNames: projectStatNames(sources.statNames),
   };
 

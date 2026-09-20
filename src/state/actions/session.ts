@@ -16,8 +16,8 @@ import { emptySelection, type ActionContext } from './shared';
 export interface SessionActions {
   /** Replaces the working build (after an import or a snapshot load). */
   replaceBuild(build: BuildState, warnings?: readonly BuildWarning[]): void;
-  /** Auto-snapshots the current build, then starts over from defaults. */
-  resetBuild(): void;
+  /** Starts over from defaults; with `autoSnapshot` the current build is kept as an automatic snapshot first. */
+  resetBuild(options: { autoSnapshot: boolean }): void;
   saveSnapshot(name: string): SnapshotMeta | undefined;
   /** Stores an automatic snapshot such as "Autosave before reset"; failures become toasts. */
   autoSnapshot(label: string): void;
@@ -92,7 +92,12 @@ export function createSessionActions(
         draft.build = build;
         draft.ui.selected = emptySelection();
         draft.ui.expandedSwapId = build.gearSwaps[0]?.id ?? null;
-        draft.ui.results = { ...draft.ui.results, baselineSwapId: null, hiddenSwapIds: [] };
+        draft.ui.results = {
+          ...draft.ui.results,
+          baselineSwapId: null,
+          hiddenSwapIds: [],
+          petOverride: 'own',
+        };
       });
 
       const toast = warningToast(warnings);
@@ -102,8 +107,11 @@ export function createSessionActions(
       }
     },
 
-    resetBuild() {
-      this.autoSnapshot('Autosave before reset');
+    resetBuild({ autoSnapshot }) {
+      if (autoSnapshot) {
+        this.autoSnapshot('Autosave before reset');
+      }
+
       this.replaceBuild(createDefaultBuild(deps.data));
     },
 

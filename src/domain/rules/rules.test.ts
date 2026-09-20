@@ -19,6 +19,7 @@ import {
   reachableBlessingTotals,
   reachablePetTotals,
   remainingStatPoints,
+  statPointShares,
   setAwakePartnerOptions,
   setAwakeSecondTotals,
   skillAwakeOptions,
@@ -286,5 +287,27 @@ describe('offhand & stat points', () => {
     expect(totalStatPoints(190)).toBe(378);
     expect(remainingStatPoints(190, { id: 1, str: 15, sta: 393, dex: 15, int: 15 })).toBe(0);
     expect(remainingStatPoints(190, { id: 1, str: 15, sta: 394, dex: 15, int: 15 })).toBe(-1);
+  });
+
+  it('shares the allocated points out per stat, all 0 for an untouched page', () => {
+    expect(statPointShares({ id: 1, str: 15, sta: 393, dex: 15, int: 15 })).toEqual({
+      str: 0,
+      sta: 1,
+      dex: 0,
+      int: 0,
+    });
+    // 185 DEX + 135 STA + 13 INT = 333 points.
+    const mixed = statPointShares({ id: 1, str: 15, sta: 150, dex: 200, int: 28 });
+
+    expect(mixed.str).toBe(0);
+    expect(mixed.dex).toBeCloseTo(185 / 333);
+    expect(mixed.sta).toBeCloseTo(135 / 333);
+    expect(mixed.int).toBeCloseTo(13 / 333);
+    expect(statPointShares({ id: 1, str: 15, sta: 15, dex: 15, int: 15 })).toEqual({
+      str: 0,
+      sta: 0,
+      dex: 0,
+      int: 0,
+    });
   });
 });

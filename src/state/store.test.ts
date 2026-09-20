@@ -163,7 +163,7 @@ describe('session & autosave', () => {
     actions.setLevel(170);
     const meta = actions.saveSnapshot('Before');
     tick();
-    actions.resetBuild();
+    actions.resetBuild({ autoSnapshot: true });
 
     expect(store.getState().build.character.level).toBe(190);
     expect(store.getState().ui.snapshots.map((snapshot) => snapshot.name)).toEqual(
@@ -174,6 +174,19 @@ describe('session & autosave', () => {
     expect(actions.loadSnapshot(meta?.id ?? '')).toBe(true);
     expect(store.getState().build.character.level).toBe(170);
     expect(store.getState().ui.snapshots.length).toBe(3);
+  });
+
+  it('resets without an automatic snapshot when asked not to keep the build', () => {
+    const { store, tick } = setup();
+    const { actions } = store.getState();
+
+    actions.setLevel(170);
+    actions.saveSnapshot('Before');
+    tick();
+    actions.resetBuild({ autoSnapshot: false });
+
+    expect(store.getState().build.character.level).toBe(190);
+    expect(store.getState().ui.snapshots.map((snapshot) => snapshot.name)).toEqual(['Before']);
   });
 
   it('surfaces storage failures as toasts instead of throwing', () => {

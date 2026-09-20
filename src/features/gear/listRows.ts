@@ -1,4 +1,4 @@
-import { getItem, type GameData } from '@/data';
+import { getItem, isSkillAwakeParameter, type GameData } from '@/data';
 import {
   accessorySetShortName,
   formatAbility,
@@ -28,12 +28,7 @@ import {
 import type { EntityListChip } from '@/components/EntityList';
 import { rarityClassName } from '@/components/rarity';
 
-import {
-  capitalize,
-  formatStatTotals,
-  isSkillDamageAwake,
-  skillAwakeParameterLabel,
-} from './format';
+import { capitalize, formatStatTotals, skillAwakeParameterLabel } from './format';
 
 /**
  * What a gear list row shows besides its name (plan D3): an item icon, the name colour and the
@@ -74,7 +69,7 @@ function skillAwakeChips(data: GameData, entry: WeaponEntry | ShieldEntry): Enti
 
   if (entry.skillAwake !== null) {
     const { parameter, value } = entry.skillAwake;
-    chips = isSkillDamageAwake(parameter)
+    chips = isSkillAwakeParameter(parameter)
       ? [chip(`${skillAwakeParameterLabel(data, parameter)} +${value}%`)]
       : [chip(formatAbility(data, parameter, value, true))];
   }

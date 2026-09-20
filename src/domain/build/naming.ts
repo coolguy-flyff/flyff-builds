@@ -2,6 +2,8 @@ import {
   ACCESSORY_SET_IDS,
   getItem,
   getStatName,
+  isSkillAwakeParameter,
+  STAT_KEYS,
   type Ability,
   type AccessorySet,
   type GameData,
@@ -18,18 +20,19 @@ import {
   statAwakeTotals,
 } from '../rules';
 
-import type {
-  AccessorySetEntry,
-  BuildState,
-  EquipmentSetEntry,
-  FashionSetEntry,
-  GearSwap,
-  PetEntry,
-  ShieldEntry,
-  Stack,
-  StatAwake,
-  StatPage,
-  WeaponEntry,
+import {
+  MIN_BASE_STAT,
+  type AccessorySetEntry,
+  type BuildState,
+  type EquipmentSetEntry,
+  type FashionSetEntry,
+  type GearSwap,
+  type PetEntry,
+  type ShieldEntry,
+  type Stack,
+  type StatAwake,
+  type StatPage,
+  type WeaponEntry,
 } from './schema';
 
 /**
@@ -38,8 +41,6 @@ import type {
  * upgrade omitted at +0: "HP/STA Etranar +10", "STA Healing Oracle +10", "STA/Crit Fashion";
  * accessory sets use their upgrade signature (r1 e1 necklace e2 r2), pets "Perfect <animal>".
  */
-
-const SKILL_AWAKE_PARAMETER_PREFIX = 'skill:';
 
 /** "+10" when upgraded, nothing at +0. */
 function upgradeSuffix(upgrade: number): string | null {
@@ -63,13 +64,13 @@ const SHORT_STAT_LABELS: Readonly<Record<string, string>> = {
   attack: 'Attack',
   damage: 'Dmg',
   def: 'Def',
-  magicdefense: 'M.Def',
-  magicattack: 'M.Atk',
+  magicdefense: 'MR',
+  magicattack: 'M.Pwr',
   criticalchance: 'Crit',
   criticaldamage: 'Crit dmg',
   attackspeed: 'Aspd',
   attackspeedrate: 'Aspd',
-  decreasedcastingtime: 'Cast Speed',
+  decreasedcastingtime: 'DCT',
   speed: 'Spd',
   healing: 'Heal',
   hitrate: 'Hit Rate',
@@ -113,14 +114,70 @@ export function armorSetShortName(name: string): string {
   return name.replace(/^2026 FWC /, '').replace(/ Set$/, '');
 }
 
-/** "Adept's Set" → "Adept's". */
+/** "Adept's Set" → "Adept", "Defender's Set" → "Defender": no possessive in the short form. */
 export function accessorySetShortName(name: string): string {
-  return name.replace(/ Set$/, '');
+  return name.replace(/(?:'s)? Set$/, '');
 }
 
-/** "2026 FWC Golden Oracle" → "Golden Oracle"; keeps other names verbatim. */
+/** Nicknames for the long weapon and shield names, applied after any Cursed/Golden prefix. */
+const ITEM_NICKNAMES: Readonly<Record<string, string>> = {
+  Leviathan: 'Levi',
+  Nautilus: 'Nauti',
+  "Nemo's Fury": 'Nemo',
+  'Fist of Tides': 'FoT',
+  "Lamprey's Wand": 'Lamprey',
+  'Conch Staff': 'Conch',
+  'Coral Cutlass': 'Cutlass',
+  'Veil of Shade': 'Veil',
+  'Maw of Judgement': 'Maw',
+  'Scepter of Disorder': 'Scepter',
+  "Roika's Staff": 'Roika',
+  'Celestial Edge': 'Edge',
+  "Butcher's Carnage": 'Butcher',
+  'Cleaver of the Mist': 'Cleaver',
+  'Jewel of Nightmare': 'Jewel',
+};
+
+/**
+ * The Lusaka's Crystal line: "LC Wand", and the FWC Golden editions by year, "'24 GLC Wand" and
+ * "'25 GLC Heavy Axe".
+ */
+const LUSAKA_CRYSTAL_PATTERN = /^(2025 FWC Golden |FWC Golden )?Lusaka's (Heavy )?Crystal (.+)$/;
+const LUSAKA_CRYSTAL_LABELS: Readonly<Record<string, string>> = {
+  '': 'LC',
+  'FWC Golden ': "'24 GLC",
+  '2025 FWC Golden ': "'25 GLC",
+};
+
+/** "Cursed Roika's Staff" → "Cursed Roika", "Golden Maw of Judgement" → "Golden Maw". */
+const VARIANT_PREFIX_PATTERN = /^(Cursed |Golden )?(.+)$/;
+
+/**
+ * "2026 FWC Golden Oracle" → "Golden Oracle", "Cursed Roika's Staff" → "Cursed Roika",
+ * "Lusaka's Crystal Wand" → "LC Wand", "FWC Golden Lusaka's Crystal Wand" → "'24 GLC Wand",
+ * "Legendary Golden Wand" → "LG Wand", "Bloody Obsidian Wand" → "Obsidian Wand"; keeps other
+ * names verbatim.
+ */
 export function itemShortName(name: string): string {
-  return name.replace(/^2026 FWC /, '').replace(/^FWC /, '');
+  const lusaka = LUSAKA_CRYSTAL_PATTERN.exec(name);
+  let short: string;
+
+  if (lusaka !== null) {
+    const [, edition = '', heavy = '', weapon = ''] = lusaka;
+
+    short = joinWords([LUSAKA_CRYSTAL_LABELS[edition], heavy.trim(), weapon]);
+  } else {
+    const stripped = name
+      .replace(/^2026 FWC /, '')
+      .replace(/^FWC /, '')
+      .replace(/^Legendary Golden /, 'LG ')
+      .replace(/^Bloody Obsidian /, 'Obsidian ');
+    const [, variant = '', base = stripped] = VARIANT_PREFIX_PATTERN.exec(stripped) ?? [];
+
+    short = `${variant}${ITEM_NICKNAMES[base] ?? base}`;
+  }
+
+  return short;
 }
 
 /** "Volcano Card (7%)" → "Volcano 7%"; "Land Card (A)" → "Land A". */
@@ -163,10 +220,28 @@ export function stackTotals(data: GameData, stacks: readonly Stack[]): Ability[]
   return [...totals.values()];
 }
 
+/**
+ * "Full STA" when one stat holds every allocated point, "STA/DEX" (most points first, ties in
+ * STR/STA/DEX/INT order) when several do, "Page N" for a page with nothing allocated.
+ */
 export function autoStatPageName(build: BuildState, page: StatPage): string {
-  const index = build.statPages.findIndex((candidate) => candidate.id === page.id);
+  const raised = STAT_KEYS.map((stat) => ({ stat, points: page[stat] - MIN_BASE_STAT }))
+    .filter((entry) => entry.points > 0)
+    .sort((a, b) => b.points - a.points);
+  const labels = raised.map((entry) => entry.stat.toUpperCase());
+  let name: string;
 
-  return `Page ${index + 1}`;
+  if (labels.length === 0) {
+    const index = build.statPages.findIndex((candidate) => candidate.id === page.id);
+
+    name = `Page ${String(index + 1)}`;
+  } else if (labels.length === 1) {
+    name = `Full ${labels[0] ?? ''}`;
+  } else {
+    name = labels.join('/');
+  }
+
+  return name;
 }
 
 /** The suit-piercing stat with the largest total ("HP" for 4 × Volcano), if any. */
@@ -236,10 +311,7 @@ export function weaponStatSummary(
     push(stat, value, false);
   }
 
-  if (
-    entry.skillAwake !== null &&
-    !entry.skillAwake.parameter.startsWith(SKILL_AWAKE_PARAMETER_PREFIX)
-  ) {
+  if (entry.skillAwake !== null && !isSkillAwakeParameter(entry.skillAwake.parameter)) {
     push(entry.skillAwake.parameter, entry.skillAwake.value, true);
   }
 
@@ -277,22 +349,13 @@ function skillAwakeWord(
   data: GameData,
   awake: { parameter: string; value: number } | null,
 ): string | undefined {
-  let word: string | undefined;
-
-  if (awake !== null) {
-    if (awake.parameter.startsWith(SKILL_AWAKE_PARAMETER_PREFIX)) {
-      const skillId = Number(awake.parameter.slice(SKILL_AWAKE_PARAMETER_PREFIX.length));
-
-      word = data.awakeSkills.get(skillId)?.name;
-    } else {
-      word = getStatName(data, awake.parameter);
-    }
-  }
-
-  return word;
+  return awake === null ? undefined : getStatName(data, awake.parameter);
 }
 
-/** "STA Healing Oracle +10": dominant stat total, skill awake, item, upgrade (omitted at +0). */
+/**
+ * "STA Healing Oracle +10": dominant stat total, skill awake, item, upgrade (omitted at +0). A
+ * stat awake that is itself the dominant total is named once ("Block Veil +10", not "Block Block").
+ */
 function autoHeldItemName(
   data: GameData,
   entry: WeaponEntry | ShieldEntry,
@@ -303,9 +366,12 @@ function autoHeldItemName(
 
   if (item !== undefined) {
     const [dominant] = weaponStatSummary(data, entry).totals;
+    const dominantIsAwake = dominant?.parameter === entry.skillAwake?.parameter;
 
     name = joinWords([
-      dominant === undefined ? undefined : shortStatLabel(data, dominant.parameter),
+      dominant === undefined || dominantIsAwake
+        ? undefined
+        : shortStatLabel(data, dominant.parameter),
       skillAwakeWord(data, entry.skillAwake),
       itemShortName(item.name),
       upgradeSuffix(entry.upgrade),
@@ -328,7 +394,7 @@ function upgradeDigit(upgrade: number): string {
   return upgrade === 10 ? 'X' : String(upgrade);
 }
 
-/** "Adept's 94869" — pieces in wear order: ring 1, earring 1, necklace, earring 2, ring 2. */
+/** "Adept 94869" — pieces in wear order: ring 1, earring 1, necklace, earring 2, ring 2. */
 export function accessoryUpgradeSignature(entry: AccessorySetEntry): string {
   const { ring1, ring2, earring1, earring2, necklace } = entry.upgrades;
 
@@ -373,7 +439,7 @@ function accessoryMixLabel(parts: readonly AccessoryPart[]): string {
 }
 
 /**
- * "Adept's X0700" for a full set, "Clean Adept's" at +0; a mix reads "Adept/CW X555X" — the parts
+ * "Adept X0700" for a full set, "Clean Adept" at +0; a mix reads "Adept/CW X555X" — the parts
  * by abbreviation, then the same per-piece upgrade signature in wear order.
  */
 export function autoAccessorySetName(data: GameData, entry: AccessorySetEntry): string {
@@ -388,7 +454,7 @@ export function autoAccessorySetName(data: GameData, entry: AccessorySetEntry): 
         : accessoryMixLabel(parts);
     const signature = accessoryUpgradeSignature(entry);
 
-    // All pieces at +0 read better as "Clean Adept's" than "Adept's 00000".
+    // All pieces at +0 read better as "Clean Adept" than "Adept 00000".
     name = signature === '00000' ? `Clean ${label}` : `${label} ${signature}`;
   }
 
@@ -408,11 +474,11 @@ function dominantBlessingStats(data: GameData, entry: FashionSetEntry): string[]
     .map((line) => line.label);
 }
 
-/** "STA Fashion", "STA/Crit Fashion" (the two dominant blessings) or "Clean Fashion" without any. */
+/** "STA Fash", "STA/Crit Fash" (the two dominant blessings) or "Clean Fash" without any. */
 export function autoFashionSetName(data: GameData, entry: FashionSetEntry): string {
   const stats = dominantBlessingStats(data, entry);
 
-  return stats.length === 0 ? 'Clean Fashion' : joinWords([stats.join('/'), 'Fashion']);
+  return stats.length === 0 ? 'Clean Fash' : joinWords([stats.join('/'), 'Fash']);
 }
 
 /** "Unicorn Corral" / "Rabbit Coop" -> "Unicorn" / "Rabbit". */
@@ -449,7 +515,7 @@ function swapPart(name: string | undefined, fallback: string): string {
 }
 
 /**
- * "Etranar / Oracle / Adept's / Fashion 10% / Page 1 / Angel" — equipment, weapon, accessory set,
+ * "Etranar / Oracle / Adept / STA Fash / Page 1 / Angel" — equipment, weapon, accessory set,
  * fashion set, stat page and pet; the accessory/fashion/pet segments are skipped when the slot is
  * empty. Falls back to "Swap N" for an empty swap.
  */

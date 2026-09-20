@@ -4,6 +4,7 @@ import { useActions, useAppStore } from '@/state';
 
 import { ConfirmDialog } from './ConfirmDialog';
 import { ImportDialog } from './ImportDialog';
+import { PvpTargetsDialog } from './PvpTargetsDialog';
 import { SaveAsDialog } from './SaveAsDialog';
 import { ShareDialog } from './ShareDialog';
 import { SnapshotsDialog } from './SnapshotsDialog';
@@ -35,6 +36,9 @@ export function DialogHost() {
         break;
       case 'snapshots':
         content = <SnapshotsDialog onClose={close} />;
+        break;
+      case 'pvpTargets':
+        content = <PvpTargetsDialog onClose={close} />;
         break;
     }
   }

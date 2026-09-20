@@ -5,7 +5,9 @@ import {
   GLORIA_PATRI_SKILL_ID,
   HEAL_RAIN_SKILL_ID,
   RM_BUFF_SKILL_IDS,
+  damageSkillFamiliesFor,
   requireItem,
+  skillAwakeSkillId,
   type GameData,
 } from '@/data';
 import {
@@ -16,6 +18,7 @@ import {
   type FashionSetEntry,
   type GearSwap,
   type ShieldEntry,
+  type SkillAwake,
   type Stack,
   type WeaponEntry,
 } from '@/domain/build/schema';
@@ -93,6 +96,24 @@ function mirrorStatAwake(
   return awake.map((line) => (line === null ? null : { parameter: line.stat, value: line.value }));
 }
 
+/** Flyffulator keys a skill-damage awake by `skill` (DC:583-586); stat awakes by `parameter`. */
+function mirrorSkillAwake(awake: SkillAwake | null): FlyffItemElem['skillAwake'] {
+  let mirrored: FlyffItemElem['skillAwake'] = null;
+
+  if (awake !== null) {
+    const skillId = skillAwakeSkillId(awake.parameter);
+
+    mirrored = {
+      id: awake.parameter,
+      parameter: awake.parameter,
+      add: awake.value,
+      ...(skillId === undefined ? {} : { skill: skillId }),
+    };
+  }
+
+  return mirrored;
+}
+
 function mirrorWeapon(fl: Flyffulator, data: GameData, entry: WeaponEntry): FlyffItemElem | null {
   let elem: FlyffItemElem | null = null;
 
@@ -127,14 +148,7 @@ function mirrorWeapon(fl: Flyffulator, data: GameData, entry: WeaponEntry): Flyf
 
         return rolled;
       });
-    elem.skillAwake =
-      entry.skillAwake === null
-        ? null
-        : {
-            id: entry.skillAwake.parameter,
-            parameter: entry.skillAwake.parameter,
-            add: entry.skillAwake.value,
-          };
+    elem.skillAwake = mirrorSkillAwake(entry.skillAwake);
     elem.statAwake = mirrorStatAwake(entry.statAwake);
     elem.piercings = expandStacks(fl, entry.cards);
     // Left uncapped on purpose: Flyffulator's own `slice(0, upgradeLevel)` must match our cap.
@@ -150,14 +164,7 @@ function mirrorShield(fl: Flyffulator, entry: ShieldEntry): FlyffItemElem | null
   if (entry.itemId !== null) {
     elem = itemElem(fl, entry.itemId);
     elem.upgradeLevel = entry.upgrade;
-    elem.skillAwake =
-      entry.skillAwake === null
-        ? null
-        : {
-            id: entry.skillAwake.parameter,
-            parameter: entry.skillAwake.parameter,
-            add: entry.skillAwake.value,
-          };
+    elem.skillAwake = mirrorSkillAwake(entry.skillAwake);
     elem.statAwake = mirrorStatAwake(entry.statAwake);
     elem.piercings = expandStacks(fl, entry.cards);
   }
@@ -493,4 +500,64 @@ export function installContext(fl: Flyffulator, entity: FlyffEntity): FlyffEntit
   fl.Context.settings.targetHealthPercent = 100;
 
   return dummy;
+}
+
+/**
+ * Every curated damage skill of the job — and each synergy source — learned at its maximum level,
+ * so `getDamage` finds the levels the engine assumes.
+ */
+export function mirrorDamageSkills(
+  fl: Flyffulator,
+  data: GameData,
+  entity: FlyffEntity,
+  jobId: number,
+): void {
+  const learn = (skillId: number): void => {
+    const prop = requireDefined(fl.Utils.getSkillById(skillId), `No skill ${skillId}`);
+
+    entity.skillLevels[skillId] = prop.levels.length;
+  };
+
+  for (const family of damageSkillFamiliesFor(data, jobId)) {
+    for (const skill of [family.base, ...family.variations]) {
+      learn(skill.id);
+
+      for (const synergy of skill.max.synergies) {
+        learn(synergy.skill);
+      }
+    }
+  }
+}
+
+/**
+ * Health below 100 % so Muran's Wrath stays out of the comparison (the engine gets the matching
+ * option), and every random side effect off: misses, blocks, lifesteal and Swordcross procs.
+ * Settings are static on Flyffulator's context; the returned function restores them.
+ */
+export function installDamageContext(fl: Flyffulator, targetHealthPercent: number): () => void {
+  const settings = fl.Context.settings;
+  const saved = { ...settings };
+
+  settings.targetHealthPercent = targetHealthPercent;
+  settings.missingEnabled = false;
+  settings.blockingEnabled = false;
+  settings.lifestealEnabled = false;
+  settings.swordcrossEnabled = false;
+
+  return () => {
+    Object.assign(settings, saved);
+  };
+}
+
+/**
+ * The dummy one level below the character, as the engine defines it for overcrits: a monster
+ * whose level is not hidden, with the item defense scaled to that level like a hidden one's.
+ */
+export function lowerDummy(fl: Flyffulator, level: number): FlyffEntity {
+  return new fl.Entity({
+    ...fl.Utils.TRAINING_DUMMY,
+    levelHidden: false,
+    level,
+    defense: (fl.Utils.TRAINING_DUMMY.defense * level) / 100,
+  });
 }

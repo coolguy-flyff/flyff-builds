@@ -1,8 +1,35 @@
-import type { ResultsPage } from '@/domain/engine';
+import { trainingDummyTarget, type DamageResults, type ResultsPage } from '@/domain/engine';
 import type { VitalBreakdown } from '@/domain/engine';
 
 /** DEX 15 / 8 × Seraph block factor 0.6 = 1.125, floored with no gear. */
 const BARE_BLOCK = { fromDex: 1.125, fromGear: 0, total: 1 };
+
+/**
+ * The bare Seraph's fists against the Lv 190 dummy (defense 185): hits 216–218 lose 201–203 to
+ * the defense, so 15 per hit; crits 1.1–1.4×, overcrits 1.2–2.0× on 15–16 against the Lv 189 dummy.
+ */
+export const BARE_DAMAGE: DamageResults = {
+  target: trainingDummyTarget(190),
+  basic: {
+    hit: { min: 15, max: 15 },
+    average: 15,
+    crit: { min: 16, max: 21 },
+    overcrit: { min: 18, max: 32 },
+    criticalChance: 1,
+    breakdown: {
+      attack: { min: 216, max: 218 },
+      attackMultiplier: 1,
+      defense: 185,
+      critBonus: 1,
+      factor: 1,
+      criticalChance: 1,
+      criticalResist: 0,
+      partyBonus: 0,
+    },
+  },
+  leftHand: null,
+  skills: {},
+};
 
 const ZERO_BREAKDOWN: VitalBreakdown = { base: 0, flat: 0, rate: 0, rateGain: 0, total: 0 };
 
@@ -50,13 +77,14 @@ export const BASE_PAGE: ResultsPage = {
   meleeBlockBreakdown: BARE_BLOCK,
   rangedBlockBreakdown: BARE_BLOCK,
   healingSkills: {
-    healRain: { skillOutput: 2254, healingRate: 0, total: 2254 },
-    gloriaPatri: { skillOutput: 6408, healingRate: 0, total: 6408 },
-    gloriaPatriEffectIncrease: { skillOutput: 6740, healingRate: 0, total: 6740 },
+    healRain: { skillOutput: 2286, healingRate: 0, total: 2286 },
+    gloriaPatri: { skillOutput: 6432, healingRate: 0, total: 6432 },
+    gloriaPatriEffectIncrease: { skillOutput: 6732, healingRate: 0, total: 6732 },
   },
   hpBreakdown: ZERO_BREAKDOWN,
   mpBreakdown: ZERO_BREAKDOWN,
   fpBreakdown: ZERO_BREAKDOWN,
+  damage: BARE_DAMAGE,
   rawTotals: {},
 };
 

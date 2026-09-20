@@ -52,8 +52,9 @@ function appended(body: Uint8Array, ...extra: number[]): Uint8Array {
 }
 
 describe('encodeV1 / decodeV1', () => {
-  it('round-trips the maximal build structurally and byte-for-byte, minus the v2 fields', () => {
-    const build = maximalBuild(data);
+  it('round-trips the maximal build structurally and byte-for-byte, minus the later fields', () => {
+    // v1 cannot carry custom PvP targets at all (v3), so the fixture is trimmed before encoding.
+    const build = withoutV2Fields(maximalBuild(data));
     const bytes = encodeV1(build);
     const decoded = decodeV1(bytes);
 

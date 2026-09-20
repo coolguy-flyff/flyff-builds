@@ -4,7 +4,6 @@ import { resolveShieldEntry } from '@/domain/engine';
 import { piercingSlots, skillAwakeOptions } from '@/domain/rules';
 import { SubCard } from '@/components/Card';
 import { rarityClassName } from '@/components/rarity';
-import { Hint } from '@/components/Text';
 import { useActions, useAppStore, useGameData } from '@/state';
 
 import { EntryEditorShell } from '../EntryEditorShell';
@@ -102,11 +101,6 @@ export function ShieldEditor({ entry }: { entry: ShieldEntry }) {
           }}
         />
       )}
-      <div className="md:col-span-2">
-        <Hint>
-          A shield only counts in swaps whose weapon is one-handed (and never for Slayers).
-        </Hint>
-      </div>
     </EntryEditorShell>
   );
 }

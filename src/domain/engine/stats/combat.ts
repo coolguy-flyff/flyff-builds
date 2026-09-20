@@ -3,10 +3,11 @@ import { clamp } from '@/lib/math';
 import type { StatContext } from './context';
 
 /**
- * Hit rate is computed against Flyffulator's Training Dummy (flyffutils.js:16-43): its level is
- * hidden (treated as the player's) and its parry is 82.
+ * Flyffulator's Training Dummy (flyffutils.js:16-43), the target hit rate and damage are computed
+ * against: a monster whose level is hidden (treated as the player's), with parry 82, defense 133
+ * (scaled by level / 100 like every hidden-level monster's), no magic defense and STA 1.
  */
-export const TRAINING_DUMMY = Object.freeze({ parry: 82 });
+export const TRAINING_DUMMY = Object.freeze({ parry: 82, defense: 133, magicDefense: 0, sta: 1 });
 
 /** Rows below this are not shown by the game; Flyffulator clamps hit rate to this range. */
 const HIT_RATE_MIN = 20;
@@ -45,9 +46,13 @@ export function computeHitRate(ctx: StatContext): HitRate {
   };
 }
 
-/** Critical chance at full health with no party Precision (flyffentity.js:1608-1628). */
+/**
+ * Critical chance at full health with no party Precision (flyffentity.js:1608-1628). The game
+ * grants the job factor per full 10 DEX (a Harlequin at DEX 25 gets 8 %, not 10 %); Flyffulator
+ * floors after multiplying, which only differs for the factor-2 and factor-4 jobs.
+ */
 export interface CriticalChanceBreakdown {
-  /** `floor(DEX / 10 × job factor)` — the character's own DEX. */
+  /** `floor(DEX / 10) × job factor` — the character's own DEX. */
   readonly fromDex: number;
   /** The critical chance % from equipment and buffs. */
   readonly fromGear: number;
@@ -56,7 +61,7 @@ export interface CriticalChanceBreakdown {
 }
 
 export function computeCriticalChanceBreakdown(ctx: StatContext): CriticalChanceBreakdown {
-  const fromDex = Math.floor((ctx.base('dex') / 10) * ctx.job.critical);
+  const fromDex = Math.floor(ctx.base('dex') / 10) * ctx.job.critical;
   const fromGear = ctx.total('criticalchance', true);
 
   return { fromDex, fromGear, total: Math.max(fromDex + fromGear, 0) };

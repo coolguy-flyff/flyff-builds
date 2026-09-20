@@ -9,6 +9,7 @@ import {
   type SwapResult,
 } from '@/domain/engine';
 
+import { damageRows } from './damageRows';
 import { formatInt, formatPercent } from './format';
 
 /**
@@ -33,6 +34,7 @@ export const RESULTS_GROUP_IDS = [
   'speed',
   'offense',
   'defense',
+  'damage',
   'healing',
   'raw',
 ] as const;
@@ -44,6 +46,8 @@ export interface ResultsGroup {
   readonly label: string;
   /** Dim inline note shown after the group label. */
   readonly note?: string | undefined;
+  /** Explanation of the group as a whole, on an info mark next to its label. */
+  readonly tooltip?: string | undefined;
 }
 
 /** One line of a cell tooltip: a factor or a source and its formatted value. */
@@ -59,6 +63,24 @@ export interface SourceSpec {
   readonly parameter: string;
   readonly rate: boolean;
   readonly statPageKey?: StatKey | undefined;
+}
+
+export interface RowVariantOption {
+  readonly value: string;
+  readonly label: string;
+}
+
+/**
+ * A row whose label is a choice (a damage skill and its master variations): the table renders a
+ * select and reports the pick as `(key, value)`; the catalogue stays free of callbacks.
+ */
+export interface RowVariants {
+  readonly key: string;
+  readonly value: string;
+  readonly ariaLabel: string;
+  readonly options: readonly RowVariantOption[];
+  /** Text after the select ("×3" hits). */
+  readonly suffix?: string | undefined;
 }
 
 export interface ResultsRow {
@@ -77,6 +99,7 @@ export interface ResultsRow {
    * jump height); the row is left out while every column sits at it.
    */
   readonly idleValue?: number | undefined;
+  readonly variants?: RowVariants | undefined;
   readonly select: (page: ResultsPage) => RowValue;
 }
 
@@ -87,11 +110,19 @@ export interface ResultsRowGroup {
 
 export interface RowCatalogOptions {
   readonly showRawTotals: boolean;
+  /** Damage skill family id → the variation its row shows (the base when absent). */
+  readonly skillVariations?: Readonly<Record<number, number>> | undefined;
 }
 
 const HEAL_SYNERGY_NOTE = 'Gloria Patri rows include Heal synergy (Heal Lv 20, +1000)';
 const HEAL_SYNERGY_TOOLTIP =
   'Includes the Heal synergy with Heal assumed maxed at Lv 20 (+1000 HP per cast).';
+
+/** What every skill row shares; the basic-attack rows keep their own explanations. */
+const DAMAGE_GROUP_TOOLTIP =
+  'Average damage per hit at maximum level, after the target’s defense. ' +
+  'Charged or buff-enhanced skills show their base value (uncharged, without the buff). ' +
+  'A multi-hit skill shows one hit.';
 
 export const RESULTS_GROUPS: readonly ResultsGroup[] = [
   { id: 'base', label: 'Base stats' },
@@ -99,6 +130,7 @@ export const RESULTS_GROUPS: readonly ResultsGroup[] = [
   { id: 'speed', label: 'Speed' },
   { id: 'offense', label: 'Offense' },
   { id: 'defense', label: 'Defense' },
+  { id: 'damage', label: 'Damage', tooltip: DAMAGE_GROUP_TOOLTIP },
   { id: 'healing', label: 'Healing skills', note: HEAL_SYNERGY_NOTE },
   { id: 'raw', label: 'Raw totals' },
 ];
@@ -182,7 +214,8 @@ function rateRow(
  * the job factor is 4 for Harlequin, 2 for Crackshooter and 1 for every other job.
  */
 const CRITICAL_CHANCE_TOOLTIP =
-  'DEX ÷ 10 × job factor, rounded down, plus critical chance from equipment and buffs. ' +
+  'Job factor per full 10 DEX (DEX ÷ 10, rounded down, × job factor), plus critical chance from ' +
+  'equipment and buffs. ' +
   'The job factor is 4 for Harlequin, 2 for Crackshooter and 1 for every other job.';
 
 const criticalChanceDetails: CellDetails = (page) => [
@@ -259,14 +292,16 @@ const STATIC_ROWS: readonly ResultsRow[] = [
   }),
   rateRow('offense', 'criticalDamage', 'Critical damage %', 'criticaldamage'),
   rateRow('offense', 'blockPenetration', 'Block penetration %', 'blockpenetration'),
-  rateRow('offense', 'healing', 'Healing %', 'healing'),
   {
     id: 'defense',
     group: 'defense',
     label: 'Defense',
     format: 'range',
     higherIsBetter: true,
-    tooltip: 'The game rolls between min and max on every hit.',
+    tooltip:
+      'The defense value in the game’s character window includes the full sum of your ' +
+      'equipment’s defense. In practice only a quarter of that sum counts, which is what is ' +
+      'shown here. The game rolls between min and max on every hit.',
     select: (page) => ({ min: page.defenseMin, max: page.defenseMax }),
   },
   scalarRow('defense', 'magicDefense', 'Magic defense', 'int'),
@@ -278,6 +313,7 @@ const STATIC_ROWS: readonly ResultsRow[] = [
   }),
   rateRow('defense', 'pveDamageReduction', 'PvE damage reduction %', 'pvedamagereduction'),
   rateRow('defense', 'pvpDamageReduction', 'PvP damage reduction %', 'pvpdamagereduction'),
+  rateRow('defense', 'healing', 'Healing %', 'healing'),
   scalarRow('defense', 'parry', 'Parry', 'int', { sources: rateSource('parry') }),
 ];
 
@@ -395,7 +431,7 @@ function rawRows(data: GameData, pages: readonly ResultsPage[]): ResultsRow[] {
 
 /**
  * The concrete rows for the current columns: the static groups minus the rows idle in every
- * column, healing when any column has it, raw totals on request.
+ * column, the damage rows the columns have, healing when any column has it, raw totals on request.
  */
 export function buildRows(
   data: GameData,
@@ -404,6 +440,8 @@ export function buildRows(
 ): ResultsRow[] {
   const pages = results.map((result) => result.page);
   const rows = [...STATIC_ROWS, ...blockRows(pages)].filter((row) => !isIdleEverywhere(row, pages));
+
+  rows.push(...damageRows(data, pages, options.skillVariations ?? {}));
 
   if (pages.some((page) => page.healingSkills !== null)) {
     rows.push(...HEALING_ROWS);

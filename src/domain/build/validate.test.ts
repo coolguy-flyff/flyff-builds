@@ -197,11 +197,11 @@ describe('naming', () => {
   it('names an unupgraded accessory set "Clean" and a fully raised pet "Perfect"', () => {
     const accessory = createAccessorySetEntry(7, ADEPTS_SET);
 
-    expect(autoAccessorySetName(data, accessory)).toBe("Clean Adept's");
+    expect(autoAccessorySetName(data, accessory)).toBe('Clean Adept');
 
     const upgraded = { ...accessory, upgrades: { ...accessory.upgrades, ring1: 10 } };
 
-    expect(autoAccessorySetName(data, upgraded)).toBe("Adept's X0000");
+    expect(autoAccessorySetName(data, upgraded)).toBe('Adept X0000');
 
     // The crit-chance pet maxes at 31 (1+2+3+4+5+7+9 across tiers F..S).
     const angel = createPetEntry(8, ANGEL_PET, 31);
@@ -213,8 +213,8 @@ describe('naming', () => {
   it('leads fashion names with a single blessing and names swaps with every picked slot', () => {
     const fashion = { ...createFashionSetEntry(9), blessings: [{ parameter: 'sta', total: 40 }] };
 
-    expect(autoFashionSetName(data, fashion)).toBe('STA Fashion');
-    expect(autoFashionSetName(data, createFashionSetEntry(9))).toBe('Clean Fashion');
+    expect(autoFashionSetName(data, fashion)).toBe('STA Fash');
+    expect(autoFashionSetName(data, createFashionSetEntry(9))).toBe('Clean Fash');
     // Two dominant blessings, ordered by the slots they need (STA 40 needs 8, crit 2.5 needs 1).
     expect(
       autoFashionSetName(data, {
@@ -224,7 +224,7 @@ describe('naming', () => {
           { parameter: 'sta', total: 40 },
         ],
       }),
-    ).toBe('STA/Crit Fashion');
+    ).toBe('STA/Crit Fash');
 
     const build = buildWith((base) => ({
       ...base,
@@ -246,7 +246,7 @@ describe('naming', () => {
     }));
 
     expect(autoGearSwapName(data, build, requireDefined(build.gearSwaps[0], 'swap'))).toBe(
-      "Etranar / Oracle / Adept's / STA Fashion / Page 1 / Angel",
+      'Etranar / Oracle / Adept / STA Fash / Page 1 / Angel',
     );
   });
 });

@@ -3,9 +3,9 @@ import { requireDefined } from '@/lib/assert';
 
 /**
  * Test oracle for "equal modulo ids": renumbers every entry 1..n in the decoder's encounter order
- * (pages, equipment sets, weapons, shields, accessory sets, fashion sets, pets, swaps), remaps swap
- * references accordingly and sets `nextId`. Written independently of the codec so a symmetric
- * encoder/decoder bug cannot hide behind it.
+ * (pages, equipment sets, weapons, shields, accessory sets, fashion sets, pets, swaps, PvP
+ * targets), remaps swap references accordingly and sets `nextId`. Written independently of the
+ * codec so a symmetric encoder/decoder bug cannot hide behind it.
  */
 export function renumberIds(build: BuildState): BuildState {
   const mapping = new Map<number, number>();
@@ -43,6 +43,7 @@ export function renumberIds(build: BuildState): BuildState {
     fashionSetId: mappedOptional(swap.fashionSetId),
     petId: mappedOptional(swap.petId),
   }));
+  const pvpTargets = renumber(build.pvpTargets);
 
   return {
     ...build,
@@ -55,5 +56,6 @@ export function renumberIds(build: BuildState): BuildState {
     fashionSets,
     pets,
     gearSwaps,
+    pvpTargets,
   };
 }

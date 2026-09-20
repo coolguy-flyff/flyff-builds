@@ -6,7 +6,8 @@ import { decodeBase64Url, encodeBase64Url } from './base64url';
 import { ByteReader } from './bytes';
 import { decodeV1 } from './codec/v1/decode';
 import { decodeV2 } from './codec/v2/decode';
-import { encodeV2 } from './codec/v2/encode';
+import { decodeV3 } from './codec/v3/decode';
+import { encodeV3 } from './codec/v3/encode';
 import { defaultDeflater, type Deflater } from './compression';
 import {
   SHARE_ERROR_MESSAGES,
@@ -46,7 +47,8 @@ type BodyDecoder = (body: Uint8Array) => BuildState;
 
 const CODEC_VERSION_V1 = 1;
 const CODEC_VERSION_V2 = 2;
-const CURRENT_CODEC_VERSION = CODEC_VERSION_V2;
+const CODEC_VERSION_V3 = 3;
+const CURRENT_CODEC_VERSION = CODEC_VERSION_V3;
 const HEADER_BYTES = 2;
 const FLAG_DEFLATED = 0b1;
 const KNOWN_FLAGS = FLAG_DEFLATED;
@@ -59,6 +61,7 @@ const MAX_BODY_BYTES = 256 * 1024;
 const DECODERS: ReadonlyMap<number, BodyDecoder> = new Map([
   [CODEC_VERSION_V1, decodeV1],
   [CODEC_VERSION_V2, decodeV2],
+  [CODEC_VERSION_V3, decodeV3],
 ]);
 
 /**
@@ -77,7 +80,7 @@ export async function encodeShareCode(
     throw new ShareEncodeError(`cannot share an invalid build: ${validated.error.message}`);
   }
 
-  const body = encodeV2(validated.value.build);
+  const body = encodeV3(validated.value.build);
   const deflated = await deflater.deflateRaw(body);
   const useDeflated = deflated.length < body.length;
   const payload = useDeflated ? deflated : body;

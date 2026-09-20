@@ -8,7 +8,12 @@ import { requireDefined } from '@/lib/assert';
 import { encodeBase64Url } from '../../base64url';
 import { decodeShareCode } from '../../index';
 import { decodeErrorCode } from '../../testing/errors';
-import { FIXTURE_IDS, maximalBuild, withoutV2Fields } from '../../testing/fixtures';
+import {
+  FIXTURE_IDS,
+  maximalBuild,
+  withoutV2Fields,
+  withoutV3Fields,
+} from '../../testing/fixtures';
 import { renumberIds } from '../../testing/ids';
 import { decodeV1 } from '../v1/decode';
 import { encodeV1 } from '../v1/encode';
@@ -18,6 +23,11 @@ import { encodeV2 } from './encode';
 
 const data = loadBundledGameData();
 const V1_ENVELOPE = [1, 0];
+
+/** The maximal build as v2 can carry it: without the custom PvP targets v3 added. */
+function v2MaximalBuild(): BuildState {
+  return withoutV3Fields(maximalBuild(data));
+}
 
 /** A share code in the v1 envelope around a v1 body, as links shared before v2 look. */
 function v1ShareCode(build: BuildState): string {
@@ -32,7 +42,7 @@ function v1ShareCode(build: BuildState): string {
 
 describe('encodeV2 / decodeV2', () => {
   it('round-trips the maximal build, mixed accessory sets and class skills included', () => {
-    const build = maximalBuild(data);
+    const build = v2MaximalBuild();
     const bytes = encodeV2(build);
     const decoded = decodeV2(bytes);
 
@@ -70,22 +80,24 @@ describe('encodeV2 / decodeV2', () => {
   });
 
   it('rejects a body that ends inside the appended fields', () => {
-    const bytes = encodeV2(maximalBuild(data));
+    const bytes = encodeV2(v2MaximalBuild());
 
-    expect(decodeErrorCode(() => decodeV2(encodeV1(maximalBuild(data))))).toBe('CORRUPT');
+    expect(decodeErrorCode(() => decodeV2(encodeV1(withoutV2Fields(maximalBuild(data)))))).toBe(
+      'CORRUPT',
+    );
     expect(decodeErrorCode(() => decodeV2(bytes.slice(0, bytes.length - 1)))).toBe('TRUNCATED');
   });
 });
 
 describe('reading v1 codes', () => {
   it('decodes a v1 body with no overrides and no class skills', () => {
-    const build = maximalBuild(data);
+    const build = withoutV2Fields(maximalBuild(data));
 
     expect(decodeV1(encodeV1(build))).toStrictEqual(withoutV2Fields(renumberIds(build)));
   });
 
   it('still accepts the v1 envelope through the public decoder', async () => {
-    const build = maximalBuild(data);
+    const build = withoutV2Fields(maximalBuild(data));
     const result = await decodeShareCode(data, v1ShareCode(build));
 
     if (!result.ok) {

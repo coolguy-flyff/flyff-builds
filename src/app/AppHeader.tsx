@@ -64,13 +64,18 @@ export function AppHeader() {
     actions.openDialog({
       kind: 'confirm',
       title: 'Start over?',
-      message:
-        'This clears the working build. Snapshots are kept, and the current build is saved as an automatic snapshot first.',
-      confirmLabel: 'Reset build',
+      message: 'This clears the working build. Existing snapshots are kept either way.',
+      confirmLabel: 'Start over',
       danger: true,
-      onConfirm: () => {
-        actions.resetBuild();
-        actions.pushToast('info', 'Build reset — the previous build was kept as a snapshot.');
+      checkbox: { label: 'Keep the current build as a snapshot', defaultChecked: true },
+      onConfirm: (autoSnapshot) => {
+        actions.resetBuild({ autoSnapshot });
+        actions.pushToast(
+          'info',
+          autoSnapshot
+            ? 'Build reset — the previous build was kept as a snapshot.'
+            : 'Build reset.',
+        );
       },
     });
   };

@@ -1,7 +1,17 @@
+import type { ReactNode } from 'react';
+
+import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { Select } from '@/components/Select';
 import { DragHandle, Sortable } from '@/components/Sortable';
 import { FloatingTooltip, Tooltip, type TooltipPlacement } from '@/components/Tooltip';
 import { useSortableItem } from '@/components/useSortableItem';
+import {
+  PARTY_MEMBERS,
+  type DamageTarget,
+  type DamageTargetChoice,
+  type PartySkill,
+} from '@/domain/engine';
 import { cx } from '@/lib/cx';
 import { cellDetails } from '@/results/cellDetails';
 import { bestColumns, diffValue, rowValues } from '@/results/compare';
@@ -9,6 +19,7 @@ import { formatDiff, formatValue } from '@/results/format';
 import type { CellDetail, ResultsRow, ResultsRowGroup, RowValue } from '@/results/rowCatalog';
 
 import { headerChips, type ResultsColumn } from './columns';
+import { TargetPicker } from './TargetPicker';
 
 export interface ResultsTableProps {
   groups: readonly ResultsRowGroup[];
@@ -24,11 +35,43 @@ export interface ResultsTableProps {
   onOpenSwap: (swapId: number) => void;
   /** Drag & drop: `swapId` takes `targetSwapId`'s column (the order is shared with Buffs & Swaps). */
   onMoveSwap: (swapId: number, targetSwapId: number) => void;
+  /** A row with variants (a damage skill family) switched to another variation. */
+  onSelectVariant: (key: string, value: string) => void;
+  /** The damage rows' target: the picker sits in the Damage group's header row. */
+  targets: readonly DamageTarget[];
+  damageTarget: DamageTargetChoice;
+  onSelectTarget: (choice: DamageTargetChoice) => void;
+  /** Opens the PvP targets dialog (presets and the build's custom targets). */
+  onEditTargets: () => void;
+  /** The party attack skill against the training dummy; the select shows for the dummy only. */
+  partySkill: PartySkill;
+  onSelectPartySkill: (partySkill: PartySkill) => void;
 }
+
+const PARTY_SKILL_OPTIONS: readonly { value: PartySkill; label: string }[] = [
+  { value: 'none', label: 'No party skill' },
+  { value: 'linked', label: 'Linked Attack' },
+  { value: 'global', label: 'Global Attack' },
+];
+
+function isPartySkill(value: string): value is PartySkill {
+  return PARTY_SKILL_OPTIONS.some((option) => option.value === value);
+}
+
+const DAMAGE_GROUP_ID = 'damage';
 
 const STAT_COLUMN_WIDTH_PX = 200;
 /** Fixed swap-column width: values stay close together instead of stretching across the page. */
 const SWAP_COLUMN_WIDTH_PX = 229;
+/**
+ * The table is never narrower than this many swap columns: one swap spans three widths, two
+ * swaps a width and a half each.
+ */
+const MIN_SWAP_COLUMNS = 3;
+
+function swapColumnWidth(columnCount: number): number {
+  return (Math.max(columnCount, MIN_SWAP_COLUMNS) * SWAP_COLUMN_WIDTH_PX) / columnCount;
+}
 
 const CELL = 'border-t border-white/5 px-3.5 py-1.5';
 const STICKY_LEFT = 'sticky left-0 z-10';
@@ -147,32 +190,103 @@ function GroupRow({
   group,
   columnCount,
   collapsed,
+  control,
   onToggle,
 }: {
   group: ResultsRowGroup['group'];
   columnCount: number;
   collapsed: boolean;
+  /** Replaces the inline note (the Damage group's target picker). */
+  control?: ReactNode;
   onToggle: () => void;
 }) {
+  let note: ReactNode = null;
+
+  if (control !== undefined) {
+    note = control;
+  } else if (group.note !== undefined) {
+    note = <span>— {group.note}</span>;
+  }
+
   return (
     <tr>
       <th scope="rowgroup" className={cx(STICKY_LEFT, 'bg-card px-3.5 py-1.5 text-left')}>
-        <button
-          type="button"
-          aria-expanded={!collapsed}
-          onClick={onToggle}
-          className={cx(UPPERCASE_LABEL, 'flex items-center gap-1.5 text-text-2 hover:text-text')}
-        >
-          <span aria-hidden="true" className="text-dim">
-            {collapsed ? '▸' : '▾'}
-          </span>
-          {group.label}
-        </button>
+        <span className="flex items-center gap-1.5">
+          <button
+            type="button"
+            aria-expanded={!collapsed}
+            onClick={onToggle}
+            className={cx(UPPERCASE_LABEL, 'flex items-center gap-1.5 text-text-2 hover:text-text')}
+          >
+            <span aria-hidden="true" className="text-dim">
+              {collapsed ? '▸' : '▾'}
+            </span>
+            {group.label}
+          </button>
+          {group.tooltip !== undefined && (
+            <FloatingTooltip content={group.tooltip}>
+              <span aria-label={`About ${group.label}`} className="cursor-help text-dim">
+                ⓘ
+              </span>
+            </FloatingTooltip>
+          )}
+        </span>
       </th>
-      <td colSpan={columnCount} className="bg-card px-3.5 py-1.5 text-[11px] text-dim">
-        {group.note !== undefined && <span>— {group.note}</span>}
+      <td colSpan={columnCount} className="bg-card px-3.5 py-1 text-[11px] text-dim">
+        {note}
       </td>
     </tr>
+  );
+}
+
+/**
+ * "— vs [Training dummy ▾] Targets… [No party skill ▾]" in the Damage group's header row; the
+ * party skill select only shows against the dummy, since the skills only work on monsters.
+ */
+function TargetControl({
+  targets,
+  choice,
+  onChange,
+  onEdit,
+  partySkill,
+  onSelectPartySkill,
+}: {
+  targets: readonly DamageTarget[];
+  choice: DamageTargetChoice;
+  onChange: (choice: DamageTargetChoice) => void;
+  onEdit: () => void;
+  partySkill: PartySkill;
+  onSelectPartySkill: (partySkill: PartySkill) => void;
+}) {
+  return (
+    <span className="flex items-center gap-2 font-sans text-text-2">
+      <span className="text-dim">— vs</span>
+      <TargetPicker targets={targets} choice={choice} onChange={onChange} />
+      <Button
+        size="xs"
+        variant="ghost"
+        title="The PvP presets and your own targets"
+        onClick={onEdit}
+      >
+        Targets…
+      </Button>
+      {choice.kind === 'dummy' && (
+        <span className="w-[150px]">
+          <Select
+            label="Party skill"
+            size="sm"
+            title={`Party attack skill, with a full party of ${String(PARTY_MEMBERS)} assumed`}
+            value={partySkill}
+            options={PARTY_SKILL_OPTIONS}
+            onChange={(value) => {
+              if (isPartySkill(value)) {
+                onSelectPartySkill(value);
+              }
+            }}
+          />
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -215,18 +329,71 @@ function CellValue({
   return content;
 }
 
+const LABEL_UNDERLINE =
+  'cursor-help underline decoration-white/25 decoration-dotted underline-offset-4';
+
+/** The stat name; a select when the row offers variants, with the explanation on an info mark. */
+function RowLabel({
+  row,
+  onSelectVariant,
+}: {
+  row: ResultsRow;
+  onSelectVariant: (key: string, value: string) => void;
+}) {
+  let label;
+
+  if (row.variants !== undefined) {
+    const { key, value, ariaLabel, options, suffix } = row.variants;
+
+    label = (
+      <span className="flex items-center gap-1.5">
+        <Select
+          label={ariaLabel}
+          size="sm"
+          value={value}
+          options={options.map((option) => ({ ...option, title: option.label }))}
+          onChange={(next) => {
+            onSelectVariant(key, next);
+          }}
+          className="min-w-0 flex-1"
+        />
+        {suffix !== undefined && <span className="shrink-0 font-mono text-muted">{suffix}</span>}
+        {row.tooltip !== undefined && (
+          <FloatingTooltip content={row.tooltip}>
+            <span aria-label="About this row" className="shrink-0 cursor-help text-dim">
+              ⓘ
+            </span>
+          </FloatingTooltip>
+        )}
+      </span>
+    );
+  } else if (row.tooltip === undefined) {
+    label = row.label;
+  } else {
+    label = (
+      <FloatingTooltip content={row.tooltip}>
+        <span className={LABEL_UNDERLINE}>{row.label}</span>
+      </FloatingTooltip>
+    );
+  }
+
+  return label;
+}
+
 function DataRow({
   row,
   columns,
   highlightBest,
   baselineIndex,
   tooltipPlacement,
+  onSelectVariant,
 }: {
   row: ResultsRow;
   columns: readonly ResultsColumn[];
   highlightBest: boolean;
   baselineIndex: number | null;
   tooltipPlacement: TooltipPlacement;
+  onSelectVariant: (key: string, value: string) => void;
 }) {
   const values = rowValues(
     row,
@@ -239,17 +406,10 @@ function DataRow({
     <tr>
       <th
         scope="row"
+        aria-label={row.variants === undefined ? undefined : row.label}
         className={cx(CELL, STICKY_LEFT, 'bg-table text-left font-sans font-medium text-text-2')}
       >
-        {row.tooltip === undefined ? (
-          row.label
-        ) : (
-          <FloatingTooltip content={row.tooltip}>
-            <span className="cursor-help underline decoration-white/25 decoration-dotted underline-offset-4">
-              {row.label}
-            </span>
-          </FloatingTooltip>
-        )}
+        <RowLabel row={row} onSelectVariant={onSelectVariant} />
       </th>
       {columns.map((column, index) => {
         const value = values[index] ?? null;
@@ -290,8 +450,8 @@ function DataRow({
 /**
  * The comparison table (plan A4.1 / D6): sticky stat column and header rows, collapsible groups,
  * best-value accents, per-cell diffs and factor/source tooltips. Fixed column widths — the table
- * shrink-wraps its columns and scrolls inside its own container, never the page. Column headers
- * drag to reorder the swaps.
+ * shrink-wraps its columns and rows, and scrolls inside its own container (never the page) once
+ * they outgrow it. Column headers drag to reorder the swaps.
  */
 export function ResultsTable({
   groups,
@@ -303,9 +463,17 @@ export function ResultsTable({
   onToggleGroup,
   onOpenSwap,
   onMoveSwap,
+  onSelectVariant,
+  targets,
+  damageTarget,
+  onSelectTarget,
+  onEditTargets,
+  partySkill,
+  onSelectPartySkill,
 }: ResultsTableProps) {
   const baselineIndex = columns.findIndex((column) => column.swapId === baselineSwapId);
   const effectiveBaselineIndex = baselineIndex === -1 ? null : baselineIndex;
+  const columnWidth = swapColumnWidth(columns.length);
 
   return (
     <Sortable
@@ -314,15 +482,15 @@ export function ResultsTable({
       onMove={onMoveSwap}
       renderOverlay={(swapId) => <ColumnDragPreview name={columnName(columns, swapId)} />}
     >
-      <div className="min-h-0 w-fit max-w-full flex-1 overflow-auto rounded-xl bg-table">
+      <div className="min-h-0 w-fit max-w-full shrink overflow-auto rounded-xl bg-table">
         <table
           className="table-fixed border-separate border-spacing-0 text-[12.5px]"
-          style={{ width: STAT_COLUMN_WIDTH_PX + columns.length * SWAP_COLUMN_WIDTH_PX }}
+          style={{ width: STAT_COLUMN_WIDTH_PX + columns.length * columnWidth }}
         >
           <colgroup>
             <col style={{ width: STAT_COLUMN_WIDTH_PX }} />
             {columns.map((column) => (
-              <col key={column.swapId} style={{ width: SWAP_COLUMN_WIDTH_PX }} />
+              <col key={column.swapId} style={{ width: columnWidth }} />
             ))}
           </colgroup>
           <thead>
@@ -358,6 +526,18 @@ export function ResultsTable({
                   group={group}
                   columnCount={columns.length}
                   collapsed={collapsed}
+                  control={
+                    group.id === DAMAGE_GROUP_ID ? (
+                      <TargetControl
+                        targets={targets}
+                        choice={damageTarget}
+                        onChange={onSelectTarget}
+                        onEdit={onEditTargets}
+                        partySkill={partySkill}
+                        onSelectPartySkill={onSelectPartySkill}
+                      />
+                    ) : undefined
+                  }
                   onToggle={() => {
                     onToggleGroup(group.id);
                   }}
@@ -371,6 +551,7 @@ export function ResultsTable({
                       highlightBest={highlightBest}
                       baselineIndex={effectiveBaselineIndex}
                       tooltipPlacement={placement}
+                      onSelectVariant={onSelectVariant}
                     />
                   ))}
               </tbody>

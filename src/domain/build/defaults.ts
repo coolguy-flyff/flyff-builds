@@ -1,3 +1,4 @@
+import { pvpTargetStatsOf, type PvpTargetStats } from '@/config/pvpTargets';
 import { CLASS_IDS, defaultClassSkillIds, type GameData, requireClass } from '@/data';
 
 import {
@@ -10,6 +11,7 @@ import {
   type FashionSetEntry,
   type GearSwap,
   type PetEntry,
+  type PvpTarget,
   type ShieldEntry,
   type StatPage,
   type WeaponEntry,
@@ -68,6 +70,11 @@ export function createPetEntry(id: number, petItemId: number | null, total: numb
   return { id, petItemId, total };
 }
 
+/** A custom PvP target with the given name and numbers (a copy of a preset or another target). */
+export function createPvpTarget(id: number, name: string, stats: PvpTargetStats): PvpTarget {
+  return { id, name, ...pvpTargetStatsOf(stats) };
+}
+
 export function createGearSwap(id: number, statPageId: number): GearSwap {
   return {
     id,
@@ -113,5 +120,6 @@ export function createDefaultBuild(data: GameData): BuildState {
       achievementId: null,
     },
     gearSwaps: [swap],
+    pvpTargets: [],
   };
 }

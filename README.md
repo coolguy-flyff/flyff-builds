@@ -15,9 +15,9 @@ Universe API) and flips the workflow:
    raised pets and stat pages live side by side.
 3. **Gear swaps** — one pick from each list plus a stat page, under a shared buff configuration
    (max RM buffs, the job's own class skills, premium items, housing NPCs, FWC achievement).
-4. **Results** — one column per swap: base stats, vitals, speed, offense, defense and (for Seraphs)
-   Heal Rain / Gloria Patri healing, with best-value highlighting, diff mode, a pet-grace what-if
-   toggle and exports.
+4. **Results** — one column per swap: base stats, vitals, speed, offense, defense, damage against
+   a chosen target and (for Seraphs) Heal Rain / Gloria Patri healing, with best-value
+   highlighting, diff mode, a pet-grace what-if toggle and exports.
 
 Everything autosaves to the browser's local storage on every change. "Save as…" keeps immutable
 snapshots, "Reset" starts over (after an automatic snapshot), and "Share" produces a compact code
@@ -46,6 +46,18 @@ or link (`?b=<code>`) that "Import" previews before replacing the working build.
   (20 s, 2 min cooldown, 50 pet energy) at the level its raised tiers unlock — a what-if toggle,
   not part of the build. Footnotes list every degradation applied (ignored offhand, excess
   jewels, …).
+- **Damage** — the Damage group shows, per swap, the basic attack (average of a normal hit after
+  the target's defense), its crit (1.1–1.4× range) and overcrit (1.2–2.0×, against a monster one
+  level below), a dual-wielder's left hand, and one row per curated attack skill at max level
+  (average per hit; a skill with master variations has a dropdown in its label). The "Target"
+  picker chooses Flyffulator's Training dummy at your level (the dummies in Flarine) or a PvP
+  target: three built-in presets (Squishy, Balanced, Tank — geared players by role) and your
+  own. "Targets…" opens a dialog where any target can be
+  duplicated and the copy's six character-window numbers edited: defense, magic defense, magic
+  resistance, crit resist, PvP damage reduction and incoming damage. Custom targets are part of
+  the build, so they persist and travel in share codes. Against a PvP target a "Crit chance vs
+  target" row shows your crit chance after the target's crit resist. Magicians get no
+  basic-attack rows.
 
 Keyboard: steppers accept typing and arrow keys (Shift ±10, Ctrl ±100); lists use ↑/↓ and
 Enter; tabs use ←/→; dialogs trap focus and close with Esc. Gear entries, swaps and result
@@ -90,17 +102,26 @@ lib ← data ← config ← domain ← share / persistence ← state ← compone
 
 ### Not modeled
 
-Element upgrades, damage simulation, party skills, buff stacking rules and skill-damage awakes
-are out of scope. Class skills skip what a "maxed" model cannot express: scalings by equipment
+Element upgrades and buff stacking rules are out of scope. A skill-damage awake ("Maximum
+Crisis +25%") multiplies that skill's damage row, and its master variations. Against the training
+dummy a party skill can be applied — Linked Attack or Global Attack, with a full party of 8
+assumed (2.5 % or 5 % per member, as the game adds it after the defense).
+Damage is a per-hit number, not a simulation: misses, blocks and parries are not weighed in,
+charged skills and forms that change with a buff show their plain value, multi-hit counts are
+collected by hand (a skill without one shows 1 hit), the Mentalist per-debuff bonus is not yet
+applied, Muran's Wrath counts (target at full health) while Ankou's Harvest does not, and only the
+element masteries (not elements themselves) enter magic skills. Class skills skip what a "maxed" model cannot express: scalings by equipment
 part or by another stat (Forcemaster aura effects) and caster-stat scalings without a cap. Attack
 speed and hit rate are not shown (hit rate means little without a real target's parry). Critical
-chance is DEX ÷ 10 × job factor, rounded down, plus equipment and buffs. Block is shown before any attacker is
+chance is the job factor per full 10 DEX (DEX ÷ 10, rounded down, × job factor), plus equipment and buffs. Block is shown before any attacker is
 known — your DEX term plus equipment and buffs, uncapped — because the effective chance also
 depends on the attacker (DEX difference, block penetration, giants) before the game's 6.25–92.5%
 clamp; the row's tooltip spells that out. "Max RM buffs" assumes the caster's INT reaches every
 scaling cap.
 The Gloria Patri rows include the Heal synergy with Heal at level 20 (+1000 HP) — a deliberate
-addition over Flyffulator, which leaves that synergy as a TODO.
+addition over Flyffulator, which leaves that synergy as a TODO. Heals use the skill's listed
+max-level scaling (8.18 × INT for Heal Rain); Flyffulator still reproduces the game's old
+level-shifted scaling bug, which has since been fixed.
 
 ## Attribution & license
 

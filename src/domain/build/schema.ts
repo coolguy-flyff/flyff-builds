@@ -3,13 +3,14 @@ import { z } from 'zod';
 import { EARRING_VARIANTS, NECKLACE_VARIANTS, STAT_KEYS } from '@/data/schema';
 
 /**
- * The user's build state: character, stat pages, the six gear lists, global buffs and gear swaps.
- * This schema is the structural contract for persistence (localStorage envelopes), snapshots and
- * share-code decoding; semantic validation against game data lives in `validate.ts`.
+ * The user's build state: character, stat pages, the six gear lists, global buffs, gear swaps and
+ * custom PvP targets. This schema is the structural contract for persistence (localStorage
+ * envelopes), snapshots and share-code decoding; semantic validation against game data lives in
+ * `validate.ts`.
  */
 
-/** 2 (2026-09-03): class skills and per-piece accessory sets; see `migrations.ts`. */
-export const BUILD_SCHEMA_VERSION = 2 as const;
+/** 3 (2026-09-05): custom PvP targets; see `migrations.ts`. */
+export const BUILD_SCHEMA_VERSION = 3 as const;
 
 export const LIMITS = {
   statPages: 16,
@@ -19,6 +20,7 @@ export const LIMITS = {
   nameLength: 32,
   blessingLines: 10,
   randomStatLines: 4,
+  pvpTargets: 8,
 } as const;
 
 /** Highest overall awake total an armor set can carry (4 pieces × +4 single awakes). */
@@ -218,6 +220,22 @@ export const CharacterSchema = z.object({
   level: z.number().int().min(1).max(300),
 });
 
+/**
+ * A custom PvP target of the damage rows (plan §9): a defender's six numbers as the character
+ * window shows them, named by the user. Ranges are semantic — `validate.ts` clamps them to
+ * `PVP_TARGET_BOUNDS` and names an unnamed target — so a hand-edited code degrades to warnings.
+ */
+export const PvpTargetSchema = z.object({
+  id: entryId,
+  name: z.string().max(LIMITS.nameLength),
+  defense: z.number().int().nonnegative(),
+  magicDefense: z.number().int().nonnegative(),
+  magicResistance: z.number(),
+  criticalResist: z.number(),
+  pvpDamageReduction: z.number(),
+  incomingDamage: z.number(),
+});
+
 export const BuildStateSchema = z.object({
   schemaVersion: z.literal(BUILD_SCHEMA_VERSION),
   nextId: entryId,
@@ -231,6 +249,7 @@ export const BuildStateSchema = z.object({
   pets: z.array(PetEntrySchema).max(LIMITS.entriesPerList),
   buffs: BuffsStateSchema,
   gearSwaps: z.array(GearSwapSchema).min(1).max(LIMITS.gearSwaps),
+  pvpTargets: z.array(PvpTargetSchema).max(LIMITS.pvpTargets),
 });
 
 /** Ids are per-build monotonic integers (`nextId`); share codes never carry them. */
@@ -258,6 +277,7 @@ export type RmBuffs = z.infer<typeof RmBuffsSchema>;
 export type BuffsState = z.infer<typeof BuffsStateSchema>;
 export type Offhand = z.infer<typeof OffhandSchema>;
 export type GearSwap = z.infer<typeof GearSwapSchema>;
+export type PvpTarget = z.infer<typeof PvpTargetSchema>;
 export type Character = z.infer<typeof CharacterSchema>;
 export type BuildState = z.infer<typeof BuildStateSchema>;
 

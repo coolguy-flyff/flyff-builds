@@ -7,6 +7,7 @@ import { resolveGearSwap } from '../resolve';
 import { addEquipmentSet, addWeapon, createTestBuild, firstSwap } from '../testing/builders';
 import type { EquippedItem } from '../types';
 import { computeAttack, computeHitMinMax, computeWeaponAttack } from './attack';
+import { computeCriticalChanceBreakdown } from './combat';
 import type { StatContext } from './context';
 import { computeEquipmentDefenseRange } from './defense';
 import { computeResultsPage } from './resultsPage';
@@ -16,6 +17,7 @@ const ORACLE_ULTIMATE = 54987;
 const ETRANAR_SET = 41091;
 
 interface SyntheticContext {
+  readonly jobId?: number;
   readonly stats?: Partial<Record<StatKey, number>>;
   readonly totals?: Readonly<Record<string, number>>;
   readonly mainhand?: EquippedItem;
@@ -28,10 +30,11 @@ function syntheticContext(spec: SyntheticContext): StatContext {
   return {
     data,
     level: 190,
-    job: requireClass(data, CLASS_IDS.seraph),
+    job: requireClass(data, spec.jobId ?? CLASS_IDS.seraph),
     base: (stat) => spec.stats?.[stat] ?? 15,
     total: (parameter, rate) => spec.totals?.[`${parameter}:${rate ? '%' : 'flat'}`] ?? 0,
     mainhand: spec.mainhand ?? { item: DEFAULT_WEAPON, upgrade: 0 },
+    offhand: null,
     armorPieces: spec.armorPieces ?? [],
     hasUpcutStone: spec.hasUpcutStone ?? false,
   };
@@ -124,6 +127,26 @@ describe('weapon attack and hit range', () => {
     // Oracle's attack range defaults to floor(17 + 2.5) = 19 %: floor(2424 * 1.19) = 2884.
     expect(page.attack).toBe(2884);
     expect(page.int).toBe(49);
+  });
+});
+
+describe('critical chance', () => {
+  it('grants a Harlequin 4 % per full 10 DEX, not 1 % per 2.5 DEX', () => {
+    const harlequin = (dex: number): StatContext =>
+      syntheticContext({ jobId: CLASS_IDS.harlequin, stats: { dex } });
+
+    // floor(25 / 10) × 4 = 8; flooring after multiplying would give floor(10) = 10.
+    expect(computeCriticalChanceBreakdown(harlequin(25)).fromDex).toBe(8);
+    expect(computeCriticalChanceBreakdown(harlequin(29)).fromDex).toBe(8);
+    expect(computeCriticalChanceBreakdown(harlequin(30)).fromDex).toBe(12);
+  });
+
+  it('adds gear and buffs after the DEX term and never goes below 0', () => {
+    const ctx = syntheticContext({ stats: { dex: 15 }, totals: { 'criticalchance:%': 2.5 } });
+    const debuffed = syntheticContext({ stats: { dex: 15 }, totals: { 'criticalchance:%': -5 } });
+
+    expect(computeCriticalChanceBreakdown(ctx)).toEqual({ fromDex: 1, fromGear: 2.5, total: 3.5 });
+    expect(computeCriticalChanceBreakdown(debuffed).total).toBe(0);
   });
 });
 

@@ -5,6 +5,7 @@ import {
   ACCESSORY_SET_IDS,
   BUNDLED_SKILL_IDS,
   CLASS_IDS,
+  DAMAGE_SKILL_IDS,
   GLORIA_PATRI_SKILL_ID,
   HEAL_RAIN_SKILL_ID,
   RM_BUFF_CLASS_IDS,
@@ -16,6 +17,8 @@ import { requireDefined } from '@/lib/assert';
 import {
   accessoryLinesFor,
   classSkillsFor,
+  damageSkillFamiliesFor,
+  damageSkillFamilyOf,
   getStatName,
   isAnteriorJob,
   loadBundledGameData,
@@ -214,5 +217,45 @@ describe('bundled game data', () => {
       sourceLevelCount: 20,
       minLevel: 15,
     });
+  });
+
+  it('bundles every curated damage skill with its variations, grouped per job chain', () => {
+    expect(data.damageSkillFamilies.map((family) => family.base.id)).toEqual([...DAMAGE_SKILL_IDS]);
+
+    for (const family of data.damageSkillFamilies) {
+      expect(family.base.familyId).toBe(family.base.id);
+      expect(family.base.attack.max).toBeGreaterThanOrEqual(family.base.attack.min);
+      expect(family.base.hits).toBeGreaterThanOrEqual(1);
+
+      for (const variation of family.variations) {
+        expect(variation.familyId).toBe(family.base.id);
+        expect(variation.baseLevelCount).toBe(family.base.levelCount);
+        expect(damageSkillFamilyOf(data, variation.id)).toBe(family);
+      }
+    }
+
+    for (const job of data.thirdJobs) {
+      const families = damageSkillFamiliesFor(data, job.id);
+      const chain = data.classChains.get(job.id) ?? [];
+
+      expect(families.length, `${job.name} damage skills`).toBeGreaterThan(0);
+
+      for (const family of families) {
+        expect(chain).toContain(family.base.classId);
+      }
+    }
+
+    // Seraph: its two attack skills by level, then Ringmaster's Merkaba; each with 3 variations.
+    expect(
+      damageSkillFamiliesFor(data, CLASS_IDS.seraph).map((family) => family.base.name),
+    ).toEqual(['Flow of Salvation', 'Hammer of Judgement', 'Merkaba Hanzelrusha']);
+    expect(
+      damageSkillFamiliesFor(data, CLASS_IDS.seraph).map((family) => family.variations.length),
+    ).toEqual([3, 3, 0]);
+    // Shield Crush needs a shield in the offhand; Nen Sphere scales by the mainhand weapon.
+    expect(data.damageSkills.get(50505)?.weapon).toBe('shield');
+    expect(
+      data.damageSkills.get(38428)?.max.scalingParameters.map((scale) => scale.part),
+    ).toContain('righthandweapon');
   });
 });

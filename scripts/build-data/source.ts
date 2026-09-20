@@ -137,6 +137,8 @@ export const RawPetSchema = z.object({
 export const RawScalingParameterSchema = z.object({
   parameter: z.string(),
   stat: z.string().optional(),
+  /** Scales by the item worn in an equipment part instead of by a stat. */
+  part: z.string().optional(),
   scale: z.number(),
   maximum: z.number().optional(),
   add: z.boolean().optional(),
@@ -154,6 +156,12 @@ export const RawSynergySchema = z.object({
   pvp: z.boolean().optional(),
 });
 
+export const RawDamageMultiplierSchema = z.object({
+  multiplier: z.number(),
+  /** Only applies while the attacker or target has a buff; such entries are left out. */
+  condition: z.unknown().optional(),
+});
+
 export const RawSkillLevelSchema = z.object({
   abilities: z.array(RawAbilitySchema).optional(),
   scalingParameters: z.array(RawScalingParameterSchema).optional(),
@@ -161,6 +169,10 @@ export const RawSkillLevelSchema = z.object({
   duration: z.number().optional(),
   /** Present on attack skills only. */
   minAttack: z.number().optional(),
+  maxAttack: z.number().optional(),
+  damageMultiplier: z.array(RawDamageMultiplierSchema).optional(),
+  /** Skill-specific numbers (Hit of Penya's damage percentage) or a string marker. */
+  arbitraryData: z.array(z.union([z.number(), z.string()])).optional(),
 });
 
 export const RawSkillSchema = z.object({
@@ -173,9 +185,15 @@ export const RawSkillSchema = z.object({
   level: z.number().optional(),
   passive: z.boolean().optional(),
   debuff: z.boolean().optional(),
+  magic: z.boolean().optional(),
   target: z.string().optional(),
+  /** Weapon the skill needs: a subcategory, a union (`wandorstaff`) or `shield`. */
+  weapon: z.string().optional(),
+  elementType: z.string().optional(),
   /** Master variations point at the base skill they specialise. */
   inheritSkill: z.number().optional(),
+  /** The variations a base skill offers (the only ones the game treats as its variations). */
+  masterVariations: z.array(z.number()).optional(),
   levels: z.array(RawSkillLevelSchema).optional(),
 });
 

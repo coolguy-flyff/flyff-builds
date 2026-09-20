@@ -1,6 +1,6 @@
 import { requireDefined } from '@/lib/assert';
 
-import { SKILL_CHANCE_PREFIX } from './constants';
+import { SKILL_CHANCE_PREFIX, skillAwakeSkillId } from './constants';
 import type {
   Ability,
   AccessoryLine,
@@ -11,6 +11,7 @@ import type {
   AwakeSkill,
   BlessingTable,
   ClassSkill,
+  DamageSkill,
   GeneratedData,
   HousingNpc,
   Manifest,
@@ -22,6 +23,12 @@ import type {
   StatAwakeDef,
   UpgradeBonusRow,
 } from './schema';
+
+/** A curated damage skill with the master variations it offers (plan §3). */
+export interface DamageSkillFamily {
+  readonly base: DamageSkill;
+  readonly variations: readonly DamageSkill[];
+}
 
 /**
  * Indexed, read-only view over the generated tables. Built once at startup; every domain function
@@ -52,6 +59,10 @@ export interface GameData {
   readonly classSkills: ReadonlyMap<number, ClassSkill>;
   /** jobId → the class skills of its chain, first job first, then by required level. */
   readonly classSkillsByJob: ReadonlyMap<number, readonly ClassSkill[]>;
+  /** Every curated damage skill (bases and variations) by id. */
+  readonly damageSkills: ReadonlyMap<number, DamageSkill>;
+  /** The curated damage skills grouped by base, in table (display) order. */
+  readonly damageSkillFamilies: readonly DamageSkillFamily[];
   readonly statAwakes: readonly StatAwakeDef[];
   readonly skillAwakes: SkillAwakeTable;
   /** Skills that can appear as `skill:<id>` damage awakes (name + icon). */
@@ -119,6 +130,24 @@ function groupClassSkillsByJob(
   }
 
   return grouped;
+}
+
+/** Bases in table order, each followed by the variations that name it as their family. */
+function buildDamageSkillFamilies(damageSkills: readonly DamageSkill[]): DamageSkillFamily[] {
+  const families = new Map<number, { base: DamageSkill; variations: DamageSkill[] }>();
+
+  for (const skill of damageSkills) {
+    if (skill.id === skill.familyId) {
+      families.set(skill.id, { base: skill, variations: [] });
+    } else {
+      requireDefined(
+        families.get(skill.familyId),
+        `Damage skill ${skill.id} precedes its base ${skill.familyId}`,
+      ).variations.push(skill);
+    }
+  }
+
+  return [...families.values()];
 }
 
 function groupByJob(
@@ -242,6 +271,8 @@ export function createGameData(raw: GeneratedData): GameData {
     skills: new Map([...raw.skills, ...raw.classSkills].map((skill) => [skill.id, skill])),
     classSkills: new Map(raw.classSkills.map((skill) => [skill.id, skill])),
     classSkillsByJob: groupClassSkillsByJob(thirdJobs, classChains, raw.classSkills),
+    damageSkills: new Map(raw.damageSkills.map((skill) => [skill.id, skill])),
+    damageSkillFamilies: buildDamageSkillFamilies(raw.damageSkills),
     statAwakes: raw.statAwakes,
     skillAwakes: raw.skillAwakes,
     awakeSkills: new Map(raw.awakeSkills.map((skill) => [skill.id, skill])),
@@ -288,6 +319,30 @@ export function defaultClassSkillIds(data: GameData, jobId: number): number[] {
     .map((skill) => skill.id);
 }
 
+export function requireDamageSkill(data: GameData, skillId: number): DamageSkill {
+  return requireDefined(data.damageSkills.get(skillId), `Unknown damage skill id ${skillId}`);
+}
+
+/** The damage skill families a job's chain teaches, in table order; empty for an unknown job. */
+export function damageSkillFamiliesFor(
+  data: GameData,
+  jobId: number,
+): readonly DamageSkillFamily[] {
+  const chain = data.classChains.get(jobId) ?? [];
+
+  return data.damageSkillFamilies.filter((family) => chain.includes(family.base.classId));
+}
+
+/** The family a curated damage skill (base or variation) belongs to. */
+export function damageSkillFamilyOf(data: GameData, skillId: number): DamageSkillFamily {
+  const skill = requireDamageSkill(data, skillId);
+
+  return requireDefined(
+    data.damageSkillFamilies.find((family) => family.base.id === skill.familyId),
+    `No damage skill family ${skill.familyId}`,
+  );
+}
+
 /** The CW jewel lines worn in a slot (rings: Strente…Meteofy; earrings: Speedo…; necklaces: Pep…). */
 export function accessoryLinesFor(data: GameData, slot: AccessorySlot): readonly AccessoryLine[] {
   return data.accessoryLines.filter((line) => line.slot === slot);
@@ -311,12 +366,25 @@ function skillChanceName(data: GameData, parameter: string): string | undefined 
   return name;
 }
 
+/** "Maximum Crisis" for `skill:<skillId>`; undefined for an unknown skill. */
+function skillAwakeName(data: GameData, parameter: string): string | undefined {
+  const skillId = skillAwakeSkillId(parameter);
+
+  return skillId === undefined ? undefined : data.awakeSkills.get(skillId)?.name;
+}
+
+/**
+ * The display name of a stat parameter, including the bundled pseudo-stats: skill chances read
+ * "Stun chance (PvE)" and skill-damage awakes read as the skill ("Maximum Crisis").
+ */
 export function getStatName(data: GameData, parameter: string): string {
   let name = data.statNames[parameter];
 
   if (name === undefined && parameter.startsWith(SKILL_CHANCE_PREFIX)) {
     name = skillChanceName(data, parameter);
   }
+
+  name ??= skillAwakeName(data, parameter);
 
   return name ?? parameter;
 }

@@ -31,7 +31,7 @@ const LAYER_RULES = [
   { from: 'data', allow: ['lib'] },
   { from: 'config', allow: ['lib', 'data'] },
   { from: 'domain', allow: ['lib', 'data', 'config'] },
-  { from: 'share', allow: ['lib', 'data', 'domain'] },
+  { from: 'share', allow: ['lib', 'data', 'config', 'domain'] },
   { from: 'persistence', allow: ['lib', 'data', 'domain'] },
   { from: 'state', allow: ['lib', 'data', 'config', 'domain', 'share', 'persistence'] },
   { from: 'components', allow: ['lib', 'data'] },

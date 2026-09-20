@@ -7,6 +7,7 @@ import {
   createFashionSetEntry,
   createGearSwap,
   createPetEntry,
+  createPvpTarget,
   createShieldEntry,
   createStatPage,
   createWeaponEntry,
@@ -18,6 +19,7 @@ import type {
   EquipmentSetEntry,
   FashionSetEntry,
   PetEntry,
+  PvpTarget,
   ShieldEntry,
   StatPage,
   WeaponEntry,
@@ -103,10 +105,15 @@ function page(id: number, stats: Pick<StatPage, 'str' | 'sta' | 'dex' | 'int'>):
   return { ...createStatPage(id), ...stats };
 }
 
-/** The build as codec v1 can express it: no per-piece accessory sets, no class skills. */
+/** The build as codec v2 can express it: no custom PvP targets. */
+export function withoutV3Fields(build: BuildState): BuildState {
+  return { ...build, pvpTargets: [] };
+}
+
+/** The build as codec v1 can express it: no per-piece accessory sets, no class skills, no targets. */
 export function withoutV2Fields(build: BuildState): BuildState {
   return {
-    ...build,
+    ...withoutV3Fields(build),
     accessorySets: build.accessorySets.map((entry) => ({
       ...entry,
       pieceSources: emptyPieceSources(),
@@ -251,10 +258,29 @@ export function maximalBuild(data: GameData): BuildState {
     createPetEntry(17, ids.angelCage, 27),
     createPetEntry(18, null, 0),
   ];
+  // Custom PvP targets (codec v3): a fractional percentage and a raw one.
+  const pvpTargets: PvpTarget[] = [
+    createPvpTarget(23, 'Guild tank ✨', {
+      defense: 21500,
+      magicDefense: 9800,
+      magicResistance: 42.5,
+      criticalResist: 38,
+      pvpDamageReduction: 25,
+      incomingDamage: -12,
+    }),
+    createPvpTarget(24, 'Glass cannon', {
+      defense: 7400,
+      magicDefense: 3900,
+      magicResistance: 0,
+      criticalResist: 0,
+      pvpDamageReduction: 3,
+      incomingDamage: 0,
+    }),
+  ];
 
   return {
     ...createDefaultBuild(data),
-    nextId: 23,
+    nextId: 25,
     character: { jobId: CLASS_IDS.seraph, level: 190 },
     statPages,
     equipmentSets,
@@ -302,6 +328,7 @@ export function maximalBuild(data: GameData): BuildState {
       },
       createGearSwap(22, 1),
     ],
+    pvpTargets,
   };
 }
 

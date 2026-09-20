@@ -286,6 +286,98 @@ describe('ResultsPage', () => {
     );
   });
 
+  it('overrides every swap’s pet from the toolbar without touching the build', () => {
+    const { store, actions } = setup();
+
+    act(() => {
+      const petId = actions.addEntry('pets');
+
+      actions.updateEntry('pets', petId, (pet) => {
+        pet.petItemId = LION_PET;
+        pet.total = 75;
+      });
+    });
+
+    const petId = requireDefined(store.getState().build.pets[0], 'pet').id;
+    const before = rowCells('Max HP').map((cell) => cell.textContent);
+
+    fireEvent.change(screen.getByLabelText('Pet override'), { target: { value: String(petId) } });
+
+    const after = rowCells('Max HP').map((cell) => cell.textContent);
+
+    expect(store.getState().ui.results.petOverride).toBe(petId);
+    expect(after[0]).not.toBe(before[0]);
+    expect(after[1]).not.toBe(before[1]);
+    expect(store.getState().build.gearSwaps.map((swap) => swap.petId)).toEqual([null, null]);
+
+    // "None" strips the pet everywhere; the swaps wear none anyway, so it matches the start.
+    fireEvent.change(screen.getByLabelText('Pet override'), { target: { value: 'none' } });
+
+    expect(store.getState().ui.results.petOverride).toBe('none');
+    expect(rowCells('Max HP').map((cell) => cell.textContent)).toEqual(before);
+
+    fireEvent.change(screen.getByLabelText('Pet override'), { target: { value: 'own' } });
+
+    expect(rowCells('Max HP').map((cell) => cell.textContent)).toEqual(before);
+  });
+
+  it('shows the damage rows and recomputes them for a target picked in the group row', () => {
+    const { store } = setup();
+    const before = rowCells('Basic attack').map((cell) => cell.textContent);
+    const target = screen.getByLabelText('Target');
+
+    expect(screen.getByRole('rowheader', { name: 'Overcrit' })).toBeDefined();
+    expect(screen.queryByRole('rowheader', { name: 'Effective crit chance' })).toBeNull();
+    expect(screen.getByRole('option', { name: 'Training dummy' })).toBeDefined();
+    expect(target.closest('tr')).toBe(screen.getByRole('button', { name: /Damage/ }).closest('tr'));
+
+    fireEvent.change(target, { target: { value: 'preset:balanced' } });
+
+    expect(store.getState().ui.results.damageTarget).toEqual({ kind: 'preset', id: 'balanced' });
+    expect(screen.queryByRole('rowheader', { name: 'Overcrit' })).toBeNull();
+    expect(screen.getByRole('rowheader', { name: 'Effective crit chance' })).toBeDefined();
+    expect(screen.getByLabelText<HTMLSelectElement>('Target').value).toBe('preset:balanced');
+    expect(rowCells('Basic attack')[0]?.textContent).not.toBe(before[0]);
+  });
+
+  it('offers a party skill against the dummy only and applies it to the damage rows', () => {
+    const { store } = setup();
+    const before = rowCells('Basic attack').map((cell) => cell.textContent);
+
+    fireEvent.change(screen.getByLabelText('Party skill'), { target: { value: 'global' } });
+
+    expect(store.getState().ui.results.partySkill).toBe('global');
+    expect(rowCells('Basic attack')[0]?.textContent).not.toBe(before[0]);
+
+    fireEvent.change(screen.getByLabelText('Target'), { target: { value: 'preset:balanced' } });
+
+    expect(screen.queryByLabelText('Party skill')).toBeNull();
+  });
+
+  it('opens the PvP targets dialog from the Damage group row', () => {
+    const { store } = setup();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Targets…' }));
+
+    expect(store.getState().ui.dialog).toEqual({ kind: 'pvpTargets' });
+  });
+
+  it('switches a skill row to a master variation without touching the build', () => {
+    const { store } = setup();
+    const select = screen.getByLabelText('Flow of Salvation variation');
+
+    expect(screen.getByRole('rowheader', { name: 'Flow of Salvation' })).toBeDefined();
+
+    // Increased Damage is the one Flow variation whose damage differs from the base's.
+    fireEvent.change(select, { target: { value: '55757' } });
+
+    expect(store.getState().ui.results.skillVariations).toEqual({ 32253: 55757 });
+    expect(
+      screen.getByRole('rowheader', { name: 'Flow of Salvation (Increased Damage)' }),
+    ).toBeDefined();
+    expect(store.getState().build).toBe(store.getState().build);
+  });
+
   it('copies the table as TSV and reports success', async () => {
     const writeText = vi.fn<(text: string) => Promise<void>>(() => Promise.resolve());
     installClipboard(writeText);

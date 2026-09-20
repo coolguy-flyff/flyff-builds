@@ -1,7 +1,12 @@
 import { useMemo } from 'react';
 
 import type { BuildState } from '@/domain/build';
-import { computeAllResults, DEFAULT_ENGINE_OPTIONS, type EngineOptions } from '@/domain/engine';
+import {
+  computeAllResults,
+  DEFAULT_ENGINE_OPTIONS,
+  listDamageTargets,
+  type EngineOptions,
+} from '@/domain/engine';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { memoByRef } from '@/lib/memo';
@@ -21,7 +26,13 @@ import {
 } from './exportActions';
 import { ResultsTable } from './ResultsTable';
 import { ResultsToolbar } from './ResultsToolbar';
-import { effectiveBaseline, setMembership, toggleMembership } from './viewState';
+import {
+  effectiveBaseline,
+  setMembership,
+  toggleMembership,
+  withPetOverride,
+  withSkillVariation,
+} from './viewState';
 
 export interface ResultsPageProps {
   /** Jumps to the Buffs & Swaps tab, expanding the given swap (or just the tab when `null`). */
@@ -38,19 +49,36 @@ export function ResultsPage({ onOpenSwap }: ResultsPageProps) {
   const actions = useActions();
   const view = useAppStore((state) => state.ui.results);
   const options = useMemo(
-    (): EngineOptions => ({ ...DEFAULT_ENGINE_OPTIONS, petGrace: view.petGrace }),
-    [view.petGrace],
+    (): EngineOptions => ({
+      ...DEFAULT_ENGINE_OPTIONS,
+      petGrace: view.petGrace,
+      target: view.damageTarget,
+      customTargets: build.pvpTargets,
+      partySkill: view.partySkill,
+    }),
+    [view.petGrace, view.damageTarget, build.pvpTargets, view.partySkill],
   );
   const resultsOf = useMemo(
     () => memoByRef((current: BuildState) => computeAllResults(data, current, options)),
     [data, options],
   );
-  const results = resultsOf(build);
-  const columns = buildColumns(data, build, selectors, results);
+  const effectiveBuild = useMemo(
+    () => withPetOverride(build, view.petOverride),
+    [build, view.petOverride],
+  );
+  const results = resultsOf(effectiveBuild);
+  const columns = buildColumns(data, effectiveBuild, selectors, results);
   const visible = visibleColumns(columns, view.hiddenSwapIds);
   const pages = visible.map((column) => column.result.page);
-  const allRows = buildRows(data, results, { showRawTotals: view.showRawTotals });
+  const allRows = buildRows(data, results, {
+    showRawTotals: view.showRawTotals,
+    skillVariations: view.skillVariations,
+  });
   const rows = view.onlyDiffering ? filterDifferingRows(allRows, pages) : allRows;
+  const targets = useMemo(
+    () => listDamageTargets(build.character.level, build.pvpTargets),
+    [build.character.level, build.pvpTargets],
+  );
   const baselineSwapId = effectiveBaseline(
     view.baselineSwapId,
     visible.map((column) => column.swapId),
@@ -138,6 +166,23 @@ export function ResultsPage({ onOpenSwap }: ResultsPageProps) {
           onMoveSwap={(swapId, targetSwapId) => {
             actions.moveEntryTo('gearSwaps', swapId, targetSwapId);
           }}
+          onSelectVariant={(key, value) => {
+            actions.updateResultsView({
+              skillVariations: withSkillVariation(view.skillVariations, Number(key), Number(value)),
+            });
+          }}
+          targets={targets}
+          damageTarget={view.damageTarget}
+          onSelectTarget={(choice) => {
+            actions.updateResultsView({ damageTarget: choice });
+          }}
+          onEditTargets={() => {
+            actions.openDialog({ kind: 'pvpTargets' });
+          }}
+          partySkill={view.partySkill}
+          onSelectPartySkill={(partySkill) => {
+            actions.updateResultsView({ partySkill });
+          }}
         />
         {footnotes.length > 0 && (
           <p className="text-[11.5px] text-dim">{footnotes.join(FOOTNOTE_SEPARATOR)}</p>
@@ -158,6 +203,10 @@ export function ResultsPage({ onOpenSwap }: ResultsPageProps) {
               hidden: !visible.includes(column),
             }))}
             baselineSwapId={baselineSwapId}
+            pets={build.pets.map((pet) => ({
+              id: pet.id,
+              name: selectors.entryName(build, 'pets', pet.id),
+            }))}
             petGraceHint={petGraceHint(data)}
             onViewChange={(patch) => {
               actions.updateResultsView(patch);

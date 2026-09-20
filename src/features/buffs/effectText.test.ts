@@ -21,7 +21,7 @@ describe('maxedSkillEffect', () => {
   it('shows the maxed value including the caster-INT scaling cap', () => {
     expect(maxedSkillEffect(data, requireSkill(data, BEEF_UP), 'rmBuff')).toBe('STR +40');
     expect(maxedSkillEffect(data, requireSkill(data, GEBURAH_TIPHRETH), 'rmBuff')).toBe(
-      'Attack +20% · Aspd +15% · Cast Speed +10%',
+      'Attack +20% · Aspd +15% · DCT +10%',
     );
   });
 

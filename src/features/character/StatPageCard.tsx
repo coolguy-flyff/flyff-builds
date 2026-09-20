@@ -2,10 +2,9 @@ import { useEffect, useState } from 'react';
 
 import { STAT_KEYS, type StatKey } from '@/data';
 import { autoStatPageName, MIN_BASE_STAT, swapsReferencing, type StatPage } from '@/domain/build';
-import { remainingStatPoints, totalStatPoints } from '@/domain/rules';
+import { remainingStatPoints, statPointShares, totalStatPoints } from '@/domain/rules';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
-import { Chip } from '@/components/Chip';
 import { InlineName } from '@/components/InlineName';
 import { ProgressBar, type ProgressTone } from '@/components/ProgressBar';
 import { Stepper } from '@/components/Stepper';
@@ -15,17 +14,42 @@ import { useActions, useBuild, useSelectors } from '@/state';
 
 const STAT_LABELS: Record<StatKey, string> = { str: 'STR', sta: 'STA', dex: 'DEX', int: 'INT' };
 const CLAMP_NOTE_MS = 2500;
+/**
+ * Accent border of a stat tile by its share of the allocated points: a floor so even a small
+ * share stays visibly apart from an untouched (dimmed) stat, up to a solid accent for a full stat.
+ */
+const BORDER_TINT_FLOOR_PERCENT = 25;
+const BORDER_TINT_RANGE_PERCENT = 75;
+const VALUE_TINT_FLOOR_PERCENT = 30;
+const VALUE_TINT_RANGE_PERCENT = 70;
 
-function highestStat(page: StatPage): StatKey | null {
-  let best: StatKey | null = null;
+function accentMix(percent: number, base: string): string {
+  return `color-mix(in srgb, var(--color-accent) ${String(Math.round(percent))}%, ${base})`;
+}
 
-  for (const key of STAT_KEYS) {
-    if (page[key] > MIN_BASE_STAT && (best === null || page[key] > page[best])) {
-      best = key;
-    }
+interface TileStyle {
+  readonly borderColor: string;
+  readonly color: string;
+}
+
+/** Inline colours of a stat tile; null for an untouched stat, which is dimmed instead. */
+function tileStyle(share: number): TileStyle | null {
+  let style: TileStyle | null = null;
+
+  if (share > 0) {
+    style = {
+      borderColor: accentMix(
+        BORDER_TINT_FLOOR_PERCENT + share * BORDER_TINT_RANGE_PERCENT,
+        'transparent',
+      ),
+      color: accentMix(
+        VALUE_TINT_FLOOR_PERCENT + share * VALUE_TINT_RANGE_PERCENT,
+        'var(--color-text)',
+      ),
+    };
   }
 
-  return best;
+  return style;
 }
 
 interface Meter {
@@ -79,7 +103,7 @@ export function StatPageCard({
   const [clampNote, setClampNote] = useState<string | null>(null);
   const name = selectors.entryName(build, 'statPages', page.id);
   const meter = meterFor(build.character.level, page);
-  const highest = highestStat(page);
+  const shares = statPointShares(page);
   const swaps = swapsReferencing(build, 'statPages', page.id);
   const usage = `used by ${plural(swaps.length, 'swap')}`;
   const usageTitle = swaps
@@ -134,13 +158,6 @@ export function StatPageCard({
     />
   );
 
-  const highlight =
-    highest === null ? null : (
-      <Chip tone="accent">
-        {STAT_LABELS[highest]} {page[highest]}
-      </Chip>
-    );
-
   let card;
 
   if (expanded) {
@@ -155,7 +172,6 @@ export function StatPageCard({
             }}
             nameClassName="text-[14px] text-accent"
           />
-          {highlight}
           <span className="text-[11px] text-muted" title={usageTitle}>
             {usage}
           </span>
@@ -189,21 +205,17 @@ export function StatPageCard({
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {STAT_KEYS.map((stat) => {
-            const isHighest = stat === highest;
+            const style = tileStyle(shares[stat]);
 
             return (
               <div
                 key={stat}
-                className={cx(
-                  'rounded-sub bg-sub px-3 py-2.5',
-                  isHighest && 'outline-1 outline-accent/30',
-                )}
+                className="rounded-sub border border-transparent bg-sub px-3 py-2.5"
+                style={style === null ? undefined : { borderColor: style.borderColor }}
               >
                 <div
-                  className={cx(
-                    'mb-1.5 text-[11px] font-semibold',
-                    isHighest ? 'text-accent' : 'text-muted',
-                  )}
+                  className={cx('mb-1.5 text-[11px] font-semibold', style === null && 'text-dim')}
+                  style={style === null ? undefined : { color: style.color }}
                 >
                   {STAT_LABELS[stat]}
                 </div>
@@ -225,7 +237,7 @@ export function StatPageCard({
                   />
                   <Button
                     size="xs"
-                    variant="outline"
+                    variant="control"
                     disabled={meter.remaining <= 0}
                     onClick={() => {
                       actions.maxStat(page.id, stat);
@@ -270,19 +282,34 @@ export function StatPageCard({
       >
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[13.5px] font-semibold">{name}</span>
-          {highlight}
           <span className="text-[11px] text-muted" title={usageTitle}>
             {usage}
           </span>
           <span className="ml-auto text-[10.5px] text-dim">click to expand</span>
         </div>
         <div className="grid grid-cols-4 gap-2">
-          {STAT_KEYS.map((stat) => (
-            <div key={stat} className="rounded-sub bg-sub px-3 py-2">
-              <div className="text-[10.5px] font-semibold text-muted">{STAT_LABELS[stat]}</div>
-              <div className="font-mono text-[14px] font-semibold text-text">{page[stat]}</div>
-            </div>
-          ))}
+          {STAT_KEYS.map((stat) => {
+            const style = tileStyle(shares[stat]);
+
+            return (
+              <div
+                key={stat}
+                className={cx(
+                  'rounded-sub border border-transparent bg-sub px-3 py-2',
+                  style === null && 'opacity-45',
+                )}
+                style={style === null ? undefined : { borderColor: style.borderColor }}
+              >
+                <div className="text-[10.5px] font-semibold text-muted">{STAT_LABELS[stat]}</div>
+                <div
+                  className="font-mono text-[14px] font-semibold text-text"
+                  style={style === null ? undefined : { color: style.color }}
+                >
+                  {page[stat]}
+                </div>
+              </div>
+            );
+          })}
         </div>
         {meterBar}
       </Card>

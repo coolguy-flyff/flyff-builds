@@ -16,7 +16,8 @@ const PANEL =
 /**
  * Hover/focus tooltip (plan D7 menu-panel style): a real positioned panel, not the browser's
  * `title` bubble. Pure CSS — visible while the wrapper is hovered or holds keyboard focus
- * (`focus-visible`, so a mouse click does not pin it open).
+ * (`focus-visible`, so a mouse click does not pin it open). No panel at all when `content` is
+ * `null`, so a caller can silence the tooltip without unmounting its children.
  */
 export function Tooltip({
   content,
@@ -32,16 +33,18 @@ export function Tooltip({
   return (
     <span className={cx('group/tip relative inline-flex min-w-0', className)}>
       {children}
-      <span
-        role="tooltip"
-        className={cx(
-          PANEL,
-          'absolute left-1/2 z-40 -translate-x-1/2 opacity-0 transition-opacity delay-100 group-has-[:focus-visible]/tip:opacity-100 group-hover/tip:opacity-100',
-          PLACEMENT_CLASSES[placement],
-        )}
-      >
-        {content}
-      </span>
+      {content !== null && content !== undefined && (
+        <span
+          role="tooltip"
+          className={cx(
+            PANEL,
+            'absolute left-1/2 z-40 -translate-x-1/2 opacity-0 transition-opacity delay-100 group-has-[:focus-visible]/tip:opacity-100 group-hover/tip:opacity-100',
+            PLACEMENT_CLASSES[placement],
+          )}
+        >
+          {content}
+        </span>
+      )}
     </span>
   );
 }

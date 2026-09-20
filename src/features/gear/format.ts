@@ -1,5 +1,6 @@
 import {
   getStatName,
+  isSkillAwakeParameter,
   STAT_KEYS,
   type Ability,
   type ArmorSet,
@@ -86,26 +87,11 @@ export function statOptionLabel(data: GameData, parameter: string, rate: boolean
   return `${getStatName(data, parameter)}${rate ? ' %' : ''}`;
 }
 
-/** Marks skill-damage awakes stored under a `skill:<id>` pseudo-parameter. */
-export const SKILL_AWAKE_PREFIX = 'skill:';
-
-export function isSkillDamageAwake(parameter: string): boolean {
-  return parameter.startsWith(SKILL_AWAKE_PREFIX);
-}
-
-/** "Sonic Blade dmg %" for skill-damage awakes, the stat label otherwise. */
+/** The skill's name ("Sonic Blade") for skill-damage awakes, the "%"-marked stat label otherwise. */
 export function skillAwakeParameterLabel(data: GameData, parameter: string): string {
-  let label: string;
-
-  if (isSkillDamageAwake(parameter)) {
-    const id = Number(parameter.slice(SKILL_AWAKE_PREFIX.length));
-    const skill = data.awakeSkills.get(id);
-    label = skill === undefined ? parameter : `${skill.name} dmg %`;
-  } else {
-    label = statOptionLabel(data, parameter, true);
-  }
-
-  return label;
+  return isSkillAwakeParameter(parameter)
+    ? getStatName(data, parameter)
+    : statOptionLabel(data, parameter, true);
 }
 
 export function handLabel(item: SlimItem): string {
@@ -226,7 +212,7 @@ export function formatSetBonusLines(data: GameData, bonus: readonly SetBonus[]):
     .join(SEGMENT_SEPARATOR);
 }
 
-/** Bonus lines grouped by tier: "5-pc: M.Atk +5% · Cast Speed +10% · 4-pc: MP recovery +500". */
+/** Bonus lines grouped by tier: "5-pc: M.Pwr +5% · DCT +10% · 4-pc: MP recovery +500". */
 export function formatSetBonusByTier(data: GameData, bonus: readonly SetBonus[]): string {
   const tiers = new Map<number, string[]>();
 

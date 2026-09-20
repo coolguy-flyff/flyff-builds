@@ -4,66 +4,25 @@ import {
   HEAL_RAIN_SKILL_ID,
   requireSkill,
   type GameData,
-  type ScalingParameter,
   type SlimSkill,
   type Synergy,
 } from '@/data';
 
 import type { EngineOptions } from '../options';
+import { computeMaxLevelStatScale } from '../skills/statScale';
 import type { StatContext } from '../stats/context';
-import { computeHp } from '../stats/vitals';
 
 /**
- * Healing per cast of a self-heal skill at its maximum level. Port of
- * flyffdamagecalculator.js:19-63 and `getStatScale` (flyffentity.js:1736-1809), plus the
- * Heal synergy Flyffulator left as a TODO (plan B7.3), switchable via {@link EngineOptions}.
+ * Healing per cast of a self-heal skill at its maximum level: the skill's flat HP plus the listed
+ * max-level stat scaling (8.18 × INT for Heal Rain), plus the Heal synergy Flyffulator left as a
+ * TODO (plan B7.3), switchable via {@link EngineOptions}, then the Healing % bonus.
+ *
+ * Flyffulator (flyffdamagecalculator.js:19-63) instead ports the level-shifted scaling of an
+ * in-game bug that has since been fixed, so its heals come out slightly lower; the parity suite
+ * accounts for that.
  */
 
 const HEALED_PARAMETER = 'hp';
-
-export interface HealingSkillSpec {
-  readonly skill: SlimSkill;
-  /**
-   * Level fed to the stat scaling: 1 for a base skill, the inherited skill's level count for a
-   * master variation (flyffdamagecalculator.js:43-53 — "not 0-indexed, small bug ingame").
-   */
-  readonly statScaleSkillLevel: number;
-}
-
-function referencedStat(ctx: StatContext, scale: ScalingParameter): number {
-  let value = 0;
-
-  if (scale.stat === 'hp') {
-    value = computeHp(ctx);
-  } else if (scale.stat !== undefined) {
-    value = ctx.base(scale.stat);
-  }
-
-  // FLYFFULATOR_QUIRKS.statScaleIgnoresMaximum: the cap is never applied.
-  return value;
-}
-
-/** flyffentity.js:1736-1809 for `parameter = hp`, PvE context. */
-function statScale(ctx: StatContext, spec: HealingSkillSpec, realScaleLevel: number): number {
-  let total = 0;
-
-  for (const scale of spec.skill.max.scalingParameters) {
-    if (scale.parameter !== HEALED_PARAMETER || !scale.pve) {
-      continue;
-    }
-
-    const statValue = referencedStat(ctx, scale);
-    const realScale = Math.floor((scale.scale * 50 - realScaleLevel) / 5);
-
-    if (scale.add) {
-      total += Math.floor(
-        (realScale / 10) * statValue + spec.statScaleSkillLevel * (statValue / 50),
-      );
-    }
-  }
-
-  return total;
-}
 
 /**
  * Additive synergy with another skill assumed maxed, the floored flat-per-level reading the game
@@ -93,19 +52,23 @@ const NO_HEALING: HealingBreakdown = Object.freeze({ skillOutput: 0, healingRate
 
 export function computeSkillHealing(
   ctx: StatContext,
-  spec: HealingSkillSpec,
+  skill: SlimSkill,
   options: EngineOptions,
 ): HealingBreakdown {
-  const skillLevel = spec.skill.levelCount;
-  const healed = spec.skill.max.abilities.find((ability) => ability.parameter === HEALED_PARAMETER);
+  const healed = skill.max.abilities.find((ability) => ability.parameter === HEALED_PARAMETER);
   let skillOutput = healed?.add ?? 0;
   let breakdown = NO_HEALING;
 
   if (skillOutput > 0) {
-    skillOutput += statScale(ctx, spec, skillLevel - 1);
+    skillOutput += computeMaxLevelStatScale(
+      ctx,
+      skill.max.scalingParameters,
+      HEALED_PARAMETER,
+      'pve',
+    );
 
     if (options.applyHealSynergy) {
-      for (const synergy of spec.skill.max.synergies) {
+      for (const synergy of skill.max.synergies) {
         skillOutput += synergyBonus(synergy);
       }
     }
@@ -134,22 +97,12 @@ export function computeHealingSkills(
   ctx: StatContext,
   options: EngineOptions,
 ): HealingSkills {
-  const gloriaPatri = requireSkill(data, GLORIA_PATRI_SKILL_ID);
+  const healingOf = (skillId: number): HealingBreakdown =>
+    computeSkillHealing(ctx, requireSkill(data, skillId), options);
 
   return {
-    healRain: computeSkillHealing(
-      ctx,
-      { skill: requireSkill(data, HEAL_RAIN_SKILL_ID), statScaleSkillLevel: 1 },
-      options,
-    ),
-    gloriaPatri: computeSkillHealing(ctx, { skill: gloriaPatri, statScaleSkillLevel: 1 }, options),
-    gloriaPatriEffectIncrease: computeSkillHealing(
-      ctx,
-      {
-        skill: requireSkill(data, GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID),
-        statScaleSkillLevel: gloriaPatri.levelCount,
-      },
-      options,
-    ),
+    healRain: healingOf(HEAL_RAIN_SKILL_ID),
+    gloriaPatri: healingOf(GLORIA_PATRI_SKILL_ID),
+    gloriaPatriEffectIncrease: healingOf(GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID),
   };
 }

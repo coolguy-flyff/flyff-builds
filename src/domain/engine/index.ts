@@ -28,7 +28,7 @@ export {
   type EngineIssueCode,
   type EngineIssueSeverity,
 } from './issues';
-export { DEFAULT_ENGINE_OPTIONS, type EngineOptions } from './options';
+export { DEFAULT_ENGINE_OPTIONS, type EngineOptions, type PartySkill } from './options';
 export { FLYFFULATOR_QUIRKS, type FlyffulatorQuirk, type FlyffulatorQuirkId } from './quirks';
 export { resolveGearSwap } from './resolve';
 // Per-entry resolvers: the gear editors' ability previews audit what one entry contributes.
@@ -42,6 +42,33 @@ export { resolveWeaponEntry, type WeaponHand, type WeaponResolution } from './ge
 export { computeAllResults, type SwapResult } from './results';
 export { computeResultsPage, type ResultsPage } from './stats/resultsPage';
 export type { VitalBreakdown } from './stats/vitals';
+export { computeDamageResults } from './damage/damage';
+export { PARTY_MEMBERS } from './damage/defense';
+export { skillDamageSignature } from './damage/skill';
+export {
+  DUMMY_TARGET_ID,
+  PVP_FACTOR,
+  customTarget,
+  damageTargetKey,
+  listDamageTargets,
+  overcritTarget,
+  playerTarget,
+  presetTarget,
+  resolveDamageTarget,
+  trainingDummyTarget,
+  type PlayerTargetSpec,
+} from './damage/target';
+export { DUMMY_TARGET_CHOICE } from './options';
+export type {
+  BasicDamage,
+  DamageMode,
+  DamageRange,
+  DamageResults,
+  DamageTarget,
+  DamageTargetChoice,
+  DamageTargetStat,
+  SkillDamage,
+} from './damage/types';
 export {
   BLOCK_DEX_BONUS_MAX,
   BLOCK_EFFECTIVE_MAX,

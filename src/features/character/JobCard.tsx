@@ -28,16 +28,20 @@ function describeRemoved(counts: RemovalCounts): string[] {
 }
 
 /**
- * Job tiles (plan A1.1). A switch that would remove gear asks for confirmation first; either way
- * the current build is kept as an automatic snapshot before the change.
+ * Job tiles (plan A1.1). A switch that would remove gear asks for confirmation first, with the
+ * automatic snapshot of the current build as an opt-out; a switch that removes nothing keeps the
+ * snapshot without asking.
  */
 export function JobCard() {
   const data = useGameData();
   const jobId = useAppStore((state) => state.build.character.jobId);
   const actions = useActions();
 
-  const switchTo = (job: SlimClass): void => {
-    actions.autoSnapshot('Autosave before job change');
+  const switchTo = (job: SlimClass, snapshot: boolean): void => {
+    if (snapshot) {
+      actions.autoSnapshot('Autosave before job change');
+    }
+
     const removed = describeRemoved(actions.setJob(job.id));
     actions.pushToast(
       'info',
@@ -55,16 +59,17 @@ export function JobCard() {
     const removed = describeRemoved(actions.previewJobChange(job.id));
 
     if (removed.length === 0) {
-      switchTo(job);
+      switchTo(job, true);
     } else {
       actions.openDialog({
         kind: 'confirm',
         title: `Switch to ${job.name}?`,
-        message: `Switching to ${job.name} removes gear that ${job.name} can't use: ${removed.join(', ')}. Swaps keep their other picks. A snapshot of the current build is saved first.`,
+        message: `Switching to ${job.name} removes gear that ${job.name} can't use: ${removed.join(', ')}. Swaps keep their other picks.`,
         confirmLabel: `Switch to ${job.name}`,
         danger: false,
-        onConfirm: () => {
-          switchTo(job);
+        checkbox: { label: 'Save a snapshot of the current build first', defaultChecked: true },
+        onConfirm: (snapshot) => {
+          switchTo(job, snapshot);
         },
       });
     }

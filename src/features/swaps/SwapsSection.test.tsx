@@ -62,7 +62,7 @@ describe('offhand rule', () => {
     expect(offhand.disabled).toBe(false);
     expect([...offhand.options].map((option) => option.textContent)).toEqual([
       '— none —',
-      'Bloody Obsidian Sword',
+      'Obsidian Sword',
     ]);
 
     fireEvent.change(offhand, { target: { value: String(second) } });

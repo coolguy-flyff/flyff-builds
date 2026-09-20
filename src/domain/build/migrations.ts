@@ -44,8 +44,14 @@ function migrateV1ToV2(raw: Record<string, unknown>): Record<string, unknown> {
   return next;
 }
 
+/** 2 → 3: the build gains its custom PvP targets (none — the presets were all there was). */
+function migrateV2ToV3(raw: Record<string, unknown>): Record<string, unknown> {
+  return raw.pvpTargets === undefined ? { ...raw, pvpTargets: [] } : raw;
+}
+
 const MIGRATIONS: Readonly<Record<number, Migration>> = {
   1: migrateV1ToV2,
+  2: migrateV2ToV3,
 };
 
 export function readSchemaVersion(raw: unknown): number | undefined {

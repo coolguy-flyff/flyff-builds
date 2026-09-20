@@ -1,6 +1,36 @@
 import { describe, expect, it } from 'vitest';
 
-import { effectiveBaseline, setMembership, toggleMembership } from './viewState';
+import { loadBundledGameData } from '@/data';
+import { createDefaultBuild, createGearSwap, createPetEntry } from '@/domain/build';
+
+import { effectiveBaseline, setMembership, toggleMembership, withPetOverride } from './viewState';
+
+describe('withPetOverride', () => {
+  const data = loadBundledGameData();
+  const base = createDefaultBuild(data);
+  const pet = createPetEntry(7, 9941, 75);
+  const build = {
+    ...base,
+    pets: [pet],
+    gearSwaps: [...base.gearSwaps, { ...createGearSwap(8, 1), petId: 3 }],
+  };
+
+  it('puts the override pet, or no pet, on every swap', () => {
+    const effective = withPetOverride(build, 7);
+
+    expect(effective.gearSwaps.map((swap) => swap.petId)).toEqual([7, 7]);
+    expect(effective.pets).toBe(build.pets);
+    expect(withPetOverride(build, 'none').gearSwaps.map((swap) => swap.petId)).toEqual([
+      null,
+      null,
+    ]);
+  });
+
+  it('returns the build itself without an override or for a pet that is gone', () => {
+    expect(withPetOverride(build, 'own')).toBe(build);
+    expect(withPetOverride(build, 99)).toBe(build);
+  });
+});
 
 describe('setMembership / toggleMembership', () => {
   it('adds once, removes, and toggles', () => {

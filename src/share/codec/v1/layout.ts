@@ -10,6 +10,7 @@ import {
   type GearSwap,
   type Offhand,
   type PetEntry,
+  type PvpTarget,
   type ShieldEntry,
   type StatPage,
   type WeaponEntry,
@@ -157,7 +158,7 @@ function enumCode<T>(table: readonly T[], value: T, label: string): number {
   return code;
 }
 
-function writeList<T>(
+export function writeList<T>(
   writer: ByteWriter,
   items: readonly T[],
   limit: number,
@@ -171,7 +172,12 @@ function writeList<T>(
   }
 }
 
-function readList<T>(reader: ByteReader, limit: number, label: string, readItem: () => T): T[] {
+export function readList<T>(
+  reader: ByteReader,
+  limit: number,
+  label: string,
+  readItem: () => T,
+): T[] {
   const count = readCount(reader, limit, label);
   const items: T[] = [];
 
@@ -542,6 +548,20 @@ export interface RecordCodecs {
   readonly readAccessorySet: (reader: ByteReader, id: number) => AccessorySetEntry;
   readonly writeBuffs: (writer: ByteWriter, buffs: BuffsState) => void;
   readonly readBuffs: (reader: ByteReader) => BuffsState;
+  /** The custom PvP targets after the swaps (codec v3); earlier bodies end with the swaps. */
+  readonly writePvpTargets: (writer: ByteWriter, targets: readonly PvpTarget[]) => void;
+  readonly readPvpTargets: (reader: ByteReader, nextId: () => number) => PvpTarget[];
+}
+
+/** Bodies before v3 have no place for custom targets; encoding one with them is a programmer error. */
+export function writeNoPvpTargets(_writer: ByteWriter, targets: readonly PvpTarget[]): void {
+  if (targets.length > 0) {
+    throw new ShareEncodeError('this codec version cannot carry custom PvP targets');
+  }
+}
+
+export function readNoPvpTargets(): PvpTarget[] {
+  return [];
 }
 
 export const V1_RECORDS: RecordCodecs = {
@@ -549,6 +569,8 @@ export const V1_RECORDS: RecordCodecs = {
   readAccessorySet: readAccessorySetV1,
   writeBuffs: writeBuffsV1,
   readBuffs: readBuffsV1,
+  writePvpTargets: writeNoPvpTargets,
+  readPvpTargets: readNoPvpTargets,
 };
 
 /** Serialises a schema-valid build into a body of the v1 list layout (no envelope header). */
@@ -589,6 +611,7 @@ export function writeBody(build: BuildState, records: RecordCodecs): Uint8Array<
   writeList(writer, build.gearSwaps, LIMITS.gearSwaps, 'gear swaps', (w, swap) => {
     writeGearSwap(w, swap, lists);
   });
+  records.writePvpTargets(writer, build.pvpTargets);
 
   return writer.toBytes();
 }
@@ -631,6 +654,7 @@ export function readBody(bytes: Uint8Array, records: RecordCodecs): BuildState {
   const gearSwaps = readList(reader, LIMITS.gearSwaps, 'gear swaps', () =>
     readGearSwap(reader, ids.next(), lists),
   );
+  const pvpTargets = records.readPvpTargets(reader, () => ids.next());
 
   if (statPages.length === 0 || gearSwaps.length === 0) {
     throw corrupt('a build needs at least one stat page and one gear swap');
@@ -653,5 +677,6 @@ export function readBody(bytes: Uint8Array, records: RecordCodecs): BuildState {
     pets,
     buffs,
     gearSwaps,
+    pvpTargets,
   };
 }

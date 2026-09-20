@@ -27,6 +27,8 @@ export interface SelectProps {
   className?: string | undefined;
   /** Extra classes for the select element, e.g. a rarity colour. */
   valueClassName?: string | undefined;
+  /** Native tooltip of the control, e.g. the full text of a truncated selection. */
+  title?: string | undefined;
 }
 
 /** Native select styled as a control (plan D5); accessible and keyboard-friendly by default. */
@@ -43,12 +45,14 @@ export function Select({
   size = 'md',
   className,
   valueClassName,
+  title,
 }: SelectProps) {
   return (
     <span className={cx('relative inline-flex w-full', className)}>
       <select
         id={id}
         aria-label={label}
+        title={title}
         value={value}
         disabled={disabled}
         onChange={(event) => {

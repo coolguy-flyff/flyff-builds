@@ -1,6 +1,7 @@
 import { WEAPON_SUBCATEGORIES, type SlimClass, type StatKey, type WeaponSubcategory } from '@/data';
 
 import { effectiveUpgradeLevel, upgradeFlatBonus, upgradeMultiplier } from '../../rules';
+import type { EquippedItem } from '../types';
 import type { StatContext } from './context';
 import { computeFp } from './vitals';
 
@@ -59,9 +60,12 @@ export interface HitRange {
   readonly max: number;
 }
 
-/** Mainhand auto-attack hit range (flyffentity.js:1012-1058). */
-export function computeHitMinMax(ctx: StatContext): HitRange {
-  const { item, upgrade } = ctx.mainhand;
+/**
+ * The hit range of a basic attack with `weapon` (flyffentity.js:1012-1058): the mainhand by
+ * default, the offhand weapon for a dual-wielder's left hand. The stat totals are shared.
+ */
+export function computeHitMinMax(ctx: StatContext, weapon: EquippedItem = ctx.mainhand): HitRange {
+  const { item, upgrade } = weapon;
   let min = (item.minAttack ?? 0) * 2;
   let max = (item.maxAttack ?? 0) * 2;
 
@@ -93,6 +97,21 @@ export function computeHitMinMax(ctx: StatContext): HitRange {
   }
 
   return { min, max };
+}
+
+/**
+ * The weapon's attack power in the skill formula (flyffdamagecalculator.js:1205-1234). Unlike the
+ * hit range, the flat upgrade bonus sits inside the floor here.
+ */
+export function computeWeaponAttackPower(ctx: StatContext, weapon: EquippedItem): HitRange {
+  const { item, upgrade } = weapon;
+  const factor = upgradeMultiplier(ctx.data, item, upgrade);
+  const bonus = upgradeFlatBonus(effectiveUpgradeLevel(item, upgrade));
+
+  return {
+    min: Math.floor(((item.minAttack ?? 0) + ctx.total('minability', false)) * factor + bonus),
+    max: Math.floor(((item.maxAttack ?? 0) + ctx.total('maxability', false)) * factor + bonus),
+  };
 }
 
 /** The character-window attack value (flyffentity.js:803-822). */

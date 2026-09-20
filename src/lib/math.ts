@@ -16,6 +16,11 @@ export function isOnStep(value: number, min: number, step: number, epsilon = 1e-
   return Math.abs(steps - Math.round(steps)) < epsilon;
 }
 
+/** Linear interpolation from `a` to `b` by `t` (Flyffulator `Utils.mix`). */
+export function mix(a: number, b: number, t: number): number {
+  return a * (1 - t) + b * t;
+}
+
 export function sum(values: readonly number[]): number {
   let total = 0;
 

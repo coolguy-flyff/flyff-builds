@@ -93,7 +93,7 @@ describe('offhandModel', () => {
     });
     expect(model.options.map((option) => option.value)).toEqual(['', String(shieldId)]);
     expect(compositionChips(data, build, firstSwap(build), nameOf)).toEqual([
-      'Bloody Obsidian Knuckle +0',
+      'Obsidian Knuckle +0',
       'Azure Shield +0',
       'statPages#1',
     ]);

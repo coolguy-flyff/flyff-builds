@@ -1,10 +1,10 @@
+import { isSkillAwakeParameter } from '@/data';
 import type { SkillAwake } from '@/domain/build';
 import type { SkillAwakeOption } from '@/domain/rules';
 import { Select, type SelectGroup } from '@/components/Select';
-import { Hint } from '@/components/Text';
 import { useGameData } from '@/state';
 
-import { isSkillDamageAwake, skillAwakeParameterLabel } from '../format';
+import { skillAwakeParameterLabel } from '../format';
 
 function highestValue(option: SkillAwakeOption): number {
   return option.values[option.values.length - 1] ?? 0;
@@ -13,7 +13,7 @@ function highestValue(option: SkillAwakeOption): number {
 /**
  * Skill awake (plan A2.2 / A2.3): `None`, a stat-type awake (Healing %, Block %, …) or a
  * skill-damage awake for one of the weapon's skills. Picking an option defaults to its highest
- * value. Skill-damage awakes are stored for future work — they do not affect the results yet.
+ * value.
  */
 export function SkillAwakeSelect({
   options,
@@ -33,8 +33,8 @@ export function SkillAwakeSelect({
     value: option.parameter,
     label: skillAwakeParameterLabel(data, option.parameter),
   });
-  const statOptions = options.filter((option) => !isSkillDamageAwake(option.parameter));
-  const skillOptions = options.filter((option) => isSkillDamageAwake(option.parameter));
+  const statOptions = options.filter((option) => !isSkillAwakeParameter(option.parameter));
+  const skillOptions = options.filter((option) => isSkillAwakeParameter(option.parameter));
   const groups: SelectGroup[] = [];
 
   if (statOptions.length > 0) {
@@ -81,9 +81,6 @@ export function SkillAwakeSelect({
           </div>
         )}
       </div>
-      {value !== null && isSkillDamageAwake(value.parameter) && (
-        <Hint>skill damage — not applied to the results yet</Hint>
-      )}
     </div>
   );
 }
