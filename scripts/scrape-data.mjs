@@ -7,8 +7,8 @@
  * Three kinds of source:
  *   - id-list collections (class, skill, item, equipset): fetch the id list from the collection
  *     endpoint, batch-fetch the full objects, assemble a keyed { [id]: object } map;
- *   - whole-endpoint assets (statawake, skillawake, upgradebonus, pets): the entire endpoint
- *     response is the file;
+ *   - whole-endpoint assets (statawake, skillawake, upgradebonus, pets, couple): the entire
+ *     endpoint response is the file;
  *   - housing NPCs: fetch the housing pack list and keep the NPCs that grant abilities.
  *
  * StatNames.json has no list endpoint: its id set is derived from every parameter referenced by
@@ -47,6 +47,7 @@ const WHOLE_ENDPOINTS = [
   { name: 'skillawake', endpoint: 'skillawake', file: 'SkillAwakes.json' },
   { name: 'upgradebonus', endpoint: 'upgradelevelbonus', file: 'UpgradeBonus.json' },
   { name: 'pets', endpoint: 'raisedpet', file: 'Pets.json', transform: keyByPetItemId },
+  { name: 'couple', endpoint: 'couple', file: 'Couple.json' },
 ];
 
 const BATCH_SIZE = 400;

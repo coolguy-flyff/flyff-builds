@@ -535,6 +535,7 @@ function repairBuffs(data: GameData, build: BuildState, repairs: Repairs): Build
   const powerupIds = new Set(data.powerups.map((item) => item.id));
   const personalIds = new Set(data.personalNpcs.map((npc) => npc.id));
   const guildIds = new Set(data.guildNpcs.map((npc) => npc.id));
+  const coupleSkillIds = new Set(data.coupleSkills.map((skill) => skill.id));
   let achievementId = buffs.achievementId;
 
   if (
@@ -556,6 +557,7 @@ function repairBuffs(data: GameData, build: BuildState, repairs: Repairs): Build
     personalNpcIds: keepKnown(buffs.personalNpcIds, personalIds, 'Personal house', repairs),
     coupleNpcIds: keepKnown(buffs.coupleNpcIds, personalIds, 'Couple house', repairs),
     guildNpcIds: keepKnown(buffs.guildNpcIds, guildIds, 'Guild ship', repairs),
+    coupleSkillIds: keepKnown(buffs.coupleSkillIds, coupleSkillIds, 'Couple skills', repairs),
     achievementId,
   };
 }

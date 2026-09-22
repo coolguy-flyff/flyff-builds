@@ -24,6 +24,8 @@ import {
   downloadTextFile,
   exportOption,
 } from './exportActions';
+import { describeOverridePet } from './overridePets';
+import { usePremiumQuickToggles } from './premiumQuickToggles';
 import { ResultsTable } from './ResultsTable';
 import { ResultsToolbar } from './ResultsToolbar';
 import {
@@ -48,6 +50,7 @@ export function ResultsPage({ onOpenSwap }: ResultsPageProps) {
   const selectors = useSelectors();
   const actions = useActions();
   const view = useAppStore((state) => state.ui.results);
+  const premium = usePremiumQuickToggles();
   const options = useMemo(
     (): EngineOptions => ({
       ...DEFAULT_ENGINE_OPTIONS,
@@ -203,11 +206,9 @@ export function ResultsPage({ onOpenSwap }: ResultsPageProps) {
               hidden: !visible.includes(column),
             }))}
             baselineSwapId={baselineSwapId}
-            pets={build.pets.map((pet) => ({
-              id: pet.id,
-              name: selectors.entryName(build, 'pets', pet.id),
-            }))}
+            pets={build.pets.map((pet) => describeOverridePet(data, pet))}
             petGraceHint={petGraceHint(data)}
+            premium={premium}
             onViewChange={(patch) => {
               actions.updateResultsView(patch);
             }}

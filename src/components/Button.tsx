@@ -3,7 +3,7 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cx } from '@/lib/cx';
 
 export type ButtonVariant =
-  'neutral' | 'primary' | 'danger' | 'soft' | 'outline' | 'ghost' | 'control';
+  'neutral' | 'primary' | 'danger' | 'soft' | 'golden' | 'outline' | 'ghost' | 'control';
 export type ButtonSize = 'xs' | 'sm' | 'md';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -18,6 +18,8 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'bg-accent font-semibold text-on-accent hover:brightness-110',
   danger: 'bg-danger/12 text-danger hover:bg-danger/20',
   soft: 'bg-accent/10 text-accent hover:bg-accent/16',
+  /** Pet grace: the in-game buff glitter's gold. */
+  golden: 'bg-sparkle/12 text-sparkle hover:bg-sparkle/18',
   outline: 'border border-white/12 text-text-2 hover:bg-white/5',
   ghost: 'text-muted hover:bg-white/5 hover:text-text',
   control: 'bg-control text-text hover:bg-control-hover',

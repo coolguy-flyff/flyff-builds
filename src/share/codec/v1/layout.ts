@@ -441,7 +441,7 @@ export function writeBuffsV1(writer: ByteWriter, buffs: BuffsState): void {
   writeOptionalId(writer, buffs.achievementId);
 }
 
-/** Reads the v1 buffs record; v1 predates class skills, so none are active. */
+/** Reads the v1 buffs record; v1 predates class and couple skills, so none are active. */
 export function readBuffsV1(reader: ByteReader): BuffsState {
   const enabled = readFlag(reader, 'buff flags');
   const excludedSkillIds = readVarintList(reader, MAX_U8_COUNT, 'excluded RM buffs');
@@ -458,6 +458,7 @@ export function readBuffsV1(reader: ByteReader): BuffsState {
     personalNpcIds,
     coupleNpcIds,
     guildNpcIds,
+    coupleSkillIds: [],
     achievementId,
   };
 }

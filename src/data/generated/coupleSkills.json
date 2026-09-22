@@ -1,0 +1,10 @@
+[
+  {"id":10436,"name":"Field Outing","icon":"couplefieldouting.png","coupleLevel":1,"durationSeconds":6,"abilities":[{"parameter":"reloadexpstop","add":5,"rate":true}]},
+  {"id":15326,"name":"Party Together","icon":"couplepartytogether.png","coupleLevel":3,"durationSeconds":1800,"abilities":[{"parameter":"partyexp","add":10,"rate":true}]},
+  {"id":19886,"name":"Golden Luck","icon":"couplegoldenluck.png","coupleLevel":5,"durationSeconds":600,"abilities":[{"parameter":"monsterpenya","add":5,"rate":true},{"parameter":"droprate","add":5,"rate":true}]},
+  {"id":11284,"name":"Happy Jump","icon":"couplehappyjump.png","coupleLevel":7,"durationSeconds":600,"abilities":[{"parameter":"jumpheight","add":50,"rate":false}]},
+  {"id":18268,"name":"Swift Recovery","icon":"coupleswiftrecovery.png","coupleLevel":9,"durationSeconds":600,"abilities":[{"parameter":"mprecovery","add":10,"rate":true},{"parameter":"fprecovery","add":10,"rate":true}]},
+  {"id":19586,"name":"Madrigal Stroll","icon":"couplestroll.png","coupleLevel":11,"durationSeconds":600,"abilities":[{"parameter":"speed","add":5,"rate":true}]},
+  {"id":14733,"name":"Stamina Boost","icon":"couplestaminaboost.png","coupleLevel":13,"durationSeconds":600,"abilities":[{"parameter":"allstats","add":5,"rate":false}]},
+  {"id":10132,"name":"Sky's Blessing","icon":"coupleblessingsky.png","coupleLevel":15,"durationSeconds":300,"abilities":[{"parameter":"flyspeed","add":5,"rate":true}]}
+]

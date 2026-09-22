@@ -86,7 +86,14 @@ export interface AppStoreDeps {
   readonly now: () => number;
 }
 
+/** Per-browser settings saved on their own, never part of a build or a share code. */
+export interface Preferences {
+  /** The premium items offered as quick toggles, in display order. */
+  premiumFavorites: number[];
+}
+
 export interface AppState {
   build: BuildState;
   ui: UiState;
+  preferences: Preferences;
 }

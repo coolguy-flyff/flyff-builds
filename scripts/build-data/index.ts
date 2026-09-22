@@ -20,6 +20,7 @@ import {
 
 import { selectAccessoryLines } from './accessoryLines';
 import { projectClassSkill, selectClassSkills } from './classSkills';
+import { projectCoupleSkills } from './coupleSkills';
 import { projectDamageSkills } from './damageSkills';
 import { buildManifest } from './manifest';
 import {
@@ -83,6 +84,7 @@ const EXPECTED_COUNTS: Readonly<Record<string, number>> = {
   upgradeBonus: 20,
   achievements: 5,
   housingNpcs: 39,
+  coupleSkills: 8,
   pets: 9,
   skills: 16,
   classSkills: 128,
@@ -358,6 +360,7 @@ function assemble(
     housingNpcs: Object.values(sources.housingNpcs)
       .map(projectHousingNpc)
       .sort((a, b) => a.id - b.id),
+    coupleSkills: projectCoupleSkills(sources.couple, skillLookup),
     pets: pets.sort((a, b) => a.petItemId - b.petItemId),
     skills,
     classSkills,

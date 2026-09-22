@@ -10,12 +10,22 @@ import { validateBuild } from './validate';
 const data = loadBundledGameData();
 const ADEPTS_SET = 12670;
 
+/** The default build's buffs as a schema-3 build stored them: no `coupleSkillIds`. */
+function v3Buffs(): Record<string, unknown> {
+  const buffs: Record<string, unknown> = { ...createDefaultBuild(data).buffs };
+
+  delete buffs.coupleSkillIds;
+
+  return buffs;
+}
+
 /** A schema-1 build as persisted before 2026-09-03: no `pieceSources`, no `classSkillIds`. */
 function v1Build(): Record<string, unknown> {
-  const current = createDefaultBuild(data);
+  const current: Record<string, unknown> = { ...createDefaultBuild(data) };
   const accessorySet: Record<string, unknown> = { ...createAccessorySetEntry(3, ADEPTS_SET) };
-  const buffs: Record<string, unknown> = { ...current.buffs };
+  const buffs = v3Buffs();
 
+  delete current.pvpTargets;
   delete accessorySet.pieceSources;
   delete buffs.classSkillIds;
 
@@ -30,11 +40,20 @@ function v1Build(): Record<string, unknown> {
 
 /** A schema-2 build as persisted before 2026-09-05: no custom PvP targets. */
 function v2Build(): Record<string, unknown> {
-  const current: Record<string, unknown> = { ...createDefaultBuild(data), schemaVersion: 2 };
+  const current: Record<string, unknown> = {
+    ...createDefaultBuild(data),
+    schemaVersion: 2,
+    buffs: v3Buffs(),
+  };
 
   delete current.pvpTargets;
 
   return current;
+}
+
+/** A schema-3 build as persisted before 2026-09-22: no couple skills. */
+function v3Build(): Record<string, unknown> {
+  return { ...createDefaultBuild(data), schemaVersion: 3, buffs: v3Buffs() };
 }
 
 describe('migrateToCurrent', () => {
@@ -69,6 +88,19 @@ describe('migrateToCurrent', () => {
     expect(validated.value.warnings).toEqual([]);
     expect(validated.value.build.schemaVersion).toBe(BUILD_SCHEMA_VERSION);
     expect(validated.value.build.pvpTargets).toEqual([]);
+    expect(validated.value.build.buffs.coupleSkillIds).toEqual([]);
+  });
+
+  it('upgrades a schema-3 build with no couple skills', () => {
+    const validated = validateBuild(data, migrateToCurrent(v3Build()));
+
+    if (!validated.ok) {
+      throw new Error(validated.error.message);
+    }
+
+    expect(validated.value.warnings).toEqual([]);
+    expect(validated.value.build.schemaVersion).toBe(BUILD_SCHEMA_VERSION);
+    expect(validated.value.build.buffs.coupleSkillIds).toEqual([]);
   });
 
   it('leaves a current build untouched', () => {
@@ -79,7 +111,7 @@ describe('migrateToCurrent', () => {
 
   it('tolerates malformed input and leaves it to validation', () => {
     expect(migrateToCurrent({ schemaVersion: 1, buffs: 'nope', accessorySets: 3 })).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       buffs: 'nope',
       accessorySets: 3,
       pvpTargets: [],

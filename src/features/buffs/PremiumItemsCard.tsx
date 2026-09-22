@@ -1,8 +1,8 @@
-import { useMemo, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
-import { getItem, requireItem, type SlimItem } from '@/data';
-import { CURATED_POWERUP_IDS } from '@/config/curatedPowerups';
+import type { SlimItem } from '@/data';
 import { LIMITS } from '@/domain/build';
+import { MAX_PREMIUM_FAVORITES } from '@/persistence';
 import { Card, CardTitle } from '@/components/Card';
 import { EntityCombobox } from '@/components/EntityCombobox';
 import { ItemIcon } from '@/components/ItemIcon';
@@ -13,6 +13,7 @@ import { cx } from '@/lib/cx';
 import { useActions, useAppStore, useGameData } from '@/state';
 
 import { powerupSearchText, premiumItemEffect, splitEffectText } from './effectText';
+import { knownItems, useFavoritePremiumItems } from './premiumFavorites';
 
 function PremiumItemTile({
   item,
@@ -26,7 +27,7 @@ function PremiumItemTile({
   effect: string;
   active: boolean;
   disabled?: boolean | undefined;
-  /** Right-side control: a Toggle for curated tiles, a remove button for added ones. */
+  /** Right-side controls: a Toggle for favorites, add-favorite/remove buttons otherwise. */
   action: ReactNode;
   onRowClick?: (() => void) | undefined;
 }) {
@@ -66,7 +67,7 @@ function PremiumItemTile({
           </div>
         </div>
         <span
-          className="inline-flex"
+          className="inline-flex items-center"
           onClick={(event) => {
             event.stopPropagation();
           }}
@@ -91,69 +92,177 @@ function PowerupOption({ item, effect }: { item: SlimItem; effect: string }) {
   );
 }
 
+/** ☆ on an active item that is not a favorite: click to keep it as a quick toggle. */
+function AddFavoriteButton({
+  itemName,
+  disabled = false,
+  onClick,
+}: {
+  itemName: string;
+  disabled?: boolean | undefined;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`Add ${itemName} to favorites`}
+      disabled={disabled}
+      onClick={onClick}
+      className="px-1 text-[13px] leading-none text-dim transition-colors hover:text-favorite disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      ☆
+    </button>
+  );
+}
+
+function RemoveButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className="px-1 text-[13px] text-dim transition-colors hover:text-danger"
+    >
+      ✕
+    </button>
+  );
+}
+
 /**
- * Premium consumables (plan A3.1): curated quick toggles plus a search over every stat-granting
- * consumable. Added items render like curated tiles with a remove button instead of a switch.
- * No stacking or exclusivity rules are applied in v1.
+ * Premium consumables (plan A3.1): the user's favorites as quick toggles plus a search over every
+ * stat-granting consumable. Favorites are a personal shortlist saved in this browser (seeded with
+ * the curated list on first run) and edited with the ★ button; an active item that is not a
+ * favorite — added by search or imported with a build — renders below with a remove button.
+ * No stacking or exclusivity rules are applied.
  */
 export function PremiumItemsCard() {
   const data = useGameData();
   const activeIds = useAppStore((state) => state.build.buffs.premiumItemIds);
+  const favoriteIds = useAppStore((state) => state.preferences.premiumFavorites);
   const actions = useActions();
-  const curated = useMemo(() => CURATED_POWERUP_IDS.map((id) => requireItem(data, id)), [data]);
+  const [editing, setEditing] = useState(false);
+  const favorites = useFavoritePremiumItems();
+  const favoriteSet = new Set(favoriteIds);
   const active = new Set(activeIds);
   const atLimit = activeIds.length >= LIMITS.premiumItems;
-  const extras = activeIds
-    .filter((id) => !CURATED_POWERUP_IDS.includes(id))
-    .map((id) => getItem(data, id))
-    .filter((item): item is SlimItem => item !== undefined);
+  const favoritesFull = favoriteIds.length >= MAX_PREMIUM_FAVORITES;
+  const extras = knownItems(
+    data,
+    activeIds.filter((id) => !favoriteSet.has(id)),
+  );
 
   const toggle = (id: number): void => {
     actions.toggleIdInList('premiumItemIds', id);
   };
 
-  const add = (item: SlimItem | null): void => {
-    if (item !== null && !active.has(item.id)) {
+  const pick = (item: SlimItem | null): void => {
+    if (item === null) {
+      return;
+    }
+
+    if (editing && !favoriteSet.has(item.id)) {
+      actions.togglePremiumFavorite(item.id);
+    } else if (!editing && !active.has(item.id)) {
       toggle(item.id);
     }
+  };
+
+  const favoriteTile = (item: SlimItem): ReactNode => {
+    const isActive = active.has(item.id);
+    const blocked = atLimit && !isActive;
+    let tile;
+
+    if (editing) {
+      tile = (
+        <PremiumItemTile
+          key={item.id}
+          item={item}
+          effect={premiumItemEffect(data, item)}
+          active
+          action={
+            <RemoveButton
+              label={`Remove ${item.name} from favorites`}
+              onClick={() => {
+                actions.togglePremiumFavorite(item.id);
+              }}
+            />
+          }
+        />
+      );
+    } else {
+      tile = (
+        <PremiumItemTile
+          key={item.id}
+          item={item}
+          effect={premiumItemEffect(data, item)}
+          active={isActive}
+          disabled={blocked}
+          action={
+            <Toggle
+              label={item.name}
+              checked={isActive}
+              disabled={blocked}
+              onChange={() => {
+                toggle(item.id);
+              }}
+            />
+          }
+          onRowClick={() => {
+            toggle(item.id);
+          }}
+        />
+      );
+    }
+
+    return tile;
   };
 
   return (
     <Card>
       <CardTitle
-        right={<span className="font-mono text-[11px] text-muted">{activeIds.length} active</span>}
+        right={
+          <>
+            <span className="font-mono text-[11px] text-muted">{activeIds.length} active</span>
+            <button
+              type="button"
+              aria-pressed={editing}
+              aria-label="Edit favorites"
+              title={editing ? 'Done editing favorites' : 'Edit favorites'}
+              onClick={() => {
+                setEditing((value) => !value);
+              }}
+              className={cx(
+                'ml-1 flex items-center gap-1 rounded-control px-1.5 py-0.5 text-[11px] font-medium transition-colors',
+                editing
+                  ? 'bg-favorite/15 text-favorite'
+                  : 'text-favorite/80 hover:bg-control hover:text-favorite',
+              )}
+            >
+              <span aria-hidden="true" className="text-[13px] leading-none">
+                ★
+              </span>
+              {editing && <span>done</span>}
+            </button>
+          </>
+        }
       >
         Premium items
       </CardTitle>
-      <div className="grid grid-cols-2 gap-1.5">
-        {curated.map((item) => (
-          <PremiumItemTile
-            key={item.id}
-            item={item}
-            effect={premiumItemEffect(data, item)}
-            active={active.has(item.id)}
-            disabled={atLimit && !active.has(item.id)}
-            action={
-              <Toggle
-                label={item.name}
-                checked={active.has(item.id)}
-                disabled={atLimit && !active.has(item.id)}
-                onChange={() => {
-                  toggle(item.id);
-                }}
-              />
-            }
-            onRowClick={() => {
-              toggle(item.id);
-            }}
-          />
-        ))}
-      </div>
+      {editing && (
+        <Hint className="mb-2">
+          Your quick toggles, saved in this browser only — builds and share codes are unaffected.
+        </Hint>
+      )}
+      {favorites.length > 0 ? (
+        <div className="grid grid-cols-2 gap-1.5">{favorites.map(favoriteTile)}</div>
+      ) : (
+        <Hint>No favorites — click ★ to pick the items you use often.</Hint>
+      )}
       <EntityCombobox
         className="mt-3"
         options={data.powerups}
         value={null}
-        onChange={add}
+        onChange={pick}
         getKey={(item) => item.id}
         getLabel={(item) => item.name}
         getSearchText={(item) => powerupSearchText(data, item)}
@@ -163,19 +272,28 @@ export function PremiumItemsCard() {
         )}
         leading={
           <span aria-hidden="true" className="text-[13px] text-dim">
-            🔍
+            {editing ? '★' : '🔍'}
           </span>
         }
-        placeholder={`Add item… ${data.powerups.length} consumables`}
-        label="Add premium item"
-        disabled={atLimit}
+        placeholder={
+          editing
+            ? `Add favorite… ${data.powerups.length} consumables`
+            : `Add item… ${data.powerups.length} consumables`
+        }
+        label={editing ? 'Add premium favorite' : 'Add premium item'}
+        disabled={editing ? favoritesFull : atLimit}
       />
-      {atLimit && (
+      {!editing && atLimit && (
         <Hint tone="warn" className="mt-1.5">
           Limit of {LIMITS.premiumItems} active items reached — remove one to add another.
         </Hint>
       )}
-      {extras.length > 0 && (
+      {editing && favoritesFull && (
+        <Hint tone="warn" className="mt-1.5">
+          Limit of {MAX_PREMIUM_FAVORITES} favorites reached — remove one to add another.
+        </Hint>
+      )}
+      {!editing && extras.length > 0 && (
         <div className="mt-2.5 grid grid-cols-2 gap-1.5">
           {extras.map((item) => (
             <PremiumItemTile
@@ -184,24 +302,53 @@ export function PremiumItemsCard() {
               effect={premiumItemEffect(data, item)}
               active
               action={
-                <button
-                  type="button"
-                  aria-label={`Remove ${item.name}`}
-                  onClick={() => {
-                    toggle(item.id);
-                  }}
-                  className="px-1 text-[13px] text-dim transition-colors hover:text-danger"
-                >
-                  ✕
-                </button>
+                <>
+                  <AddFavoriteButton
+                    itemName={item.name}
+                    disabled={favoritesFull}
+                    onClick={() => {
+                      actions.togglePremiumFavorite(item.id);
+                    }}
+                  />
+                  <RemoveButton
+                    label={`Remove ${item.name}`}
+                    onClick={() => {
+                      toggle(item.id);
+                    }}
+                  />
+                </>
               }
             />
           ))}
         </div>
       )}
-      <Hint className="mt-2.5">
-        Search by name or stat. No stacking or exclusivity rules are applied.
-      </Hint>
+      {editing ? (
+        <div className="mt-2.5 flex items-center gap-2">
+          <Hint>Search to add; ✕ on a tile removes it.</Hint>
+          <button
+            type="button"
+            onClick={() => {
+              actions.openDialog({
+                kind: 'confirm',
+                title: 'Reset favorites?',
+                message: 'Your favorites are replaced by the default quick toggles.',
+                confirmLabel: 'Reset',
+                danger: false,
+                onConfirm: () => {
+                  actions.resetPremiumFavorites();
+                },
+              });
+            }}
+            className="ml-auto shrink-0 text-[11px] font-medium text-accent hover:underline"
+          >
+            reset to defaults
+          </button>
+        </div>
+      ) : (
+        <Hint className="mt-2.5">
+          Search by name or stat. No stacking or exclusivity rules are applied.
+        </Hint>
+      )}
     </Card>
   );
 }

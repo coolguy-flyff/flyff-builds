@@ -14,6 +14,8 @@ import { ResultsPage } from './ResultsPage';
 const data = loadBundledGameData();
 const ORACLE = 54987;
 const LION_PET = 9941;
+/** A default favorite: HP +50%. */
+const GRILLED_EEL = 6049;
 
 /** Headless UI's menu tracks button movement with ResizeObserver, which jsdom does not provide. */
 class ResizeObserverStub {
@@ -70,6 +72,22 @@ function rowCells(label: string): HTMLElement[] {
   return within(row).getAllByRole('cell');
 }
 
+/** Opens a settings menu of the toolbar (its switches live in the panel). */
+function openToolbarMenu(name: 'View' | 'Raised pet' | 'Prems'): void {
+  fireEvent.click(screen.getByRole('button', { name }));
+}
+
+/** Picks a pet in the Raised pet menu's list (the menu must be open). */
+function choosePetOverride(option: string | RegExp): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Pet for every swap' }));
+  fireEvent.click(screen.getByRole('option', { name: option }));
+}
+
+/** The Raised pet menu's "Grace effect: …" line (the menu must be open). */
+function graceEffectText(): string {
+  return requireDefined(screen.getByText('Grace effect:').parentElement, 'grace line').textContent;
+}
+
 function installClipboard(writeText: (text: string) => Promise<void>): void {
   Object.defineProperty(navigator, 'clipboard', {
     value: { writeText },
@@ -90,6 +108,7 @@ describe('ResultsPage', () => {
     expect(screen.getByRole('button', { name: 'Swap 2' })).toBeDefined();
     expect(screen.queryAllByText('Page 1').length).toBe(0);
 
+    openToolbarMenu('View');
     fireEvent.click(screen.getByLabelText('Swap details'));
 
     expect(screen.getAllByText('Oracle').length).toBeGreaterThan(0);
@@ -125,6 +144,7 @@ describe('ResultsPage', () => {
   it('turns highlighting off with the toggle', () => {
     setup();
 
+    openToolbarMenu('View');
     fireEvent.click(screen.getByLabelText('Highlight best'));
 
     for (const cell of rowCells('Attack')) {
@@ -150,6 +170,7 @@ describe('ResultsPage', () => {
   it('filters to differing rows only', () => {
     setup();
 
+    openToolbarMenu('View');
     fireEvent.click(screen.getByLabelText('Only differing rows'));
 
     expect(screen.queryByRole('rowheader', { name: 'Max HP' })).toBeNull();
@@ -160,6 +181,7 @@ describe('ResultsPage', () => {
     const { store } = setup();
 
     expect(screen.queryByRole('button', { name: /Raw totals/ })).toBeNull();
+    openToolbarMenu('View');
     fireEvent.click(screen.getByLabelText('Show raw totals'));
 
     expect(store.getState().ui.results.showRawTotals).toBe(true);
@@ -271,7 +293,9 @@ describe('ResultsPage', () => {
 
     const before = rowCells('Max HP').map((cell) => cell.textContent);
 
+    openToolbarMenu('Raised pet');
     fireEvent.click(screen.getByLabelText('Pet grace'));
+    openToolbarMenu('View');
     fireEvent.click(screen.getByLabelText('Swap details'));
 
     const after = rowCells('Max HP').map((cell) => cell.textContent);
@@ -301,23 +325,56 @@ describe('ResultsPage', () => {
     const petId = requireDefined(store.getState().build.pets[0], 'pet').id;
     const before = rowCells('Max HP').map((cell) => cell.textContent);
 
-    fireEvent.change(screen.getByLabelText('Pet override'), { target: { value: String(petId) } });
+    expect(screen.queryByText('Computed with')).toBeNull();
+
+    openToolbarMenu('Raised pet');
+
+    expect(graceEffectText()).toBe('Grace effect: varies by swap');
+
+    choosePetOverride(/^Lion/);
 
     const after = rowCells('Max HP').map((cell) => cell.textContent);
 
     expect(store.getState().ui.results.petOverride).toBe(petId);
+    expect(screen.getByText('Pet: Lion')).toBeDefined();
+    // Lion S raised to 75 casts its grace at a real level: the line lists its stats.
+    expect(graceEffectText()).toMatch(/^Grace effect: \S+ \+\d/);
     expect(after[0]).not.toBe(before[0]);
     expect(after[1]).not.toBe(before[1]);
     expect(store.getState().build.gearSwaps.map((swap) => swap.petId)).toEqual([null, null]);
 
     // "None" strips the pet everywhere; the swaps wear none anyway, so it matches the start.
-    fireEvent.change(screen.getByLabelText('Pet override'), { target: { value: 'none' } });
+    choosePetOverride('None');
 
     expect(store.getState().ui.results.petOverride).toBe('none');
     expect(rowCells('Max HP').map((cell) => cell.textContent)).toEqual(before);
+    expect(screen.getByText('Pet: none')).toBeDefined();
+    // Without a pet there is no grace to apply.
+    expect(graceEffectText()).toBe('Grace effect: none');
+    expect(screen.getByLabelText('Pet grace')).toHaveProperty('disabled', true);
 
-    fireEvent.change(screen.getByLabelText('Pet override'), { target: { value: 'own' } });
+    // The pill under the toolbar clears the override.
+    fireEvent.click(screen.getByLabelText('Clear pet override'));
 
+    expect(store.getState().ui.results.petOverride).toBe('own');
+    expect(screen.queryByText('Computed with')).toBeNull();
+    expect(rowCells('Max HP').map((cell) => cell.textContent)).toEqual(before);
+  });
+
+  it('switches the build’s premium items from the favorites in the Prems menu', () => {
+    const { store } = setup();
+    const before = rowCells('Max HP').map((cell) => cell.textContent);
+
+    openToolbarMenu('Prems');
+    fireEvent.click(screen.getByLabelText('Grilled Eel'));
+
+    expect(store.getState().build.buffs.premiumItemIds).toEqual([GRILLED_EEL]);
+    expect(rowCells('Max HP').map((cell) => cell.textContent)).not.toEqual(before);
+    expect(screen.getByText(/1 on · same as Buffs & Swaps/)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+
+    expect(store.getState().build.buffs.premiumItemIds).toEqual([]);
     expect(rowCells('Max HP').map((cell) => cell.textContent)).toEqual(before);
   });
 

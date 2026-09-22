@@ -9,8 +9,8 @@ import { EARRING_VARIANTS, NECKLACE_VARIANTS, STAT_KEYS } from '@/data/schema';
  * `validate.ts`.
  */
 
-/** 3 (2026-09-05): custom PvP targets; see `migrations.ts`. */
-export const BUILD_SCHEMA_VERSION = 3 as const;
+/** 4 (2026-09-22): couple skills; see `migrations.ts`. */
+export const BUILD_SCHEMA_VERSION = 4 as const;
 
 export const LIMITS = {
   statPages: 16,
@@ -191,6 +191,8 @@ export const BuffsStateSchema = z.object({
   personalNpcIds: z.array(gameId),
   coupleNpcIds: z.array(gameId),
   guildNpcIds: z.array(gameId),
+  /** Active couple skills (the couple's buffs, not the couple house NPCs). */
+  coupleSkillIds: z.array(gameId),
   achievementId: gameId.nullable(),
 });
 

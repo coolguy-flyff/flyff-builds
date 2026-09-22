@@ -29,6 +29,7 @@ export const CONTRIBUTION_ORIGIN_KINDS = [
   'pet',
   'petGrace',
   'housingNpc',
+  'coupleSkill',
   'achievement',
 ] as const;
 

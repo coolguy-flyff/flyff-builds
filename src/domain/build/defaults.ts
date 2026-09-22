@@ -117,6 +117,7 @@ export function createDefaultBuild(data: GameData): BuildState {
       personalNpcIds: [],
       coupleNpcIds: [],
       guildNpcIds: [],
+      coupleSkillIds: [],
       achievementId: null,
     },
     gearSwaps: [swap],

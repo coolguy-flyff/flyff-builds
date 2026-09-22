@@ -9,6 +9,7 @@ import awakeSkills from './generated/awakeSkills.json';
 import blessings from './generated/blessings.json';
 import classes from './generated/classes.json';
 import classSkills from './generated/classSkills.json';
+import coupleSkills from './generated/coupleSkills.json';
 import damageSkills from './generated/damageSkills.json';
 import housingNpcs from './generated/housingNpcs.json';
 import items from './generated/items.json';
@@ -39,6 +40,7 @@ export function loadBundledGameData(): GameData {
     blessings,
     achievements,
     housingNpcs,
+    coupleSkills,
     pets,
     skills,
     classSkills,

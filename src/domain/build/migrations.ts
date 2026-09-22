@@ -49,9 +49,21 @@ function migrateV2ToV3(raw: Record<string, unknown>): Record<string, unknown> {
   return raw.pvpTargets === undefined ? { ...raw, pvpTargets: [] } : raw;
 }
 
+/** 3 → 4: buffs gain the active couple skills (none — they did not exist before). */
+function migrateV3ToV4(raw: Record<string, unknown>): Record<string, unknown> {
+  let next = raw;
+
+  if (isRecord(raw.buffs) && raw.buffs.coupleSkillIds === undefined) {
+    next = { ...raw, buffs: { ...raw.buffs, coupleSkillIds: [] } };
+  }
+
+  return next;
+}
+
 const MIGRATIONS: Readonly<Record<number, Migration>> = {
   1: migrateV1ToV2,
   2: migrateV2ToV3,
+  3: migrateV3ToV4,
 };
 
 export function readSchemaVersion(raw: unknown): number | undefined {

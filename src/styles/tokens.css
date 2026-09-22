@@ -29,6 +29,10 @@
   --color-ok: #4caf7d;
   --color-warn: #d69e2e;
   --color-danger: #c46a6a;
+  /* Favorite marker (premium-item quick toggles). */
+  --color-favorite: #e8c547;
+  /* Pet grace glitter and its lit effect text. */
+  --color-sparkle: #ffe79a;
 
   /* Ultimate random-stat lines: 1–2 yellow, 3–4 orange (in-game colours). */
   --color-rand1: #dfc04e;
@@ -144,4 +148,31 @@ input[type='range'].snap-slider:disabled {
 
 .animate-card-in {
   animation: card-in 160ms ease-out;
+}
+
+/* Pet grace sparkles: four-point stars twinkling in place, like the in-game buff glitter. */
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2) rotate(0deg);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(45deg);
+  }
+}
+
+.animate-twinkle {
+  /* `both`: hidden and centred during each star's start delay too. */
+  animation: twinkle 1.8s ease-in-out infinite both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-twinkle {
+    animation: none;
+    opacity: 0.8;
+    transform: translate(-50%, -50%);
+  }
 }

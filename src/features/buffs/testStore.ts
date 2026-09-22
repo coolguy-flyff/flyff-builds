@@ -1,6 +1,6 @@
 import { loadBundledGameData, type GameData } from '@/data';
 import { createDefaultBuild } from '@/domain/build';
-import { createMemoryStorage } from '@/persistence';
+import { createMemoryStorage, type StorageAdapter } from '@/persistence';
 import { createAppStore, type AppStoreApi } from '@/state';
 
 let cached: GameData | undefined;
@@ -13,9 +13,9 @@ export function testGameData(): GameData {
 }
 
 /** An isolated store over the default build (Seraph 190, one empty swap) and in-memory storage. */
-export function createTestStore(data: GameData = testGameData()): AppStoreApi {
-  return createAppStore(
-    { data, storage: createMemoryStorage(), now: () => 1 },
-    createDefaultBuild(data),
-  );
+export function createTestStore(
+  data: GameData = testGameData(),
+  storage: StorageAdapter = createMemoryStorage(),
+): AppStoreApi {
+  return createAppStore({ data, storage, now: () => 1 }, createDefaultBuild(data));
 }

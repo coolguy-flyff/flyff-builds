@@ -11,6 +11,7 @@ import type {
   AwakeSkill,
   BlessingTable,
   ClassSkill,
+  CoupleSkill,
   DamageSkill,
   GeneratedData,
   HousingNpc,
@@ -72,6 +73,8 @@ export interface GameData {
   readonly achievements: readonly Achievement[];
   readonly personalNpcs: readonly HousingNpc[];
   readonly guildNpcs: readonly HousingNpc[];
+  /** Couple buffs that reach the results, by required couple level. */
+  readonly coupleSkills: readonly CoupleSkill[];
   readonly statNames: Readonly<Record<string, string>>;
   readonly manifest: Manifest;
 }
@@ -169,13 +172,16 @@ function groupByJob(
 }
 
 /**
- * Parameters that never reach the results: EXP / drop / party boosts, out-of-combat perks (revive
- * restores, vendor days, dungeon entries, jewel enchants, flying), upgrade and piercing chances.
- * Items and housing NPCs granting only these (or guild-artifact effects) are hidden.
+ * Parameters that never reach the results: EXP / drop / penya / party boosts, out-of-combat perks
+ * (revive restores, vendor days, dungeon entries, jewel enchants, flying, EXP-lock gauge), upgrade
+ * and piercing chances. Items, housing NPCs and couple skills granting only these (or
+ * guild-artifact effects) are hidden.
  */
 const RESULT_NEUTRAL_PARAMETERS: ReadonlySet<string> = new Set([
   'exprate',
   'droprate',
+  'monsterpenya',
+  'reloadexpstop',
   'partyexp',
   'explossreduction',
   'flyspeed',
@@ -205,8 +211,8 @@ function grantsCombatStats(item: SlimItem): boolean {
   return abilities.length === 0 || abilities.some(affectsResults);
 }
 
-function npcGrantsCombatStats(npc: HousingNpc): boolean {
-  return npc.abilities.some(affectsResults);
+function grantsResultStats(source: { readonly abilities: readonly Ability[] }): boolean {
+  return source.abilities.some(affectsResults);
 }
 
 export function createGameData(raw: GeneratedData): GameData {
@@ -233,7 +239,7 @@ export function createGameData(raw: GeneratedData): GameData {
   const weapons = allItems.filter((item) => item.category === 'weapon');
   const shields = allItems.filter((item) => item.subcategory === 'shield');
   const cards = allItems.filter((item) => item.subcategory === 'piercingcard');
-  const housingNpcs = raw.housingNpcs.filter(npcGrantsCombatStats).sort((a, b) => a.id - b.id);
+  const housingNpcs = raw.housingNpcs.filter(grantsResultStats).sort((a, b) => a.id - b.id);
 
   return {
     items,
@@ -281,6 +287,9 @@ export function createGameData(raw: GeneratedData): GameData {
     achievements: [...raw.achievements].sort((a, b) => a.id - b.id),
     personalNpcs: housingNpcs.filter((npc) => npc.group === 'personal'),
     guildNpcs: housingNpcs.filter((npc) => npc.group === 'guild'),
+    coupleSkills: raw.coupleSkills
+      .filter(grantsResultStats)
+      .sort((a, b) => a.coupleLevel - b.coupleLevel),
     statNames: raw.statNames,
     manifest: raw.manifest,
   };

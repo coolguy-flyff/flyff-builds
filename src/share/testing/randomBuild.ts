@@ -410,6 +410,7 @@ export function randomBuild(data: GameData, seed: number): BuildState {
       personalNpcIds: subset(rng, data.personalNpcs, 4).map((npc) => npc.id),
       coupleNpcIds: subset(rng, data.personalNpcs, 3).map((npc) => npc.id),
       guildNpcIds: subset(rng, data.guildNpcs, 5).map((npc) => npc.id),
+      coupleSkillIds: subset(rng, data.coupleSkills, 3).map((skill) => skill.id),
       achievementId: pickOptional(rng, data.achievements, 0.5)?.id ?? null,
     },
     gearSwaps,

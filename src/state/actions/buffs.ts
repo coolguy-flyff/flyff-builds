@@ -2,15 +2,17 @@ import type { BuffsState } from '@/domain/build';
 
 import type { ActionContext } from './shared';
 
+/** The buff lists that are plain sets of ids. */
+export type BuffIdListKey = keyof Pick<
+  BuffsState,
+  'premiumItemIds' | 'personalNpcIds' | 'coupleNpcIds' | 'guildNpcIds' | 'coupleSkillIds'
+>;
+
 export interface BuffActions {
   updateBuffs(recipe: (buffs: BuffsState) => void): void;
-  toggleIdInList(
-    list: keyof Pick<
-      BuffsState,
-      'premiumItemIds' | 'personalNpcIds' | 'coupleNpcIds' | 'guildNpcIds'
-    >,
-    id: number,
-  ): void;
+  toggleIdInList(list: BuffIdListKey, id: number): void;
+  /** Switches several ids of a list at once; switched-on ids keep the given order. */
+  setIdsInList(list: BuffIdListKey, ids: readonly number[], active: boolean): void;
   toggleRmBuff(skillId: number): void;
   /** Switches a class skill; switching one on drops the other variations of its family. */
   toggleClassSkill(skillId: number): void;
@@ -59,6 +61,20 @@ export function createBuffActions({ set, deps }: ActionContext): BuffActions {
     toggleIdInList(list, id) {
       set((draft) => {
         toggle(draft.build.buffs[list], id);
+      });
+    },
+
+    setIdsInList(list, ids, active) {
+      set((draft) => {
+        const current = draft.build.buffs[list];
+
+        if (active) {
+          const missing = new Set(ids.filter((id) => !current.includes(id)));
+
+          draft.build.buffs[list] = [...current, ...missing];
+        } else {
+          draft.build.buffs[list] = without(current, new Set(ids));
+        }
       });
     },
 

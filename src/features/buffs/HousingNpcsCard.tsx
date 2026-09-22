@@ -92,21 +92,27 @@ function NpcRow({
   return row;
 }
 
-/** One house: collapsed to its active NPCs, expanded to the full roster while editing. */
+/**
+ * One house: collapsed to its active NPCs, expanded to the full roster while editing. The switch
+ * beside the name places every NPC at once (on while all of them are placed).
+ */
 function NpcGroup({
   group,
   activeIds,
   onToggle,
+  onSetAll,
 }: {
   group: NpcGroupDef;
   activeIds: readonly number[];
   onToggle: (id: number) => void;
+  onSetAll: (ids: readonly number[], active: boolean) => void;
 }) {
   const data = useGameData();
   const [editing, setEditing] = useState(false);
   const npcs = group.npcsOf(data);
   const active = new Set(activeIds);
   const shown = editing ? npcs : npcs.filter((npc) => active.has(npc.id));
+  const allActive = npcs.length > 0 && npcs.every((npc) => active.has(npc.id));
   let rows;
 
   if (shown.length === 0) {
@@ -133,6 +139,17 @@ function NpcGroup({
   return (
     <section aria-label={group.label}>
       <div className="mb-1.5 flex items-center gap-2">
+        <Toggle
+          label={`All ${group.label} NPCs`}
+          checked={allActive}
+          disabled={npcs.length === 0}
+          onChange={(checked) => {
+            onSetAll(
+              npcs.map((npc) => npc.id),
+              checked,
+            );
+          }}
+        />
         <span className="text-[10.5px] font-semibold tracking-[0.06em] text-muted uppercase">
           {group.label}
         </span>
@@ -176,6 +193,9 @@ export function HousingNpcsCard() {
             activeIds={buffs[group.key]}
             onToggle={(id) => {
               actions.toggleIdInList(group.key, id);
+            }}
+            onSetAll={(ids, active) => {
+              actions.setIdsInList(group.key, ids, active);
             }}
           />
         ))}

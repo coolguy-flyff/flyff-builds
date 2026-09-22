@@ -64,6 +64,9 @@ export const FIXTURE_IDS = {
   /** Seraph self-buff (block/parry) and permanent passive. */
   heavensStep: 55834,
   hymnDamageReduction: 47719,
+  /** Couple skills: all stats +5, speed +5 %. */
+  staminaBoost: 14733,
+  madrigalStroll: 19586,
   fwcMaster: 5,
 } as const;
 
@@ -105,20 +108,27 @@ function page(id: number, stats: Pick<StatPage, 'str' | 'sta' | 'dex' | 'int'>):
   return { ...createStatPage(id), ...stats };
 }
 
-/** The build as codec v2 can express it: no custom PvP targets. */
+/** The build as codec v3 can express it: no couple skills. */
+export function withoutV4Fields(build: BuildState): BuildState {
+  return { ...build, buffs: { ...build.buffs, coupleSkillIds: [] } };
+}
+
+/** The build as codec v2 can express it: no custom PvP targets, no couple skills. */
 export function withoutV3Fields(build: BuildState): BuildState {
-  return { ...build, pvpTargets: [] };
+  return { ...withoutV4Fields(build), pvpTargets: [] };
 }
 
 /** The build as codec v1 can express it: no per-piece accessory sets, no class skills, no targets. */
 export function withoutV2Fields(build: BuildState): BuildState {
+  const v2Build = withoutV3Fields(build);
+
   return {
-    ...withoutV3Fields(build),
+    ...v2Build,
     accessorySets: build.accessorySets.map((entry) => ({
       ...entry,
       pieceSources: emptyPieceSources(),
     })),
-    buffs: { ...build.buffs, classSkillIds: [] },
+    buffs: { ...v2Build.buffs, classSkillIds: [] },
   };
 }
 
@@ -296,6 +306,7 @@ export function maximalBuild(data: GameData): BuildState {
       personalNpcIds: [12199, 12342, 11960],
       coupleNpcIds: [13117],
       guildNpcIds: [11693, 14035, 10508],
+      coupleSkillIds: [ids.staminaBoost, ids.madrigalStroll],
       achievementId: ids.fwcMaster,
     },
     gearSwaps: [
@@ -395,6 +406,7 @@ export function typicalBuild(data: GameData): BuildState {
       personalNpcIds: [12199, 12342],
       coupleNpcIds: [],
       guildNpcIds: [],
+      coupleSkillIds: [],
       achievementId: ids.fwcMaster,
     },
     gearSwaps: [

@@ -2,6 +2,7 @@ import { SwapsSection } from '@/features/swaps/SwapsSection';
 
 import { AchievementCard } from './AchievementCard';
 import { ClassSkillsCard } from './ClassSkillsCard';
+import { CoupleSkillsCard } from './CoupleSkillsCard';
 import { HousingNpcsCard } from './HousingNpcsCard';
 import { PremiumItemsCard } from './PremiumItemsCard';
 import { RmBuffsCard } from './RmBuffsCard';
@@ -15,6 +16,7 @@ export function BuffsPage() {
         <ClassSkillsCard />
         <PremiumItemsCard />
         <HousingNpcsCard />
+        <CoupleSkillsCard />
         <AchievementCard />
       </div>
       <SwapsSection />

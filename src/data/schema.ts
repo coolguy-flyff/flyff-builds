@@ -197,6 +197,16 @@ export const HousingNpcSchema = z.object({
   abilities: z.array(AbilitySchema),
 });
 
+/** A couple buff (/couple + Skills.json): single-level, unlocked at a couple level. */
+export const CoupleSkillSchema = z.object({
+  id: nonNegativeInt,
+  name: z.string().min(1),
+  icon: z.string().min(1),
+  coupleLevel: nonNegativeInt,
+  durationSeconds: nonNegativeInt.optional(),
+  abilities: z.array(AbilitySchema).min(1),
+});
+
 /**
  * The pet's grace skill: a short buff the pet casts on demand (Pets.json tier data + Skills.json).
  * `levels[n − 1]` holds the abilities at grace level n, which equals the number of raised tiers.
@@ -328,6 +338,7 @@ export const GeneratedDataSchema = z.object({
   blessings: BlessingTableSchema,
   achievements: z.array(AchievementSchema),
   housingNpcs: z.array(HousingNpcSchema),
+  coupleSkills: z.array(CoupleSkillSchema),
   pets: z.array(PetDefSchema),
   skills: z.array(SlimSkillSchema),
   classSkills: z.array(ClassSkillSchema),
@@ -350,6 +361,7 @@ export const GENERATED_TABLE_FILES = {
   blessings: 'blessings.json',
   achievements: 'achievements.json',
   housingNpcs: 'housingNpcs.json',
+  coupleSkills: 'coupleSkills.json',
   pets: 'pets.json',
   skills: 'skills.json',
   classSkills: 'classSkills.json',
@@ -385,6 +397,7 @@ export type UpgradeBonusRow = z.infer<typeof UpgradeBonusRowSchema>;
 export type BlessingTable = z.infer<typeof BlessingTableSchema>;
 export type Achievement = z.infer<typeof AchievementSchema>;
 export type HousingNpc = z.infer<typeof HousingNpcSchema>;
+export type CoupleSkill = z.infer<typeof CoupleSkillSchema>;
 export type PetGrace = z.infer<typeof PetGraceSchema>;
 export type PetDef = z.infer<typeof PetDefSchema>;
 export type ScalingPart = (typeof SCALING_PARTS)[number];

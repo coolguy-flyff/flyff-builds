@@ -7,9 +7,9 @@ import { requireDefined } from '@/lib/assert';
 
 import { encodeBase64Url } from '../../base64url';
 import { ShareEncodeError } from '../../errors';
-import { decodeShareCode, encodeShareCode } from '../../index';
+import { decodeShareCode } from '../../index';
 import { decodeErrorCode } from '../../testing/errors';
-import { maximalBuild, withoutV3Fields } from '../../testing/fixtures';
+import { maximalBuild, withoutV3Fields, withoutV4Fields } from '../../testing/fixtures';
 import { renumberIds } from '../../testing/ids';
 import { decodeV2 } from '../v2/decode';
 import { encodeV2 } from '../v2/encode';
@@ -19,23 +19,28 @@ import { encodeV3 } from './encode';
 
 const data = loadBundledGameData();
 const V2_ENVELOPE = [2, 0];
+const V3_ENVELOPE = [3, 0];
 /** name (1 + 2 bytes), two varint defenses, four scaled percentages: the smallest target. */
 const MIN_TARGET_BYTES = 3 + 2 + 4;
 
-/** A share code in the v2 envelope around a v2 body, as links shared before v3 look. */
-function v2ShareCode(build: BuildState): string {
-  const body = encodeV2(build);
-  const code = new Uint8Array(V2_ENVELOPE.length + body.length);
+/** The maximal build as codec v3 can express it (no couple skills). */
+function v3MaximalBuild(): BuildState {
+  return withoutV4Fields(maximalBuild(data));
+}
 
-  code.set(V2_ENVELOPE);
-  code.set(body, V2_ENVELOPE.length);
+/** A share code in an undeflated envelope around a body, as links shared before v4 look. */
+function shareCode(envelope: readonly number[], body: Uint8Array): string {
+  const code = new Uint8Array(envelope.length + body.length);
+
+  code.set(envelope);
+  code.set(body, envelope.length);
 
   return encodeBase64Url(code);
 }
 
 describe('encodeV3 / decodeV3', () => {
   it('round-trips the maximal build, custom PvP targets included', () => {
-    const build = maximalBuild(data);
+    const build = v3MaximalBuild();
     const bytes = encodeV3(build);
     const decoded = decodeV3(bytes);
 
@@ -54,13 +59,13 @@ describe('encodeV3 / decodeV3', () => {
     const build = createDefaultBuild(data);
 
     expect(encodeV3(build).length).toBe(encodeV2(build).length + 1);
-    expect(encodeV3(maximalBuild(data)).length).toBeGreaterThanOrEqual(
+    expect(encodeV3(v3MaximalBuild()).length).toBeGreaterThanOrEqual(
       encodeV2(withoutV3Fields(maximalBuild(data))).length + 1 + 2 * MIN_TARGET_BYTES,
     );
   });
 
   it('rejects a body that ends inside the targets or runs past them', () => {
-    const bytes = encodeV3(maximalBuild(data));
+    const bytes = encodeV3(v3MaximalBuild());
 
     expect(decodeErrorCode(() => decodeV3(bytes.slice(0, bytes.length - 1)))).toBe('TRUNCATED');
     expect(decodeErrorCode(() => decodeV3(Uint8Array.from([...bytes, 0])))).toBe('CORRUPT');
@@ -73,15 +78,16 @@ describe('encodeV3 / decodeV3', () => {
     expect(() => encodeV2(maximalBuild(data))).toThrow(ShareEncodeError);
   });
 
-  it('is what the public encoder produces', async () => {
-    const build = maximalBuild(data);
-    const result = await decodeShareCode(data, await encodeShareCode(data, build));
+  it('still accepts the v3 envelope through the public decoder', async () => {
+    const build = v3MaximalBuild();
+    const result = await decodeShareCode(data, shareCode(V3_ENVELOPE, encodeV3(build)));
 
     if (!result.ok) {
       throw new Error(`v3 code rejected: ${result.error.code}`);
     }
 
     expect(result.value.build.pvpTargets).toStrictEqual(renumberIds(build).pvpTargets);
+    expect(result.value.build.buffs.coupleSkillIds).toEqual([]);
   });
 });
 
@@ -95,7 +101,7 @@ describe('reading v2 codes', () => {
 
   it('still accepts the v2 envelope through the public decoder', async () => {
     const build = withoutV3Fields(maximalBuild(data));
-    const result = await decodeShareCode(data, v2ShareCode(build));
+    const result = await decodeShareCode(data, shareCode(V2_ENVELOPE, encodeV2(build)));
 
     if (!result.ok) {
       throw new Error(`v2 code rejected: ${result.error.code}`);

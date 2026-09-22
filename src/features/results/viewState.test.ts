@@ -3,7 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { loadBundledGameData } from '@/data';
 import { createDefaultBuild, createGearSwap, createPetEntry } from '@/domain/build';
 
-import { effectiveBaseline, setMembership, toggleMembership, withPetOverride } from './viewState';
+import {
+  effectiveBaseline,
+  graceEffectFor,
+  setMembership,
+  toggleMembership,
+  withPetOverride,
+  type OverridePet,
+} from './viewState';
 
 describe('withPetOverride', () => {
   const data = loadBundledGameData();
@@ -47,5 +54,30 @@ describe('effectiveBaseline', () => {
     expect(effectiveBaseline(null, [1, 2])).toBeNull();
     expect(effectiveBaseline(2, [1, 2])).toBe(2);
     expect(effectiveBaseline(3, [1, 2])).toBeNull();
+  });
+});
+
+describe('graceEffectFor', () => {
+  const pet = (id: number, graceEffect: string | null): OverridePet => ({
+    id,
+    name: `Pet ${id}`,
+    icon: null,
+    stat: null,
+    graceEffect,
+  });
+  const pets = [pet(1, 'STR +10'), pet(2, null)];
+
+  it('varies while each swap keeps its own pet, or the override names a deleted pet', () => {
+    expect(graceEffectFor('own', pets)).toEqual({ kind: 'varies' });
+    expect(graceEffectFor(99, pets)).toEqual({ kind: 'varies' });
+  });
+
+  it('is none without a pet or for a pet that has no grace', () => {
+    expect(graceEffectFor('none', pets)).toEqual({ kind: 'none' });
+    expect(graceEffectFor(2, pets)).toEqual({ kind: 'none' });
+  });
+
+  it("is the chosen pet's grace otherwise", () => {
+    expect(graceEffectFor(1, pets)).toEqual({ kind: 'effect', text: 'STR +10' });
   });
 });

@@ -392,4 +392,18 @@ describe('buffs', () => {
     expect(getStatTotal(resolved, 'healing', true)).toBe(3);
     expect(getStatTotal(resolved, 'decreasedmpconsumption', true)).toBe(10);
   });
+
+  it('collects couple skills and flags unknown ones', () => {
+    const build = createTestBuild(data);
+
+    // Stamina Boost (all stats +5), Madrigal Stroll (speed +5%), Happy Jump (jump height +50).
+    build.buffs.coupleSkillIds = [14733, 19586, 11284, 424242];
+
+    const resolved = resolveGearSwap(data, build, firstSwap(build));
+
+    expect(codes(resolved.issues)).toEqual([ENGINE_ISSUE_CODES.unknownSkill]);
+    expect(getStatTotal(resolved, 'allstats', false)).toBe(5);
+    expect(getStatTotal(resolved, 'speed', true)).toBe(5);
+    expect(getStatTotal(resolved, 'jumpheight', false)).toBe(50);
+  });
 });

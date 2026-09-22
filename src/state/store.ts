@@ -10,6 +10,11 @@ import { createBuffActions, type BuffActions } from './actions/buffs';
 import { createCharacterActions, type CharacterActions } from './actions/character';
 import { createGearActions, type GearActions } from './actions/gear';
 import { createListActions, type ListActions } from './actions/lists';
+import {
+  createPreferenceActions,
+  loadPreferences,
+  type PreferenceActions,
+} from './actions/preferences';
 import { createPvpTargetActions, type PvpTargetActions } from './actions/pvpTargets';
 import { createSessionActions, type SessionActions } from './actions/session';
 import { emptySelection, type ActionContext } from './actions/shared';
@@ -23,6 +28,7 @@ export type AppActions = CharacterActions &
   GearActions &
   BuffActions &
   PvpTargetActions &
+  PreferenceActions &
   SessionActions &
   UiActions;
 
@@ -87,13 +93,21 @@ export function createAppStore(deps: AppStoreDeps, initialBuild: BuildState): Ap
           ...createGearActions(context),
           ...createBuffActions(context),
           ...createPvpTargetActions(context),
+          ...createPreferenceActions(context, (kind, message) => {
+            ui.pushToast(kind, message);
+          }),
           ...createSessionActions(context, (kind, message, details) =>
             ui.pushToast(kind, message, details),
           ),
           ...ui,
         };
 
-        return { build: initialBuild, ui: initialUi(deps, initialBuild), actions };
+        return {
+          build: initialBuild,
+          ui: initialUi(deps, initialBuild),
+          preferences: loadPreferences(deps.storage),
+          actions,
+        };
       }),
     ),
   );

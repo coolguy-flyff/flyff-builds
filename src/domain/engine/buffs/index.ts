@@ -5,6 +5,7 @@ import type { BuffsState } from '../../build/schema';
 import { createSink, type Collected } from '../abilities/collect';
 import { collectAchievement } from './achievements';
 import { collectClassSkills } from './classSkills';
+import { collectCoupleSkills } from './coupleSkills';
 import { collectHousingNpcs } from './housing';
 import { collectPremiumItems } from './premiumItems';
 import { rmBuffContributions } from './rmBuffs';
@@ -16,7 +17,8 @@ export interface BuffsResolution extends Collected {
 /**
  * The global buff configuration shared by every swap, in Flyffulator's aggregation order: active
  * items, buffs (RM buffs, then the character's own class skills), housing NPCs, achievements
- * (flyffentity.js:1328-1512).
+ * (flyffentity.js:1328-1512). Couple skills (not in Flyffulator) are buffs too and follow the
+ * class skills; they are plain additions, so the order does not change any total.
  */
 function collectBuffs(data: GameData, buffs: BuffsState, level: number): BuffsResolution {
   const sink = createSink();
@@ -24,6 +26,7 @@ function collectBuffs(data: GameData, buffs: BuffsState, level: number): BuffsRe
 
   sink.contributions.push(...rmBuffContributions(data, buffs.rmBuffs));
   collectClassSkills(data, buffs.classSkillIds, level, sink);
+  collectCoupleSkills(data, buffs.coupleSkillIds, sink);
   collectHousingNpcs(data, buffs, sink);
   collectAchievement(data, buffs.achievementId, sink);
 

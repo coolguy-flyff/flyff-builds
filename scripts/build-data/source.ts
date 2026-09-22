@@ -134,6 +134,16 @@ export const RawPetSchema = z.object({
   tiers: z.array(RawPetTierSchema).optional(),
 });
 
+/** /couple: the couple system settings; only the skill list (with its unlock levels) is read. */
+export const RawCoupleSchema = z.object({
+  skills: z.array(
+    z.object({
+      skill: z.number(),
+      requiredCoupleLevel: z.number(),
+    }),
+  ),
+});
+
 export const RawScalingParameterSchema = z.object({
   parameter: z.string(),
   stat: z.string().optional(),
@@ -208,6 +218,7 @@ const RawSourcesSchema = z.object({
   achievements: z.array(RawAchievementSchema),
   housingNpcs: z.record(z.string(), RawHousingNpcSchema),
   pets: z.record(z.string(), RawPetSchema),
+  couple: RawCoupleSchema,
   skills: z.record(z.string(), RawSkillSchema),
   statNames: z.record(z.string(), LocalizedName),
 });
@@ -222,6 +233,7 @@ export type RawUpgradeBonusRow = z.infer<typeof RawUpgradeBonusRowSchema>;
 export type RawAchievement = z.infer<typeof RawAchievementSchema>;
 export type RawHousingNpc = z.infer<typeof RawHousingNpcSchema>;
 export type RawPet = z.infer<typeof RawPetSchema>;
+export type RawCouple = z.infer<typeof RawCoupleSchema>;
 export type RawSkillLevel = z.infer<typeof RawSkillLevelSchema>;
 export type RawSkill = z.infer<typeof RawSkillSchema>;
 export type RawSources = z.infer<typeof RawSourcesSchema>;
@@ -238,6 +250,7 @@ export const SOURCE_FILES = {
   achievements: 'Achievements.json',
   housingNpcs: 'HousingNPCs.json',
   pets: 'Pets.json',
+  couple: 'Couple.json',
   skills: 'Skills.json',
   statNames: 'StatNames.json',
 } as const satisfies Record<keyof RawSources, string>;
