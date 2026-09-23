@@ -8,9 +8,10 @@ import { ClassIcon } from '@/components/ItemIcon';
 import { FieldLabel, Hint } from '@/components/Text';
 import { pluralize } from '@/features/snapshots/format';
 import { cx } from '@/lib/cx';
-import { useActions, useGameData } from '@/state';
+import { useActions, useGameData, type SnapshotChoice } from '@/state';
 
 import { describeBuildCounts } from './buildSummary';
+import { SnapshotOption } from './SnapshotOption';
 import { useImportPreview, type ImportPreview } from './useImportPreview';
 
 const TEXTAREA_ID = 'import-share-code';
@@ -81,15 +82,24 @@ export function ImportDialog({
   const data = useGameData();
   const actions = useActions();
   const [text, setText] = useState(initialText);
+  const [snapshot, setSnapshot] = useState<SnapshotChoice>({ keep: true, name: '' });
   const preview = useImportPreview(data, text);
   const validated = preview.kind === 'valid' ? preview.validated : null;
 
   const importBuild = (): void => {
     if (validated !== null) {
-      actions.autoSnapshot('Autosave before import');
+      if (snapshot.keep) {
+        actions.autoSnapshot('import', snapshot.name);
+      }
+
       actions.replaceBuild(validated.build, validated.warnings);
       onClose();
-      actions.pushToast('success', 'Build imported');
+      actions.pushToast(
+        'success',
+        snapshot.keep
+          ? 'Build imported — the previous build was kept as a snapshot.'
+          : 'Build imported.',
+      );
     }
   };
 
@@ -98,7 +108,7 @@ export function ImportDialog({
       open
       onClose={onClose}
       title="Import"
-      description="Paste a link or code. Your current build is kept as an automatic snapshot before importing."
+      description="Paste a link or code. Existing snapshots are kept either way."
     >
       <FieldLabel htmlFor={TEXTAREA_ID} className="mb-1.5">
         Link or code
@@ -118,8 +128,14 @@ export function ImportDialog({
           preview.kind === 'invalid' ? 'border-danger/40' : 'border-transparent',
         )}
       />
-      <div className="mt-3 min-h-[52px]">
-        <PreviewStatus preview={preview} />
+      {preview.kind !== 'empty' && (
+        // The min height keeps the dialog steady as "Checking…" turns into the preview.
+        <div className="mt-3 min-h-[52px]">
+          <PreviewStatus preview={preview} />
+        </div>
+      )}
+      <div className="mt-3">
+        <SnapshotOption reason="import" value={snapshot} onChange={setSnapshot} />
       </div>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>

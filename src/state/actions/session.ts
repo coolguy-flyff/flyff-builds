@@ -7,20 +7,28 @@ import {
   overwriteSnapshot,
   renameSnapshot,
   saveSnapshot,
+  SNAPSHOT_NAME_MAX_LENGTH,
   StorageError,
   type SnapshotMeta,
 } from '@/persistence';
 
+import type { AutosaveReason, SnapshotChoice } from '../types';
 import { emptySelection, type ActionContext } from './shared';
 
 export interface SessionActions {
   /** Replaces the working build (after an import or a snapshot load). */
   replaceBuild(build: BuildState, warnings?: readonly BuildWarning[]): void;
-  /** Starts over from defaults; with `autoSnapshot` the current build is kept as an automatic snapshot first. */
-  resetBuild(options: { autoSnapshot: boolean }): void;
+  /** Starts over from defaults, keeping the current build as a snapshot first when chosen. */
+  resetBuild(snapshot: SnapshotChoice): void;
   saveSnapshot(name: string): SnapshotMeta | undefined;
-  /** Stores an automatic snapshot such as "Autosave before reset"; failures become toasts. */
-  autoSnapshot(label: string): void;
+  /**
+   * Keeps the current build as a snapshot before it is replaced; failures become toasts. Unnamed,
+   * it is an automatic snapshot called `autosaveName(reason)`; a name the user gave makes it a
+   * regular one.
+   */
+  autoSnapshot(reason: AutosaveReason, name?: string): void;
+  /** The name an unnamed `autoSnapshot` gets right now, e.g. "Autosave before reset 2026-09-23 09:12". */
+  autosaveName(reason: AutosaveReason): string;
   loadSnapshot(id: string): boolean;
   /** Replaces a snapshot's contents with the current build; `false` when storage refused (toasted). */
   overwriteSnapshot(id: string): boolean;
@@ -107,9 +115,9 @@ export function createSessionActions(
       }
     },
 
-    resetBuild({ autoSnapshot }) {
-      if (autoSnapshot) {
-        this.autoSnapshot('Autosave before reset');
+    resetBuild(snapshot) {
+      if (snapshot.keep) {
+        this.autoSnapshot('reset', snapshot.name);
       }
 
       this.replaceBuild(createDefaultBuild(deps.data));
@@ -126,17 +134,19 @@ export function createSessionActions(
       return meta;
     },
 
-    autoSnapshot(label) {
+    autoSnapshot(reason, name = '') {
+      const customName = name.trim().slice(0, SNAPSHOT_NAME_MAX_LENGTH);
+      const automatic = customName === '';
+      const snapshotName = automatic ? this.autosaveName(reason) : customName;
+
       withStorage(() => {
-        saveSnapshot(
-          deps.storage,
-          get().build,
-          `${label} ${formatTime(deps.now())}`,
-          deps.now(),
-          true,
-        );
+        saveSnapshot(deps.storage, get().build, snapshotName, deps.now(), automatic);
       });
       refresh();
+    },
+
+    autosaveName(reason) {
+      return `Autosave before ${reason} ${formatTime(deps.now())}`;
     },
 
     loadSnapshot(id) {
@@ -144,7 +154,7 @@ export function createSessionActions(
       let ok = false;
 
       if (loaded.ok) {
-        this.autoSnapshot('Autosave before load');
+        this.autoSnapshot('load');
         this.replaceBuild(loaded.value.build, loaded.value.warnings);
         ok = true;
       } else {
@@ -166,7 +176,7 @@ export function createSessionActions(
 
     renameSnapshot(id, name) {
       withStorage(() => {
-        renameSnapshot(deps.storage, id, name.trim().slice(0, 64));
+        renameSnapshot(deps.storage, id, name.trim().slice(0, SNAPSHOT_NAME_MAX_LENGTH));
       });
       refresh();
     },

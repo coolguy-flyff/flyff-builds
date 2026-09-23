@@ -1,5 +1,5 @@
 import { Description, Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { cx } from '@/lib/cx';
 
@@ -58,4 +58,32 @@ export function AppDialog({
 
 export function DialogActions({ children }: { children: ReactNode }) {
   return <div className="mt-5 flex flex-wrap justify-end gap-2">{children}</div>;
+}
+
+/** Labelled checkbox for a dialog option, e.g. "Keep the current build as a snapshot". */
+export function DialogCheckbox({
+  label,
+  checked,
+  onChange,
+}: {
+  label: ReactNode;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  const id = useId();
+
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-center gap-2 text-[12.5px] text-text">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => {
+          onChange(event.currentTarget.checked);
+        }}
+        className="accent-accent"
+      />
+      <span>{label}</span>
+    </label>
+  );
 }

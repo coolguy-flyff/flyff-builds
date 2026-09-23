@@ -19,6 +19,8 @@ export interface SnapshotMeta {
   readonly automatic: boolean;
 }
 
+export const SNAPSHOT_NAME_MAX_LENGTH = 64;
+
 interface SnapshotIndex {
   readonly snapshots: SnapshotMeta[];
 }

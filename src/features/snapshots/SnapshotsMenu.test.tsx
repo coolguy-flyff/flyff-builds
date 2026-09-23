@@ -37,7 +37,7 @@ function seedSnapshots(store: AppStoreApi): void {
   act(() => {
     actions.setLevel(170);
     actions.saveSnapshot('Before');
-    actions.autoSnapshot('Autosave before test');
+    actions.autoSnapshot('reset');
     actions.setLevel(190);
   });
 }
@@ -68,7 +68,7 @@ describe('SnapshotsMenu', () => {
     const rows = screen.getAllByRole('listitem');
 
     expect(rows.length).toBe(2);
-    expect(rows[0]?.textContent).toContain('Autosave before test ');
+    expect(rows[0]?.textContent).toContain('Autosave before reset ');
     expect(rows[0]?.textContent).toContain(' · automatic');
     expect(rows[1]?.textContent).toContain('Before');
     expect(rows[1]?.textContent).toMatch(/Seraph · Lv 170 · 1 swap · /);
@@ -120,7 +120,7 @@ describe('SnapshotsMenu', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(snapshotNames(store)).toEqual([
-      expect.stringMatching(/^Autosave before test /),
+      expect.stringMatching(/^Autosave before reset /),
       'After',
     ]);
 
@@ -162,6 +162,6 @@ describe('SnapshotsMenu', () => {
     await screen.findByText(/Delete 'Before'\?/);
     fireEvent.click(screen.getByRole('button', { name: 'Delete snapshot' }));
 
-    expect(snapshotNames(store)).toEqual([expect.stringMatching(/^Autosave before test /)]);
+    expect(snapshotNames(store)).toEqual([expect.stringMatching(/^Autosave before reset /)]);
   });
 });

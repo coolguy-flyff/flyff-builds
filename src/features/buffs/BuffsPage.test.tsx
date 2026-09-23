@@ -249,7 +249,7 @@ describe('Premium favorites', () => {
     }
 
     act(() => {
-      dialog.onConfirm(false);
+      dialog.onConfirm({ keep: false, name: '' });
     });
 
     expect(storedFavorites(storage)).toEqual(CURATED_POWERUP_IDS);

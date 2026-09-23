@@ -67,12 +67,12 @@ export function AppHeader() {
       message: 'This clears the working build. Existing snapshots are kept either way.',
       confirmLabel: 'Start over',
       danger: true,
-      checkbox: { label: 'Keep the current build as a snapshot', defaultChecked: true },
-      onConfirm: (autoSnapshot) => {
-        actions.resetBuild({ autoSnapshot });
+      snapshot: { reason: 'reset' },
+      onConfirm: (snapshot) => {
+        actions.resetBuild(snapshot);
         actions.pushToast(
           'info',
-          autoSnapshot
+          snapshot.keep
             ? 'Build reset — the previous build was kept as a snapshot.'
             : 'Build reset.',
         );

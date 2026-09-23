@@ -41,10 +41,16 @@ export interface Toast {
   details?: readonly string[];
 }
 
-/** An option the user can toggle before confirming, e.g. "Keep the current build as a snapshot". */
-export interface ConfirmCheckbox {
-  label: string;
-  defaultChecked: boolean;
+/** Why the current build is being replaced; names its autosave, e.g. "Autosave before reset …". */
+export type AutosaveReason = 'reset' | 'import' | 'job change' | 'load';
+
+/**
+ * The answer to "Keep the current build as a snapshot" before the build is replaced. A blank
+ * `name` falls back to the autosave name.
+ */
+export interface SnapshotChoice {
+  readonly keep: boolean;
+  readonly name: string;
 }
 
 export interface ConfirmDialog {
@@ -53,9 +59,10 @@ export interface ConfirmDialog {
   message: string;
   confirmLabel: string;
   danger: boolean;
-  /** Receives the checkbox state (false when the dialog has no checkbox). */
-  onConfirm: (checked: boolean) => void;
-  checkbox?: ConfirmCheckbox;
+  /** Receives the snapshot choice (`keep: false` when the dialog offers none). */
+  onConfirm: (snapshot: SnapshotChoice) => void;
+  /** Offers to keep the current build as a snapshot (checked by default) under an optional name. */
+  snapshot?: { reason: AutosaveReason };
 }
 
 export type DialogState =

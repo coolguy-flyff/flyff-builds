@@ -94,6 +94,31 @@ describe('Reset', () => {
     ]);
   });
 
+  it('names the kept snapshot after the optional name field', () => {
+    const { store } = mount();
+
+    openResetDialog();
+
+    const name = screen.getByLabelText('Snapshot name');
+
+    expect(name.getAttribute('placeholder')).toMatch(/^Autosave before reset /);
+    fireEvent.change(name, { target: { value: 'Before the respec' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Start over' }));
+
+    expect(
+      store.getState().ui.snapshots.map((snapshot) => [snapshot.name, snapshot.automatic]),
+    ).toEqual([['Before the respec', false]]);
+  });
+
+  it('disables the name field while the box is unchecked', () => {
+    mount();
+
+    openResetDialog();
+    fireEvent.click(snapshotCheckbox());
+
+    expect(screen.getByLabelText('Snapshot name')).toHaveProperty('disabled', true);
+  });
+
   it('leaves no snapshot behind once the box is unchecked', () => {
     const { store } = mount();
 

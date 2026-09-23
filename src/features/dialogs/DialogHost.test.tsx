@@ -130,9 +130,31 @@ describe('Import', () => {
     expect(build.weapons.length).toBe(2);
     expect(build.gearSwaps.length).toBe(2);
     expect(ui.dialog).toBeNull();
-    expect(toastMessages(store)).toEqual(['success: Build imported']);
+    expect(toastMessages(store)).toEqual([
+      'success: Build imported — the previous build was kept as a snapshot.',
+    ]);
     expect(ui.snapshots.map((snapshot) => snapshot.automatic)).toEqual([true]);
     expect(ui.snapshots[0]?.name).toMatch(/^Autosave before import /);
+  });
+
+  it('skips the snapshot when "Keep the current build" is unchecked', async () => {
+    const store = mount();
+    const code = await encodeShareCode(data, typicalBuild(data));
+
+    openDialog(store, { kind: 'import', initialText: code });
+    await screen.findByText('✓ Valid code');
+
+    const keep = screen.getByRole('checkbox', { name: 'Keep the current build as a snapshot' });
+
+    expect(keep).toHaveProperty('checked', true);
+    fireEvent.click(keep);
+    fireEvent.click(screen.getByRole('button', { name: IMPORT_BUTTON }));
+
+    const { build, ui } = store.getState();
+
+    expect(build.weapons.length).toBe(2);
+    expect(ui.snapshots).toEqual([]);
+    expect(toastMessages(store)).toEqual(['success: Build imported.']);
   });
 
   it('shows the error row for text that is not a code', async () => {

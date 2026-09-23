@@ -3,7 +3,7 @@ import { Card, CardTitle } from '@/components/Card';
 import { ClassIcon } from '@/components/ItemIcon';
 import { Hint } from '@/components/Text';
 import { Tile, TileGroup } from '@/components/Tile';
-import { useActions, useAppStore, useGameData } from '@/state';
+import { useActions, useAppStore, useGameData, type SnapshotChoice } from '@/state';
 
 interface RemovalCounts {
   readonly equipmentSets: number;
@@ -37,9 +37,9 @@ export function JobCard() {
   const jobId = useAppStore((state) => state.build.character.jobId);
   const actions = useActions();
 
-  const switchTo = (job: SlimClass, snapshot: boolean): void => {
-    if (snapshot) {
-      actions.autoSnapshot('Autosave before job change');
+  const switchTo = (job: SlimClass, snapshot: SnapshotChoice): void => {
+    if (snapshot.keep) {
+      actions.autoSnapshot('job change', snapshot.name);
     }
 
     const removed = describeRemoved(actions.setJob(job.id));
@@ -59,7 +59,7 @@ export function JobCard() {
     const removed = describeRemoved(actions.previewJobChange(job.id));
 
     if (removed.length === 0) {
-      switchTo(job, true);
+      switchTo(job, { keep: true, name: '' });
     } else {
       actions.openDialog({
         kind: 'confirm',
@@ -67,7 +67,7 @@ export function JobCard() {
         message: `Switching to ${job.name} removes gear that ${job.name} can't use: ${removed.join(', ')}. Swaps keep their other picks.`,
         confirmLabel: `Switch to ${job.name}`,
         danger: false,
-        checkbox: { label: 'Save a snapshot of the current build first', defaultChecked: true },
+        snapshot: { reason: 'job change' },
         onConfirm: (snapshot) => {
           switchTo(job, snapshot);
         },

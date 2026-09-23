@@ -163,7 +163,7 @@ describe('session & autosave', () => {
     actions.setLevel(170);
     const meta = actions.saveSnapshot('Before');
     tick();
-    actions.resetBuild({ autoSnapshot: true });
+    actions.resetBuild({ keep: true, name: '' });
 
     expect(store.getState().build.character.level).toBe(190);
     expect(store.getState().ui.snapshots.map((snapshot) => snapshot.name)).toEqual(
@@ -183,10 +183,26 @@ describe('session & autosave', () => {
     actions.setLevel(170);
     actions.saveSnapshot('Before');
     tick();
-    actions.resetBuild({ autoSnapshot: false });
+    actions.resetBuild({ keep: false, name: 'Ignored' });
 
     expect(store.getState().build.character.level).toBe(190);
     expect(store.getState().ui.snapshots.map((snapshot) => snapshot.name)).toEqual(['Before']);
+  });
+
+  it('keeps a named snapshot as a regular one and falls back to the autosave name when blank', () => {
+    const { store, tick } = setup();
+    const { actions } = store.getState();
+
+    actions.autoSnapshot('reset', '  My old build  ');
+    tick();
+    actions.autoSnapshot('import', '   ');
+
+    expect(
+      store.getState().ui.snapshots.map((snapshot) => [snapshot.name, snapshot.automatic]),
+    ).toEqual([
+      [expect.stringMatching(/^Autosave before import \d{4}-\d\d-\d\d \d\d:\d\d$/), true],
+      ['My old build', false],
+    ]);
   });
 
   it('surfaces storage failures as toasts instead of throwing', () => {
