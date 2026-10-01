@@ -3,6 +3,7 @@ import { useState, type KeyboardEvent } from 'react';
 import { Button } from '@/components/Button';
 import { DropdownMenu, type DropdownMenuItem } from '@/components/DropdownMenu';
 import { ClassIcon } from '@/components/ItemIcon';
+import { FloatingTooltip } from '@/components/Tooltip';
 import { cx } from '@/lib/cx';
 import type { SnapshotMeta } from '@/persistence';
 import { useActions, useGameData } from '@/state';
@@ -13,12 +14,18 @@ import { createSnapshotCommands } from './snapshotCommands';
 const ICON_SIZE = 26;
 const NAME_MAX_LENGTH = 64;
 
-/** One snapshot (plan D7): job icon, name with inline rename, meta line, Load and the ⋯ menu. */
+/**
+ * One snapshot (plan D7): job icon, name with inline rename, meta line, Load and the ⋯ menu — or,
+ * in delete mode, a red ✕ that deletes without asking.
+ */
 export function SnapshotRow({
   meta,
+  deleteMode = false,
   onDismiss,
 }: {
   meta: SnapshotMeta;
+  /** Shift is held: the ⋯ menu gives way to an instant delete. */
+  deleteMode?: boolean | undefined;
   /** Called before a confirm dialog opens so a popover host can close itself. */
   onDismiss?: (() => void) | undefined;
 }) {
@@ -119,14 +126,27 @@ export function SnapshotRow({
       <Button size="sm" variant="primary" onClick={commands.load}>
         Load
       </Button>
-      <DropdownMenu
-        label={`More actions for ${meta.name}`}
-        items={menuItems}
-        variant="ghost"
-        size="sm"
-      >
-        ⋯
-      </DropdownMenu>
+      {deleteMode ? (
+        <FloatingTooltip content="Delete instantly">
+          <Button
+            size="sm"
+            variant="danger"
+            aria-label={`Delete ${meta.name}`}
+            onClick={commands.removeInstantly}
+          >
+            ✕
+          </Button>
+        </FloatingTooltip>
+      ) : (
+        <DropdownMenu
+          label={`More actions for ${meta.name}`}
+          items={menuItems}
+          variant="ghost"
+          size="sm"
+        >
+          ⋯
+        </DropdownMenu>
+      )}
     </li>
   );
 }

@@ -8,11 +8,13 @@ export interface SnapshotCommands {
   readonly overwrite: () => void;
   /** Confirms, then deletes the snapshot. */
   readonly remove: () => void;
+  /** Deletes the snapshot without asking (the list's Shift delete mode). */
+  readonly removeInstantly: () => void;
 }
 
 /**
- * The destructive snapshot actions of plan A0.2, each behind a confirm dialog. `onDismiss` lets
- * the host (the header popover) close itself before the modal opens.
+ * The destructive snapshot actions of plan A0.2, each behind a confirm dialog except the Shift
+ * delete. `onDismiss` lets the host (the header popover) close itself before the modal opens.
  */
 export function createSnapshotCommands(
   actions: AppActions,
@@ -63,6 +65,10 @@ export function createSnapshotCommands(
           actions.deleteSnapshot(meta.id);
         },
       });
+    },
+
+    removeInstantly: () => {
+      actions.deleteSnapshot(meta.id);
     },
   };
 }

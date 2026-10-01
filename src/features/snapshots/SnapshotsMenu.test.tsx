@@ -164,4 +164,46 @@ describe('SnapshotsMenu', () => {
 
     expect(snapshotNames(store)).toEqual([expect.stringMatching(/^Autosave before reset /)]);
   });
+
+  it('holding Shift turns every ⋯ into a red ✕ that deletes without asking', async () => {
+    const store = mount();
+
+    seedSnapshots(store);
+    await openMenu();
+    fireEvent.keyDown(window, { key: 'Shift' });
+
+    expect(screen.queryByRole('button', { name: 'More actions for Before' })).toBeNull();
+
+    const remove = screen.getByRole('button', { name: 'Delete Before' });
+
+    fireEvent.mouseEnter(remove);
+    expect(screen.getByRole('tooltip').textContent).toBe('Delete instantly');
+
+    fireEvent.click(remove);
+
+    expect(screen.queryByText(/Delete 'Before'\?/)).toBeNull();
+    expect(snapshotNames(store)).toEqual([expect.stringMatching(/^Autosave before reset /)]);
+    // The popover stays open for further deletes.
+    expect(screen.getByRole('list', { name: 'Snapshots' })).toBeDefined();
+
+    fireEvent.keyUp(window, { key: 'Shift' });
+
+    expect(screen.getByRole('button', { name: /^More actions for Autosave/ })).toBeDefined();
+  });
+
+  it('leaves delete mode when the window loses focus and ignores Shift typed into a name', async () => {
+    const store = mount();
+
+    seedSnapshots(store);
+    await openMenu();
+    fireEvent.keyDown(window, { key: 'Shift' });
+    fireEvent.blur(window);
+
+    expect(screen.queryByRole('button', { name: 'Delete Before' })).toBeNull();
+
+    await chooseRowAction('Rename');
+    fireEvent.keyDown(screen.getByLabelText('Snapshot name'), { key: 'Shift' });
+
+    expect(screen.queryByRole('button', { name: /^Delete / })).toBeNull();
+  });
 });

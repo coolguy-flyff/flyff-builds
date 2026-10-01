@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { Hint } from '@/components/Text';
+import { useShiftHeld } from '@/components/useShiftHeld';
 import { useActions, useAppStore } from '@/state';
 
 import { SnapshotRow } from './SnapshotRow';
@@ -8,6 +9,7 @@ import { SnapshotRow } from './SnapshotRow';
 /**
  * Snapshot rows, newest first, with the empty state and the footer hint (plan A0.2 / D7). Shared by
  * the header popover and the Snapshots dialog; re-reads storage on mount so other tabs' saves show.
+ * Holding Shift switches every row to delete mode.
  */
 export function SnapshotList({
   onDismiss,
@@ -17,6 +19,7 @@ export function SnapshotList({
 }) {
   const snapshots = useAppStore((state) => state.ui.snapshots);
   const actions = useActions();
+  const deleteMode = useShiftHeld();
 
   useEffect(() => {
     actions.refreshSnapshots();
@@ -37,7 +40,7 @@ export function SnapshotList({
         className="flex max-h-[min(60vh,420px)] flex-col gap-1.5 overflow-y-auto"
       >
         {snapshots.map((meta) => (
-          <SnapshotRow key={meta.id} meta={meta} onDismiss={onDismiss} />
+          <SnapshotRow key={meta.id} meta={meta} deleteMode={deleteMode} onDismiss={onDismiss} />
         ))}
       </ul>
     );
