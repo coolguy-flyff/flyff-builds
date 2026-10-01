@@ -1,10 +1,17 @@
-import type { DamageSkill, DamageSkillFamily, GameData } from '@/data';
+import {
+  WATERBOMB_SKILL_ID,
+  type AttackSkill,
+  type DamageSkill,
+  type DamageSkillFamily,
+  type GameData,
+} from '@/data';
 import {
   PARTY_MEMBERS,
   skillDamageSignature,
   type BasicDamage,
   type DamageRange,
   type DamageResults,
+  type ProcDamage,
   type ResultsPage,
   type SkillDamage,
 } from '@/domain/engine';
@@ -14,9 +21,9 @@ import type { CellDetail, ResultsRow, RowFormat, RowValue, RowVariants } from '.
 
 /**
  * The Damage group (plan §5): basic attack, crit, overcrit, the crit chance against a PvP target,
- * left hand, and one row per curated skill family the columns have, with a variation select where
- * the family offers variations. Presence is decided here — a row appears when any column has a
- * value for it.
+ * left hand, one row per proc the gear can trigger (Waterbomb), and one row per curated skill
+ * family the columns have, with a variation select where the family offers variations. Presence
+ * is decided here — a row appears when any column has a value for it.
  */
 
 export const DAMAGE_ROW_IDS = {
@@ -33,6 +40,10 @@ export function skillRowId(familyId: number): string {
 
 export function skillVariantKey(familyId: number): string {
   return String(familyId);
+}
+
+export function procRowId(skillId: number): string {
+  return `damage:proc:${String(skillId)}`;
 }
 
 const BASIC_TOOLTIP =
@@ -52,6 +63,17 @@ const CRIT_CHANCE_TOOLTIP =
 const LEFT_HAND_TOOLTIP =
   'The offhand weapon’s hit on every second swing of a dual-wielder: 75 % plus left-hand ' +
   'damage %, after the same defense.';
+const PROC_TOOLTIP =
+  'A skill your weapon triggers by chance on a hit, whatever your job: one hit on the target ' +
+  'through the skill formula, with skill damage % and, for a magic proc, magic attack %. The ' +
+  'trigger chance is in the cell.';
+const PROC_TOOLTIPS: Readonly<Record<number, string>> = {
+  [WATERBOMB_SKILL_ID]:
+    'Waterbomb, triggered by the Waterbomb chance of the Coral weapons (Coral Cutlass, Nautilus, ' +
+    'Typhoon…) on a hit: a magic skill that scales with your weapon ' +
+    'attack and STR + STA + DEX + INT, ×2, with skill damage % and magic attack %, against the ' +
+    'target’s magic defense and resistance.',
+};
 const CRIT_FACTOR_RANGE = '1.1–1.4';
 const OVERCRIT_FACTOR_RANGE = '1.2–2.0';
 
@@ -127,6 +149,10 @@ function skillDetails(skill: SkillDamage): CellDetail[] {
   }
 
   return lines;
+}
+
+function procDetails(proc: ProcDamage): CellDetail[] {
+  return [{ label: 'Trigger chance', value: formatPercent(proc.chance) }, ...skillDetails(proc)];
 }
 
 type BasicPick = (damage: DamageResults) => BasicDamage | null;
@@ -210,6 +236,28 @@ function basicRow(spec: BasicRowSpec): ResultsRow {
       return basic === null ? null : spec.value(basic);
     },
   };
+}
+
+/** One row per proc skill; `damageRows` only asks for procs some column can trigger. */
+function procRow(skill: AttackSkill): ResultsRow {
+  return {
+    id: procRowId(skill.id),
+    group: 'damage',
+    label: skill.name,
+    format: 'int',
+    higherIsBetter: true,
+    tooltip: PROC_TOOLTIPS[skill.id] ?? PROC_TOOLTIP,
+    details: (page) => {
+      const proc = page.damage.procs[skill.id];
+
+      return proc === undefined ? [] : procDetails(proc);
+    },
+    select: (page) => page.damage.procs[skill.id]?.average ?? null,
+  };
+}
+
+function hasProc(pages: readonly ResultsPage[], skillId: number): boolean {
+  return pages.some((page) => page.damage.procs[skillId] !== undefined);
 }
 
 function hasSkill(pages: readonly ResultsPage[], skillId: number): boolean {
@@ -306,6 +354,12 @@ export function damageRows(
   const rows = BASIC_ROW_SPECS.filter((spec) =>
     pages.some((page) => spec.pick(page.damage) !== null),
   ).map(basicRow);
+
+  for (const skill of data.procSkills) {
+    if (hasProc(pages, skill.id)) {
+      rows.push(procRow(skill));
+    }
+  }
 
   for (const family of familiesInPages(data, pages)) {
     rows.push(skillRow(family, chosenSkill(family, skillVariations[family.base.id])));

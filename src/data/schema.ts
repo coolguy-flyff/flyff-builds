@@ -289,11 +289,12 @@ export const ClassSkillSchema = SlimSkillSchema.extend({
 });
 
 /**
- * An attack skill the damage rows compare (plan §3), at its maximum level: the base skill or one
- * of its master variations, with the per-level attack values and multipliers the formula needs.
+ * An attack skill at its maximum level, with the per-level attack values and multipliers the
+ * damage formula needs: a class's damage skill or a skill an item triggers by chance.
  */
-export const DamageSkillSchema = SlimSkillSchema.extend({
-  classId: nonNegativeInt,
+export const AttackSkillSchema = SlimSkillSchema.extend({
+  /** The class that teaches the skill; none for a skill only an item triggers (Waterbomb). */
+  classId: nonNegativeInt.optional(),
   /** Character level required to learn it. */
   level: nonNegativeInt,
   /** Magic skills scale with Magic Attack % and meet the target's magic defense. */
@@ -313,6 +314,14 @@ export const DamageSkillSchema = SlimSkillSchema.extend({
   baseLevelCount: z.number().int().positive(),
   /** Hits per cast; hand-curated, 1 unless known otherwise. */
   hits: z.number().int().positive(),
+});
+
+/**
+ * A skill the damage rows compare (plan §3): the base skill of a class or one of its master
+ * variations.
+ */
+export const DamageSkillSchema = AttackSkillSchema.extend({
+  classId: nonNegativeInt,
 });
 
 export const ManifestSchema = z.object({
@@ -343,6 +352,7 @@ export const GeneratedDataSchema = z.object({
   skills: z.array(SlimSkillSchema),
   classSkills: z.array(ClassSkillSchema),
   damageSkills: z.array(DamageSkillSchema),
+  procSkills: z.array(AttackSkillSchema),
   statNames: z.record(z.string(), z.string()),
   manifest: ManifestSchema,
 });
@@ -366,6 +376,7 @@ export const GENERATED_TABLE_FILES = {
   skills: 'skills.json',
   classSkills: 'classSkills.json',
   damageSkills: 'damageSkills.json',
+  procSkills: 'procSkills.json',
   statNames: 'statNames.json',
   manifest: 'manifest.json',
 } as const satisfies Record<keyof z.infer<typeof GeneratedDataSchema>, string>;
@@ -406,6 +417,7 @@ export type Synergy = z.infer<typeof SynergySchema>;
 export type SlimSkill = z.infer<typeof SlimSkillSchema>;
 export type ClassSkillKind = (typeof CLASS_SKILL_KINDS)[number];
 export type ClassSkill = z.infer<typeof ClassSkillSchema>;
+export type AttackSkill = z.infer<typeof AttackSkillSchema>;
 export type DamageSkill = z.infer<typeof DamageSkillSchema>;
 export type Manifest = z.infer<typeof ManifestSchema>;
 export type GeneratedData = z.infer<typeof GeneratedDataSchema>;

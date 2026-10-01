@@ -24,7 +24,7 @@ import {
   STAT_KEYS,
   WEAPON_SUBCATEGORIES,
 } from '../../src/data/schema';
-import { SKILL_CHANCE_PREFIX } from '../../src/data/constants';
+import { skillChanceParameter } from '../../src/data/constants';
 
 import type {
   RawAbility,
@@ -74,23 +74,23 @@ export function stripUndefined<T extends object>(value: T): T {
  * Skill-chance abilities are keyed by their skill and, when limited to one mode, by PvE / PvP —
  * Lusaka's weapons carry a PvE and a PvP stun chance that must stay apart.
  */
-function skillChanceParameter(skillId: number, ability: RawAbility): string {
-  let parameter = `${SKILL_CHANCE_PREFIX}${skillId}`;
+function abilitySkillChanceParameter(skillId: number, ability: RawAbility): string {
+  let mode: 'pve' | 'pvp' | undefined;
 
   if (ability.pve === true && ability.pvp !== true) {
-    parameter += ':pve';
+    mode = 'pve';
   } else if (ability.pvp === true && ability.pve !== true) {
-    parameter += ':pvp';
+    mode = 'pvp';
   }
 
-  return parameter;
+  return skillChanceParameter(skillId, mode);
 }
 
 function projectedParameter(parameter: string, ability: RawAbility): string {
   let result = parameter;
 
   if (parameter === 'skillchance' && ability.skill !== undefined) {
-    result = skillChanceParameter(ability.skill, ability);
+    result = abilitySkillChanceParameter(ability.skill, ability);
   }
 
   return result;

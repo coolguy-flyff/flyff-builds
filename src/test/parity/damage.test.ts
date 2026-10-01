@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { CLASS_IDS, loadBundledGameData, requireDamageSkill } from '@/data';
+import { CLASS_IDS, loadBundledGameData, requireDamageSkill, WATERBOMB_SKILL_ID } from '@/data';
 import {
   computeResultsPage,
   playerTarget,
@@ -56,6 +56,10 @@ interface Subject {
 
 describe.skipIf(!hasFlyffulator())('Flyffulator damage parity', () => {
   const data = loadBundledGameData();
+  const waterbomb = requireDefined(
+    data.procSkills.find((skill) => skill.id === WATERBOMB_SKILL_ID),
+    'Waterbomb',
+  );
   let fl: Flyffulator;
   let restoreSettings: () => void = () => undefined;
 
@@ -110,6 +114,11 @@ describe.skipIf(!hasFlyffulator())('Flyffulator damage parity', () => {
         max: damageWith([HIGH_ROLL, CRIT, 1], handFlag),
       },
     };
+  }
+
+  /** Flyffulator learns Waterbomb at level 1 for a gear chance (calculations.jsx:76-79). */
+  function learnWaterbomb(entity: FlyffEntity): void {
+    entity.skillLevels[WATERBOMB_SKILL_ID] = 1;
   }
 
   function skillAttack(skillId: number): DamageRange {
@@ -177,8 +186,20 @@ describe.skipIf(!hasFlyffulator())('Flyffulator damage parity', () => {
         }
       });
 
+      it('matches Waterbomb against the dummy, chance or not', () => {
+        const { resolved, entity } = prepare(fixture);
+        const target = computeResultsPage(data, resolved, OPTIONS).damage.target;
+        const ctx = createStatContext(data, resolved);
+
+        learnWaterbomb(entity);
+
+        expect(computeSkillDamage(ctx, waterbomb, target, OPTIONS).range).toEqual(
+          skillAttack(WATERBOMB_SKILL_ID),
+        );
+      });
+
       it('matches a player-versus-player hit on a bare STA Templar', () => {
-        const { resolved } = prepare(fixture);
+        const { resolved, entity } = prepare(fixture);
         const defenderBuild = createTestBuild(data, {
           jobId: CLASS_IDS.templar,
           stats: { sta: 400 },
@@ -228,6 +249,12 @@ describe.skipIf(!hasFlyffulator())('Flyffulator damage parity', () => {
 
           expect(skill.range, requireDamageSkill(data, skillId).name).toEqual(skillAttack(skillId));
         }
+
+        learnWaterbomb(entity);
+
+        expect(computeSkillDamage(ctx, waterbomb, target, OPTIONS).range, 'Waterbomb').toEqual(
+          skillAttack(WATERBOMB_SKILL_ID),
+        );
       });
     });
   }

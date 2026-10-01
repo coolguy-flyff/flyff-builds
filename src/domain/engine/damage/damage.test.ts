@@ -7,6 +7,8 @@ import {
   requireDamageSkill,
   requireItem,
   skillAwakeParameter,
+  skillChanceParameter,
+  WATERBOMB_SKILL_ID,
 } from '@/data';
 import { createPvpTarget } from '@/domain/build/defaults';
 import { requireDefined } from '@/lib/assert';
@@ -16,8 +18,10 @@ import { resolveGearSwap } from '../resolve';
 import { createStatContext } from '../stats/context';
 import { computeMp } from '../stats/vitals';
 import { addShield, addWeapon, createTestBuild, firstSwap } from '../testing/builders';
+import { attackMultiplier } from './attack';
 import { computeDamageResults } from './damage';
 import { applyAttackDefense, finishDamage } from './defense';
+import { procChance } from './proc';
 import { computeSkillPower, isSkillUsable, skillDamageSignature } from './skill';
 import { playerTarget, resolveDamageTarget, trainingDummyTarget } from './target';
 import type { DamageTargetChoice } from './types';
@@ -38,6 +42,8 @@ const ORACLE_ULTIMATE = 54987;
 const BLOODY_OBSIDIAN_KNUCKLE = 3763;
 const AZURE_SHIELD = 469;
 const FWC_GOLDEN_K_FANG = 47197;
+/** A Mercenary axe with a 4–9 % Waterbomb chance. */
+const NAUTILUS = 11957;
 const HAMMER_OF_JUDGEMENT = 30021;
 const SHIELD_CRUSH = 50505;
 const ASAL = 5041;
@@ -430,5 +436,63 @@ describe('skill-damage awakes', () => {
         expect(awakened.skills[Number(skillId)], skillId).toEqual(before);
       }
     }
+  });
+});
+
+describe('proc skills', () => {
+  const waterbombSkill = requireDefined(
+    data.procSkills.find((skill) => skill.id === WATERBOMB_SKILL_ID),
+    'Waterbomb',
+  );
+
+  function templarWith(itemId: number) {
+    const build = createTestBuild(data, { jobId: CLASS_IDS.templar, stats: { str: 200 } });
+
+    addWeapon(build, { itemId, upgrade: 10 });
+
+    return build;
+  }
+
+  it('adds Waterbomb for a weapon with a Waterbomb chance, as a magic hit', () => {
+    const damage = damageOf(templarWith(NAUTILUS));
+    const waterbomb = requireDefined(damage.procs[WATERBOMB_SKILL_ID], 'Waterbomb');
+
+    // Nautilus rolls 4–9 %; the entry defaults to the floored midpoint.
+    expect(waterbomb.chance).toBe(6);
+    expect(waterbomb.breakdown.defense).toBe(damage.target.defense.magicSkill);
+    expect(waterbomb.range.min).toBeGreaterThan(0);
+    expect(waterbomb.average).toBe((waterbomb.range.min + waterbomb.range.max) / 2);
+  });
+
+  it('adds nothing without a chance', () => {
+    expect(damageOf(templarWith(ORACLE_ULTIMATE)).procs).toEqual({});
+  });
+
+  it('sums the chance for both modes with the chance limited to the target’s mode', () => {
+    const build = templarWith(ORACLE_ULTIMATE);
+    const ctx = createStatContext(data, resolveGearSwap(data, build, firstSwap(build)));
+    const chances: Record<string, number> = {
+      [skillChanceParameter(WATERBOMB_SKILL_ID)]: 3,
+      [skillChanceParameter(WATERBOMB_SKILL_ID, 'pvp')]: 2,
+    };
+    const stub = { ...ctx, total: (parameter: string) => chances[parameter] ?? 0 };
+
+    expect(procChance(stub, WATERBOMB_SKILL_ID, 'pve')).toBe(3);
+    expect(procChance(stub, WATERBOMB_SKILL_ID, 'pvp')).toBe(5);
+  });
+
+  it('never adds third-job skill damage to a class-less proc', () => {
+    const build = templarWith(NAUTILUS);
+    const ctx = createStatContext(data, resolveGearSwap(data, build, firstSwap(build)));
+    const boosted = {
+      ...ctx,
+      total: (parameter: string, rate: boolean) =>
+        parameter === 'thirdjobskilldamage' ? 50 : ctx.total(parameter, rate),
+    };
+
+    expect(attackMultiplier(boosted, waterbombSkill)).toBe(attackMultiplier(ctx, waterbombSkill));
+    expect(attackMultiplier(boosted, requireDamageSkill(data, SHIELD_CRUSH))).toBeCloseTo(
+      attackMultiplier(ctx, requireDamageSkill(data, SHIELD_CRUSH)) + 0.5,
+    );
   });
 });

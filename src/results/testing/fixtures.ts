@@ -29,6 +29,7 @@ export const BARE_DAMAGE: DamageResults = {
   },
   leftHand: null,
   skills: {},
+  procs: {},
 };
 
 const ZERO_BREAKDOWN: VitalBreakdown = { base: 0, flat: 0, rate: 0, rateGain: 0, total: 0 };

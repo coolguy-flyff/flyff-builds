@@ -15,6 +15,7 @@ import housingNpcs from './generated/housingNpcs.json';
 import items from './generated/items.json';
 import manifest from './generated/manifest.json';
 import pets from './generated/pets.json';
+import procSkills from './generated/procSkills.json';
 import skillAwakes from './generated/skillAwakes.json';
 import skills from './generated/skills.json';
 import statAwakes from './generated/statAwakes.json';
@@ -45,6 +46,7 @@ export function loadBundledGameData(): GameData {
     skills,
     classSkills,
     damageSkills,
+    procSkills,
     statNames,
     manifest,
   });

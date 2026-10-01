@@ -4,7 +4,7 @@ import {
   HIT_OF_PENYA_SKILL_ID,
   skillAwakeParameter,
   SPIRIT_BOMB_SKILL_ID,
-  type DamageSkill,
+  type AttackSkill,
 } from '@/data';
 
 import type { EngineOptions } from '../options';
@@ -68,7 +68,7 @@ function weaponSatisfies(requirement: string, subcategory: string | undefined): 
  * is met — in the mainhand, or a shield in the offhand (Flyffulator checks the mainhand only,
  * FLYFFULATOR_QUIRKS.skillWeaponCheckIgnoresShield).
  */
-export function isSkillUsable(ctx: StatContext, skill: DamageSkill): boolean {
+export function isSkillUsable(ctx: StatContext, skill: AttackSkill): boolean {
   let usable = skill.level <= ctx.level;
 
   if (usable && skill.weapon !== undefined) {
@@ -82,7 +82,7 @@ export function isSkillUsable(ctx: StatContext, skill: DamageSkill): boolean {
   return usable;
 }
 
-function isBaseSkill(skill: DamageSkill): boolean {
+function isBaseSkill(skill: AttackSkill): boolean {
   return skill.id === skill.familyId;
 }
 
@@ -94,7 +94,7 @@ function isBaseSkill(skill: DamageSkill): boolean {
  * whose damage % it is — elsewhere it is a leap length, a toxin count or the like. Only the
  * `attack` scalings and synergies enter the power; a duration or charging-time scaling does not.
  */
-export function skillDamageSignature(skill: DamageSkill): string {
+export function skillDamageSignature(skill: AttackSkill): string {
   const attackOnly = <T extends { readonly parameter: string }>(entries: readonly T[]): T[] =>
     entries.filter((entry) => entry.parameter === SKILL_ATTACK_PARAMETER);
 
@@ -117,7 +117,7 @@ export function skillDamageSignature(skill: DamageSkill): string {
 /** `getBaseSkillPower` before the roll (DC:1096-1146), both bounds. */
 export function computeSkillPower(
   ctx: StatContext,
-  skill: DamageSkill,
+  skill: AttackSkill,
   mode: DamageMode,
 ): DamageRange {
   const formulaLevel = (isBaseSkill(skill) ? skill.levelCount : skill.baseLevelCount) - 1;
@@ -173,7 +173,7 @@ function elementMastery(ctx: StatContext, elementType: string | undefined): numb
 }
 
 /** `getMagicSkillPower` (DC:1148-1186): Magic Attack % and the element mastery on the roll. */
-function magicPower(ctx: StatContext, skill: DamageSkill, rolled: number): number {
+function magicPower(ctx: StatContext, skill: AttackSkill, rolled: number): number {
   let power = rolled;
 
   if (skill.magic) {
@@ -189,7 +189,7 @@ function magicPower(ctx: StatContext, skill: DamageSkill, rolled: number): numbe
   return power;
 }
 
-function skillDefense(target: DamageTarget, skill: DamageSkill): number {
+function skillDefense(target: DamageTarget, skill: AttackSkill): number {
   let defense = skill.magic ? target.defense.magicSkill : target.defense.meleeSkill;
   const halvedInPvp = skill.id === ASAL_SKILL_ID || skill.id === HIT_OF_PENYA_SKILL_ID;
 
@@ -201,7 +201,7 @@ function skillDefense(target: DamageTarget, skill: DamageSkill): number {
 }
 
 /** Asal's bonus from STR, max MP and its level (DC:477-486, 905-913). */
-function asalBonus(ctx: StatContext, skill: DamageSkill): number {
+function asalBonus(ctx: StatContext, skill: AttackSkill): number {
   const level = skill.levelCount;
   const add = ASAL_BONUS_BY_LEVEL[level - 1] ?? 0;
 
@@ -217,7 +217,7 @@ function withAsalBonus(damage: number, bonus: number): number {
 /** `applyDefense` up to the multipliers (DC:457-497, 887-949) for one attack value. */
 function damageAfterDefense(
   ctx: StatContext,
-  skill: DamageSkill,
+  skill: AttackSkill,
   attack: number,
   target: DamageTarget,
   defense: number,
@@ -255,14 +255,14 @@ function damageAfterDefense(
  * A skill-damage awake on a held item names the base skill and covers its master variations too
  * (`Utils.isSkillOrInherit`, DC:582-586), so it is read by the family.
  */
-function skillAwakeBonus(ctx: StatContext, skill: DamageSkill): number {
+function skillAwakeBonus(ctx: StatContext, skill: AttackSkill): number {
   return ctx.total(skillAwakeParameter(skill.familyId), true);
 }
 
 /** The skill's multipliers, specials and awake, then the PvP factor (DC:509-615). */
 function skillFactor(
   ctx: StatContext,
-  skill: DamageSkill,
+  skill: AttackSkill,
   mode: DamageMode,
   skillAwake: number,
 ): number {
@@ -282,7 +282,7 @@ function skillFactor(
 
 export function computeSkillDamage(
   ctx: StatContext,
-  skill: DamageSkill,
+  skill: AttackSkill,
   target: DamageTarget,
   options: EngineOptions,
 ): SkillDamage {

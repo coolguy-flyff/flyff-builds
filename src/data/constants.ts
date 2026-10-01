@@ -158,6 +158,13 @@ export const DAMAGE_SKILL_IDS: readonly number[] = [
  */
 export const DAMAGE_SKILL_HITS: Readonly<Record<number, number>> = {};
 
+/**
+ * Skills that gear triggers by chance on a hit (`skillchance` abilities) and whose damage the
+ * results show: Waterbomb from the Coral Cutlass, Nautilus, Typhoon and other sea weapons.
+ */
+export const WATERBOMB_SKILL_ID = 11389;
+export const PROC_SKILL_IDS: readonly number[] = [WATERBOMB_SKILL_ID];
+
 /** Damage skills with their own rules in the damage formula (flyffdamagecalculator.js). */
 export const ASAL_SKILL_ID = 5041;
 export const HIT_OF_PENYA_SKILL_ID = 7156;
@@ -210,6 +217,13 @@ export const SKIN_ITEM_LEVEL = 1;
  * name for the bare parameter ("Death's Rush Chance") is wrong for every other skill.
  */
 export const SKILL_CHANCE_PREFIX = 'skillchance:';
+
+/** `skillchance:<skillId>`, or `skillchance:<skillId>:pve` for a chance limited to one mode. */
+export function skillChanceParameter(skillId: number, mode?: 'pve' | 'pvp'): string {
+  const parameter = `${SKILL_CHANCE_PREFIX}${String(skillId)}`;
+
+  return mode === undefined ? parameter : `${parameter}:${mode}`;
+}
 
 /**
  * Skill-damage awakes ("Maximum Crisis +25 %") are stored under `skill:<skillId>`, a pseudo-stat

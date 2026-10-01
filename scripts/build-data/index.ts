@@ -7,6 +7,7 @@ import {
   BUNDLED_SKILL_IDS,
   DAMAGE_SKILL_HITS,
   DAMAGE_SKILL_IDS,
+  PROC_SKILL_IDS,
   RM_BUFF_SKILL_IDS,
 } from '../../src/data/constants';
 import {
@@ -21,7 +22,7 @@ import {
 import { selectAccessoryLines } from './accessoryLines';
 import { projectClassSkill, selectClassSkills } from './classSkills';
 import { projectCoupleSkills } from './coupleSkills';
-import { projectDamageSkills } from './damageSkills';
+import { projectDamageSkills, projectProcSkills } from './damageSkills';
 import { buildManifest } from './manifest';
 import {
   assertCappedScalings,
@@ -89,6 +90,7 @@ const EXPECTED_COUNTS: Readonly<Record<string, number>> = {
   skills: 16,
   classSkills: 128,
   damageSkills: 233,
+  procSkills: 1,
   statNames: 169,
 };
 
@@ -301,6 +303,7 @@ function assemble(
     projectClassSkill(raw, skillLookup),
   );
   const damageSkills = projectDamageSkills(skillLookup, DAMAGE_SKILL_IDS, DAMAGE_SKILL_HITS);
+  const procSkills = projectProcSkills(skillLookup, PROC_SKILL_IDS);
 
   // Skills the app only needs by name: skill-damage awakes and skill-chance item abilities.
   const namedSkillIds = [
@@ -365,6 +368,7 @@ function assemble(
     skills,
     classSkills,
     damageSkills,
+    procSkills,
     statNames: projectStatNames(sources.statNames),
   };
 

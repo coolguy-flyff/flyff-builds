@@ -4,15 +4,16 @@ import { canDualWield } from '../../rules';
 import type { EngineOptions } from '../options';
 import type { StatContext } from '../stats/context';
 import { computeBasicDamage } from './basic';
+import { computeProcDamage } from './proc';
 import { computeSkillDamage, isSkillUsable } from './skill';
 import { overcritTarget, resolveDamageTarget } from './target';
-import type { BasicDamage, DamageResults, SkillDamage } from './types';
+import type { BasicDamage, DamageResults, ProcDamage, SkillDamage } from './types';
 
 /**
  * Every damage number of one swap against the chosen target: the basic attack (not for the
  * magician chain — wand and staff basics are not worth a row), the left hand of a dual-wielder,
- * and every usable curated skill with its variations, so the results view can pick any of them
- * without the engine knowing which is chosen.
+ * every usable curated skill with its variations, so the results view can pick any of them
+ * without the engine knowing which is chosen, and the procs the gear can trigger (any job).
  */
 export function computeDamageResults(
   data: GameData,
@@ -43,5 +44,15 @@ export function computeDamageResults(
     }
   }
 
-  return { target, basic, leftHand, skills };
+  const procs: Record<number, ProcDamage> = {};
+
+  for (const skill of data.procSkills) {
+    const proc = computeProcDamage(ctx, skill, target, options);
+
+    if (proc !== null) {
+      procs[skill.id] = proc;
+    }
+  }
+
+  return { target, basic, leftHand, skills, procs };
 }

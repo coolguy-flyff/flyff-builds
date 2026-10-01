@@ -1,4 +1,4 @@
-import type { DamageSkill } from '../../src/data/schema';
+import type { AttackSkill, DamageSkill } from '../../src/data/schema';
 
 import {
   maxLevelOf,
@@ -77,20 +77,17 @@ function firstNumber(values: readonly (number | string)[] | undefined): number |
   return values?.find((value): value is number => typeof value === 'number');
 }
 
-export function projectDamageSkill(
+/** The damage inputs of any attack skill at its maximum level; `base` is `raw` for a base skill. */
+function projectAttackSkill(
   raw: RawSkill,
   base: RawSkill,
   lookup: SkillLookup,
   hits: Readonly<Record<number, number>>,
-): DamageSkill {
+): AttackSkill {
   const max = maxLevelOf(raw);
 
   if (max.minAttack === undefined) {
-    throw new ProjectionError(`Damage skill ${raw.id} "${raw.name.en}" has no attack values`);
-  }
-
-  if (raw.class === undefined) {
-    throw new ProjectionError(`Damage skill ${raw.id} "${raw.name.en}" has no class`);
+    throw new ProjectionError(`Attack skill ${raw.id} "${raw.name.en}" has no attack values`);
   }
 
   return stripUndefined({
@@ -106,6 +103,30 @@ export function projectDamageSkill(
     familyId: base.id,
     baseLevelCount: (base.levels ?? []).length,
     hits: hits[raw.id] ?? hits[base.id] ?? 1,
+  });
+}
+
+export function projectDamageSkill(
+  raw: RawSkill,
+  base: RawSkill,
+  lookup: SkillLookup,
+  hits: Readonly<Record<number, number>>,
+): DamageSkill {
+  const { classId, ...skill } = projectAttackSkill(raw, base, lookup, hits);
+
+  if (classId === undefined) {
+    throw new ProjectionError(`Damage skill ${raw.id} "${raw.name.en}" has no class`);
+  }
+
+  return { ...skill, classId };
+}
+
+/** Skills gear triggers by chance (Waterbomb), in list order; single skills without variations. */
+export function projectProcSkills(lookup: SkillLookup, ids: readonly number[]): AttackSkill[] {
+  return ids.map((id) => {
+    const raw = requireRawSkill(lookup, id, 'Proc skills');
+
+    return projectAttackSkill(raw, raw, lookup, {});
   });
 }
 

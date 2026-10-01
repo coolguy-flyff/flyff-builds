@@ -7,6 +7,7 @@ import type {
   AccessorySet,
   AccessorySlot,
   Achievement,
+  AttackSkill,
   ArmorSet,
   AwakeSkill,
   BlessingTable,
@@ -64,6 +65,8 @@ export interface GameData {
   readonly damageSkills: ReadonlyMap<number, DamageSkill>;
   /** The curated damage skills grouped by base, in table (display) order. */
   readonly damageSkillFamilies: readonly DamageSkillFamily[];
+  /** Skills gear triggers by chance on a hit (Waterbomb), in display order. */
+  readonly procSkills: readonly AttackSkill[];
   readonly statAwakes: readonly StatAwakeDef[];
   readonly skillAwakes: SkillAwakeTable;
   /** Skills that can appear as `skill:<id>` damage awakes (name + icon). */
@@ -279,6 +282,7 @@ export function createGameData(raw: GeneratedData): GameData {
     classSkillsByJob: groupClassSkillsByJob(thirdJobs, classChains, raw.classSkills),
     damageSkills: new Map(raw.damageSkills.map((skill) => [skill.id, skill])),
     damageSkillFamilies: buildDamageSkillFamilies(raw.damageSkills),
+    procSkills: raw.procSkills,
     statAwakes: raw.statAwakes,
     skillAwakes: raw.skillAwakes,
     awakeSkills: new Map(raw.awakeSkills.map((skill) => [skill.id, skill])),

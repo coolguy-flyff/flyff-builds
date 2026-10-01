@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadBundledGameData } from '@/data';
+import { loadBundledGameData, WATERBOMB_SKILL_ID } from '@/data';
 import {
   createDefaultBuild,
   createGearSwap,
@@ -11,7 +11,7 @@ import { computeAllResults, resolveDamageTarget, type ResultsPage } from '@/doma
 import { requireDefined } from '@/lib/assert';
 
 import { cellDetails } from './cellDetails';
-import { DAMAGE_ROW_IDS, damageRows, skillRowId } from './damageRows';
+import { DAMAGE_ROW_IDS, damageRows, procRowId, skillRowId } from './damageRows';
 import { buildRows, groupRows, type ResultsRow } from './rowCatalog';
 import { BARE_DAMAGE, makePage } from './testing/fixtures';
 
@@ -83,6 +83,43 @@ describe('damageRows (plan §5)', () => {
         'left hand row',
       ).select(dual),
     ).toBe(15);
+  });
+
+  it('adds a Waterbomb row before the skills when a column can trigger it', () => {
+    const waterbomb = {
+      range: { min: 900, max: 1000 },
+      average: 950,
+      hits: 1,
+      chance: 6,
+      breakdown: {
+        power: { min: 700, max: 710 },
+        attack: { min: 900, max: 1000 },
+        attackMultiplier: 1,
+        defense: 0,
+        factor: 2,
+        skillAwake: 0,
+        partyBonus: 0,
+      },
+    };
+    const armed = makePage({
+      damage: { ...BARE_DAMAGE, procs: { [WATERBOMB_SKILL_ID]: waterbomb } },
+    });
+    const row = requireDefined(
+      damageRows(data, [makePage(), armed], {}).find(
+        (candidate) => candidate.id === procRowId(WATERBOMB_SKILL_ID),
+      ),
+      'Waterbomb row',
+    );
+
+    expect(labelsOf([armed])).toEqual(['Basic attack', 'Crit', 'Overcrit', 'Waterbomb']);
+    expect(labelsOf([makePage()])).not.toContain('Waterbomb');
+    expect(row.select(armed)).toBe(950);
+    expect(row.select(makePage())).toBeNull();
+    expect(row.tooltip).toContain('splashes');
+    expect(requireDefined(row.details, 'details')(armed).slice(0, 2)).toEqual([
+      { label: 'Trigger chance', value: '6%' },
+      { label: 'Skill power', value: '700~710' },
+    ]);
   });
 
   it('explains a cell with the hit before defense, the multiplier and the target defense', () => {

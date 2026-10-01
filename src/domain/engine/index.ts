@@ -67,6 +67,7 @@ export type {
   DamageTarget,
   DamageTargetChoice,
   DamageTargetStat,
+  ProcDamage,
   SkillDamage,
 } from './damage/types';
 export {

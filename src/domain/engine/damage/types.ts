@@ -103,6 +103,12 @@ export interface SkillDamage {
   readonly breakdown: SkillDamageBreakdown;
 }
 
+/** A skill the gear triggers by chance on a hit (Waterbomb), as one hit on the target. */
+export interface ProcDamage extends SkillDamage {
+  /** Trigger chance % per hit: the gear's chance for both modes plus the target mode's own. */
+  readonly chance: number;
+}
+
 export interface DamageResults {
   readonly target: DamageTarget;
   /** Null for the magician chain, which shows no basic attacks. */
@@ -111,4 +117,6 @@ export interface DamageResults {
   readonly leftHand: BasicDamage | null;
   /** Every usable curated skill (bases and variations) by id. */
   readonly skills: Readonly<Record<number, SkillDamage>>;
+  /** Every proc skill the gear can trigger (a chance above 0) by id. */
+  readonly procs: Readonly<Record<number, ProcDamage>>;
 }

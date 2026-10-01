@@ -1,4 +1,4 @@
-import type { DamageSkill } from '@/data';
+import type { AttackSkill } from '@/data';
 
 import type { StatContext } from '../stats/context';
 import type { DamageMode } from './types';
@@ -6,15 +6,16 @@ import type { DamageMode } from './types';
 /** Upcut Stone multiplies the attack of every hit (flyffdamagecalculator.js:445-452). */
 const UPCUT_STONE_FACTOR = 1.2;
 
-function isThirdJobClass(ctx: StatContext, classId: number): boolean {
-  return ctx.data.classes.get(classId)?.type === 'specialist';
+function isThirdJobClass(ctx: StatContext, classId: number | undefined): boolean {
+  return classId !== undefined && ctx.data.classes.get(classId)?.type === 'specialist';
 }
 
 /**
  * `getAttackMultiplier` (flyffdamagecalculator.js:423-455): attack % for every hit, plus skill
- * damage % (and third-job skill damage % for a third job's skill) for skills, times Upcut.
+ * damage % (and third-job skill damage % for a third job's skill — never a class-less proc) for
+ * skills, times Upcut.
  */
-export function attackMultiplier(ctx: StatContext, skill: DamageSkill | null): number {
+export function attackMultiplier(ctx: StatContext, skill: AttackSkill | null): number {
   let sumPower = ctx.total('attack', true);
 
   if (skill !== null) {
