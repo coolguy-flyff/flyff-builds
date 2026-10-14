@@ -27,19 +27,23 @@ export const HEAL_RAIN_SKILL_ID = 7411;
 export const GLORIA_PATRI_SKILL_ID = 28548;
 export const GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID = 31249;
 
-/** Skills whose max-level data is bundled (buffs + healing skills + synergy sources). */
-export const BUNDLED_SKILL_IDS = [
-  ...RM_BUFF_SKILL_IDS,
+/** The healing rows, in display order; each shows once the character can learn the skill. */
+export const HEALING_SKILL_IDS = [
   HEAL_SKILL_ID,
   HEAL_RAIN_SKILL_ID,
   GLORIA_PATRI_SKILL_ID,
   GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID,
 ] as const;
 
+/** Skills whose max-level data is bundled (buffs + healing skills + synergy sources). */
+export const BUNDLED_SKILL_IDS = [...RM_BUFF_SKILL_IDS, ...HEALING_SKILL_IDS] as const;
+
 /**
- * The damage skills the results compare (plan §7), base skills only in display order: each third
- * job's own attack skills by level, then its second job's. Master variations come along through
- * the base's `masterVariations` list. Pure debuff/utility skills are pruned by the user over time.
+ * The damage skills the results compare (plan §7), base skills only: each third job's own attack
+ * skills by level, then its second job's, then a few first-job skills. A job's rows read third job
+ * first, then second, then first (`damageSkillFamiliesFor`), each in this order. Master variations
+ * come along through the base's `masterVariations` list. Pure debuff/utility skills are pruned by
+ * the user over time.
  */
 export const DAMAGE_SKILL_IDS: readonly number[] = [
   // Arcanist
@@ -149,6 +153,10 @@ export const DAMAGE_SKILL_IDS: readonly number[] = [
   7208, // Grand Rage (Knight, Lv 65)
   8890, // Power Stomp (Knight, Lv 65)
   5559, // Power Swing (Knight, Lv 75)
+  // First jobs (shared by both chains that descend from them)
+  8203, // Moon Beam (Assist, Lv 15)
+  7773, // Burst Crack (Assist, Lv 28)
+  4058, // Arrow Rain (Acrobat, Lv 50)
 ];
 
 /**
@@ -192,6 +200,8 @@ export const ACCESSORY_LINE_NAMES = {
 
 export const CLASS_IDS = {
   vagrant: 9686,
+  mercenary: 764,
+  acrobat: 9098,
   assist: 8962,
   ringmaster: 9389,
   blade: 2246,

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { requireClass } from '@/data';
+import { jobAtLevel } from '@/data';
 import type { ValidatedBuild } from '@/domain/build';
 import { Button } from '@/components/Button';
 import { AppDialog, DialogActions } from '@/components/Dialog';
@@ -20,7 +20,7 @@ function ImportPreviewPanel({ validated }: { validated: ValidatedBuild }) {
   const data = useGameData();
   const { build, warnings } = validated;
   // A decoded build is validated, so its job is always known.
-  const job = requireClass(data, build.character.jobId);
+  const job = jobAtLevel(data, build.character.jobId, build.character.level);
 
   return (
     <div>

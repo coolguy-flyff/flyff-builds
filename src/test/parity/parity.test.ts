@@ -1,9 +1,11 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
+  CLASS_IDS,
   GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID,
   GLORIA_PATRI_SKILL_ID,
   HEAL_RAIN_SKILL_ID,
+  HEAL_SKILL_ID,
   loadBundledGameData,
   requireSkill,
   type SlimSkill,
@@ -236,19 +238,23 @@ describe.skipIf(!hasFlyffulator())('Flyffulator parity', () => {
         const { resolved } = prepare(fixture);
         const page = computeResultsPage(data, resolved, NO_SYNERGY);
 
-        if (page.healingSkills === null) {
-          expect(resolved.job.name).not.toBe('Seraph');
+        if (resolved.job.id !== CLASS_IDS.seraph) {
+          expect(page.healingSkills[GLORIA_PATRI_SKILL_ID]).toBeUndefined();
 
           return;
         }
 
         const ctx = createStatContext(data, resolved);
+        const heal = requireSkill(data, HEAL_SKILL_ID);
         const healRain = requireSkill(data, HEAL_RAIN_SKILL_ID);
         const gloriaPatri = requireSkill(data, GLORIA_PATRI_SKILL_ID);
         const effectIncrease = requireSkill(data, GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID);
+        const row = (skillId: number): number =>
+          requireDefined(page.healingSkills[skillId], `healing row ${skillId}`).total;
 
         // Flyffulator feeds 1 for a base skill and the inherited skill's level count for a
         // master variation (flyffdamagecalculator.js:43-53).
+        expect(healing(HEAL_SKILL_ID)).toBe(levelScaledHealing(ctx, heal, 1));
         expect(healing(HEAL_RAIN_SKILL_ID)).toBe(levelScaledHealing(ctx, healRain, 1));
         expect(healing(GLORIA_PATRI_SKILL_ID)).toBe(levelScaledHealing(ctx, gloriaPatri, 1));
         expect(healing(GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID)).toBe(
@@ -256,12 +262,9 @@ describe.skipIf(!hasFlyffulator())('Flyffulator parity', () => {
         );
 
         // The listed scale is never below the level-shifted one.
-        expect(page.healingSkills.healRain.total).toBeGreaterThanOrEqual(
-          healing(HEAL_RAIN_SKILL_ID),
-        );
-        expect(page.healingSkills.gloriaPatri.total).toBeGreaterThanOrEqual(
-          healing(GLORIA_PATRI_SKILL_ID),
-        );
+        expect(row(HEAL_SKILL_ID)).toBeGreaterThanOrEqual(healing(HEAL_SKILL_ID));
+        expect(row(HEAL_RAIN_SKILL_ID)).toBeGreaterThanOrEqual(healing(HEAL_RAIN_SKILL_ID));
+        expect(row(GLORIA_PATRI_SKILL_ID)).toBeGreaterThanOrEqual(healing(GLORIA_PATRI_SKILL_ID));
       });
 
       it('matches getStat for a sweep of parameters', () => {

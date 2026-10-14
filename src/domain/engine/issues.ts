@@ -18,6 +18,8 @@ export const ENGINE_ISSUE_CODES = {
   unknownBlessing: 'unknown-blessing',
   /** The stored offhand is incompatible with the job/mainhand and was dropped. */
   offhandIgnored: 'offhand-ignored',
+  /** The job at the build's level cannot wear the swap's weapon or armor set; it was dropped. */
+  gearUnusable: 'gear-unusable',
   jewelsExceedSlots: 'jewels-exceed-slots',
   cardsExceedSlots: 'cards-exceed-slots',
   /** An ultimate random-stat line names a parameter the weapon cannot roll. */

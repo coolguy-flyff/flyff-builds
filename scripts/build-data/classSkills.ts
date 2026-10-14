@@ -138,7 +138,6 @@ export function projectClassSkill(raw: RawSkill, lookup: SkillLookup): ClassSkil
   const skill: ClassSkill = {
     ...projectSkill(raw, lookup),
     classId: raw.class ?? 0,
-    level: raw.level ?? 0,
     kind,
     familyId: familyIdOf(raw),
     permanent: kind === 'passive' && (duration ?? 0) >= PERMANENT_DURATION_SECONDS,

@@ -1,4 +1,4 @@
-import { CLASS_IDS, UPCUT_STONE_ITEM_ID, type GameData } from '@/data';
+import { CLASS_IDS, SKIN_ITEM_LEVEL, UPCUT_STONE_ITEM_ID, type GameData } from '@/data';
 import type { BuildState, GearSwap } from '@/domain/build/schema';
 import { ENGINE_ISSUE_CODES } from '@/domain/engine';
 import {
@@ -68,6 +68,7 @@ const BLOODY_OBSIDIAN_KNUCKLE = 3763;
 const ARCANIST = 36983;
 const FORCEMASTER = 43403;
 const MENTALIST = 54571;
+const CRACKSHOOTER = 35045;
 
 const ALL_TEN = { ring1: 10, ring2: 10, earring1: 10, earring2: 10, necklace: 10 };
 
@@ -397,4 +398,62 @@ export const PARITY_FIXTURES: readonly ParityFixture[] = [
       return { build, swap: firstSwap(build) };
     },
   },
+  {
+    // A first job: Assist job factors at Lv 45 on the Seraph path, Moon Beam with a stick and
+    // the Heal row; Burst Crack (knuckle) stays out.
+    name: 'assist-stick-lv45',
+    expectedIssueCodes: [],
+    create: (data) => {
+      const build = createTestBuild(data, { level: 45, stats: { int: 60, sta: 28 } });
+
+      addWeapon(build, {
+        itemId: bestFirstJobWeapon(data, CLASS_IDS.assist, 'stick', 45),
+        upgrade: 6,
+      });
+
+      return { build, swap: firstSwap(build) };
+    },
+  },
+  {
+    // A first job with a bow: Acrobat at Lv 55 on the Crackshooter path, with Arrow Rain.
+    name: 'acrobat-bow-lv55',
+    expectedIssueCodes: [],
+    create: (data) => {
+      const build = createTestBuild(data, {
+        jobId: CRACKSHOOTER,
+        level: 55,
+        stats: { dex: 80, sta: 28 },
+      });
+
+      addWeapon(build, {
+        itemId: bestFirstJobWeapon(data, CLASS_IDS.acrobat, 'bow', 55),
+        upgrade: 6,
+      });
+
+      return { build, swap: firstSwap(build) };
+    },
+  },
 ];
+
+/** The highest-level weapon of a type that a first job's own class can wield at `level`. */
+function bestFirstJobWeapon(
+  data: GameData,
+  classId: number,
+  subcategory: string,
+  level: number,
+): number {
+  const candidates = [...data.items.values()].filter(
+    (item) =>
+      item.class === classId &&
+      item.subcategory === subcategory &&
+      item.level <= level &&
+      item.level > SKIN_ITEM_LEVEL,
+  );
+  const best = candidates.sort((a, b) => b.level - a.level || a.id - b.id)[0];
+
+  if (best === undefined) {
+    throw new Error(`No ${subcategory} for class ${classId} up to Lv ${level}`);
+  }
+
+  return best.id;
+}

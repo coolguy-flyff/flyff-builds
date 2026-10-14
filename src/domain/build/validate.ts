@@ -4,6 +4,7 @@ import {
   classSkillsFor,
   getItem,
   isAnteriorJob,
+  jobLevelRange,
   type GameData,
   type SlimItem,
 } from '@/data';
@@ -621,11 +622,8 @@ export function repairBuild(data: GameData, input: BuildState): ValidatedBuild {
     jobId = DEFAULT_JOB_ID;
   }
 
-  const job = data.classes.get(jobId);
-  const level =
-    job === undefined
-      ? input.character.level
-      : clamp(input.character.level, job.minLevel, job.maxLevel);
+  const range = jobLevelRange(data, jobId);
+  const level = clamp(input.character.level, range.min, range.max);
 
   if (level !== input.character.level) {
     repairs.add('level-clamped', `Level clamped to ${level}`);

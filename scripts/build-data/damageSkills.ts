@@ -92,8 +92,6 @@ function projectAttackSkill(
 
   return stripUndefined({
     ...projectSkill(raw, lookup),
-    classId: raw.class,
-    level: raw.level ?? 0,
     magic: raw.magic ?? false,
     elementType: raw.elementType === NO_ELEMENT ? undefined : raw.elementType,
     weapon: raw.weapon === ANY_WEAPON ? undefined : raw.weapon,

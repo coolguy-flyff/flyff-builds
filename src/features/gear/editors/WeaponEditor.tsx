@@ -11,7 +11,7 @@ import {
 } from '@/domain/rules';
 import { SubCard } from '@/components/Card';
 import { rarityClassName } from '@/components/rarity';
-import { useActions, useAppStore, useGameData } from '@/state';
+import { useActions, useGameData } from '@/state';
 
 import { EntryEditorShell } from '../EntryEditorShell';
 import { weaponMetaLine, weaponRowMeta, weaponTypeLabel } from '../format';
@@ -22,6 +22,7 @@ import { StackEditor } from './StackEditor';
 import { StatAwakeEditor } from './StatAwakeEditor';
 import { StatRangesEditor } from './StatRangesEditor';
 import { UpgradeField } from './UpgradeField';
+import { useWearableWeapons } from './useWearableGear';
 
 /**
  * Weapon editor (plan A2.2): item, upgrade, stat awake, skill awake, stat ranges, ultimate random
@@ -31,8 +32,7 @@ import { UpgradeField } from './UpgradeField';
 export function WeaponEditor({ entry }: { entry: WeaponEntry }) {
   const data = useGameData();
   const actions = useActions();
-  const jobId = useAppStore((state) => state.build.character.jobId);
-  const items = data.weaponsByJob.get(jobId) ?? [];
+  const items = useWearableWeapons();
   const item = entry.itemId === null ? null : (getItem(data, entry.itemId) ?? null);
   const resolution = resolveWeaponEntry(data, entry, 'mainhand');
   const ultimate = item !== null && item.rarity === 'ultimate';

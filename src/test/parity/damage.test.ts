@@ -81,7 +81,7 @@ describe.skipIf(!hasFlyffulator())('Flyffulator damage parity', () => {
     const resolved = resolveGearSwap(data, build, swap, OPTIONS);
     const entity = buildEntity(fl, data, build, swap);
 
-    mirrorDamageSkills(fl, data, entity, build.character.jobId);
+    mirrorDamageSkills(fl, data, entity, resolved.job.id);
     installContext(fl, entity);
     // `installContext` restores the calculations tab's full-health default.
     fl.Context.settings.targetHealthPercent = TARGET_HEALTH_PERCENT;

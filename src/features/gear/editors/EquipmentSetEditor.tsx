@@ -6,13 +6,14 @@ import { SubCard } from '@/components/Card';
 import { EntityCombobox } from '@/components/EntityCombobox';
 import { ItemIcon } from '@/components/ItemIcon';
 import { Hint } from '@/components/Text';
-import { useActions, useAppStore, useGameData } from '@/state';
+import { useActions, useGameData } from '@/state';
 
 import { EntryEditorShell } from '../EntryEditorShell';
 import { armorSetLabel, armorSetTier, formatAbilityList, formatSetBonusLines } from '../format';
 import { SetStatAwakeEditor } from './SetStatAwakeEditor';
 import { StackEditor } from './StackEditor';
 import { UpgradeField } from './UpgradeField';
+import { useWearableArmorSets } from './useWearableGear';
 
 const DEFAULT_SUIT_SLOTS = 4;
 
@@ -37,8 +38,7 @@ function SetOptionRow({ set }: { set: ArmorSet }) {
 export function EquipmentSetEditor({ entry }: { entry: EquipmentSetEntry }) {
   const data = useGameData();
   const actions = useActions();
-  const jobId = useAppStore((state) => state.build.character.jobId);
-  const sets = data.armorSetsByJob.get(jobId) ?? [];
+  const sets = useWearableArmorSets();
   const set = entry.setId === null ? null : (data.armorSets.get(entry.setId) ?? null);
   const suit = set === null ? undefined : getItem(data, set.parts.suit);
   const capacity = suit === undefined ? DEFAULT_SUIT_SLOTS : piercingSlots(suit);

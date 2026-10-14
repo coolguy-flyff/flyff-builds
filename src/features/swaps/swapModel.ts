@@ -7,7 +7,7 @@ import {
   type GearSwap,
   type Offhand,
 } from '@/domain/build';
-import { isOneHandedWeapon, offhandKind, type OffhandKind } from '@/domain/rules';
+import { characterOffhandKind, isOneHandedWeapon, type OffhandKind } from '@/domain/rules';
 import type { SelectGroup, SelectOption } from '@/components/Select';
 import { formatAbilityList } from '@/features/buffs/effectText';
 import { memoByRef } from '@/lib/memo';
@@ -121,7 +121,7 @@ export function offhandModel(
   swap: GearSwap,
   nameOf: EntryNamer,
 ): OffhandModel {
-  const kind = offhandKind(data, build.character.jobId, mainhandItem(data, build, swap));
+  const kind = characterOffhandKind(data, build.character, mainhandItem(data, build, swap));
   const stored = swap.offhand;
   const options: SelectOption[] = [NONE_OPTION];
   let value = NONE_VALUE;
@@ -215,7 +215,7 @@ function resolvedOffhandChip(data: GameData, build: BuildState, swap: GearSwap):
 
   if (
     stored !== null &&
-    stored.kind === offhandKind(data, build.character.jobId, mainhandItem(data, build, swap))
+    stored.kind === characterOffhandKind(data, build.character, mainhandItem(data, build, swap))
   ) {
     const entry =
       stored.kind === 'shield'

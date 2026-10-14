@@ -115,7 +115,7 @@ describe('damageRows (plan §5)', () => {
     expect(labelsOf([makePage()])).not.toContain('Waterbomb');
     expect(row.select(armed)).toBe(950);
     expect(row.select(makePage())).toBeNull();
-    expect(row.tooltip).toContain('splashes');
+    expect(row.tooltip).toContain('Coral weapons');
     expect(requireDefined(row.details, 'details')(armed).slice(0, 2)).toEqual([
       { label: 'Trigger chance', value: '6%' },
       { label: 'Skill power', value: '700~710' },

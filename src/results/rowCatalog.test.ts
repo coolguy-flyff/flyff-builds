@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadBundledGameData } from '@/data';
+import { HEAL_SKILL_ID, loadBundledGameData } from '@/data';
 import { createDefaultBuild } from '@/domain/build';
 import { computeAllResults } from '@/domain/engine';
 
@@ -19,7 +19,7 @@ function labelsOf(...pages: ReturnType<typeof makePage>[]): string[] {
 
 describe('buildRows', () => {
   it('lists the static groups in catalogue order with the A4.2 rows', () => {
-    const rows = buildRows(data, [withPage(makePage({ healingSkills: null }))], NO_RAW);
+    const rows = buildRows(data, [withPage(makePage({ healingSkills: {} }))], NO_RAW);
     const groups = groupRows(rows);
 
     expect(groups.map((bucket) => bucket.group.id)).toEqual([
@@ -100,7 +100,7 @@ describe('buildRows', () => {
 
   it('adds the healing group only when a column has healing skills', () => {
     const seraph = makePage();
-    const other = makePage({ healingSkills: null });
+    const other = makePage({ healingSkills: {} });
 
     expect(
       groupRows(buildRows(data, [withPage(other)], NO_RAW)).map((g) => g.group.id),
@@ -109,17 +109,28 @@ describe('buildRows', () => {
     const rows = buildRows(data, [withPage(other), withPage(seraph)], NO_RAW);
     const healing = groupRows(rows).find((bucket) => bucket.group.id === 'healing');
 
-    expect(healing?.group.note).toContain('Heal synergy');
     expect(RESULTS_GROUPS.find((group) => group.id === 'damage')?.tooltip).toContain('per hit');
     expect(healing?.rows.map((row) => row.label)).toEqual([
+      'Heal (Lv 20)',
       'Heal Rain (Lv 10)',
       'Gloria Patri (Lv 5)',
       'Gloria Patri – Effect Increase (Lv 5)',
     ]);
-    expect(healing?.rows[0]?.tooltip).toBeUndefined();
-    expect(healing?.rows[1]?.tooltip).toContain('Heal');
-    expect(healing?.rows[1]?.select(seraph)).toBe(6432);
-    expect(healing?.rows[1]?.select(other)).toBeNull();
+    expect(healing?.rows[1]?.tooltip).toBeUndefined();
+    expect(healing?.rows[2]?.tooltip).toContain('Heal synergy');
+    expect(healing?.rows[2]?.select(seraph)).toBe(6432);
+    expect(healing?.rows[2]?.select(other)).toBeNull();
+  });
+
+  it('lists only the heals some column has learned', () => {
+    const assist = makePage({
+      healingSkills: { [HEAL_SKILL_ID]: { skillOutput: 1826, healingRate: 0, total: 1826 } },
+    });
+    const rows = buildRows(data, [withPage(assist)], NO_RAW);
+
+    expect(rows.filter((row) => row.group === 'healing').map((row) => row.id)).toEqual([
+      `healing:${HEAL_SKILL_ID}`,
+    ]);
   });
 
   it('adds one raw-total row per parameter and bucket with a non-zero value in any column', () => {

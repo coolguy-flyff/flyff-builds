@@ -1,5 +1,6 @@
 import { useState, type KeyboardEvent } from 'react';
 
+import { findJobAtLevel } from '@/data';
 import { Button } from '@/components/Button';
 import { DropdownMenu, type DropdownMenuItem } from '@/components/DropdownMenu';
 import { ClassIcon } from '@/components/ItemIcon';
@@ -33,7 +34,7 @@ export function SnapshotRow({
   const actions = useActions();
   const [draft, setDraft] = useState<string | null>(null);
   // Snapshot metas come straight from storage, so an unknown job (older data) must not crash the menu.
-  const job = data.classes.get(meta.jobId);
+  const job = findJobAtLevel(data, meta.jobId, meta.level);
   const commands = createSnapshotCommands(actions, meta, onDismiss);
 
   const commitRename = (): void => {

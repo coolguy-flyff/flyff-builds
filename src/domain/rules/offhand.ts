@@ -1,4 +1,4 @@
-import { CLASS_IDS, isAnteriorJob, type GameData, type SlimItem } from '@/data';
+import { CLASS_IDS, isAnteriorJob, jobAtLevel, type GameData, type SlimItem } from '@/data';
 
 export type OffhandKind = 'none' | 'shield' | 'weapon';
 
@@ -18,6 +18,18 @@ export function offhandKind(data: GameData, jobId: number, mainhand: SlimItem | 
   }
 
   return kind;
+}
+
+/**
+ * {@link offhandKind} for a build's character, whose stored job is a third-job path: the job it
+ * holds at its level decides (a Lv 100 Blade dual-wields, a Lv 50 Mercenary does not).
+ */
+export function characterOffhandKind(
+  data: GameData,
+  character: { readonly jobId: number; readonly level: number },
+  mainhand: SlimItem | null,
+): OffhandKind {
+  return offhandKind(data, jobAtLevel(data, character.jobId, character.level).id, mainhand);
 }
 
 export function isOneHandedWeapon(item: SlimItem): boolean {

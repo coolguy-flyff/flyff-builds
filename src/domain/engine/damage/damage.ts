@@ -1,6 +1,6 @@
 import { CLASS_IDS, damageSkillFamiliesFor, isAnteriorJob, type GameData } from '@/data';
 
-import { canDualWield } from '../../rules';
+import { canDualWield, isSkillUnlocked } from '../../rules';
 import type { EngineOptions } from '../options';
 import type { StatContext } from '../stats/context';
 import { computeBasicDamage } from './basic';
@@ -12,7 +12,8 @@ import type { BasicDamage, DamageResults, ProcDamage, SkillDamage } from './type
 /**
  * Every damage number of one swap against the chosen target: the basic attack (not for the
  * magician chain — wand and staff basics are not worth a row), the left hand of a dual-wielder,
- * every usable curated skill with its variations, so the results view can pick any of them
+ * every curated skill the character has learned by its level and can use with its weapon, with
+ * its variations (a variation needs its base's level), so the results view can pick any of them
  * without the engine knowing which is chosen, and the procs the gear can trigger (any job).
  */
 export function computeDamageResults(
@@ -37,6 +38,10 @@ export function computeDamageResults(
   const skills: Record<number, SkillDamage> = {};
 
   for (const family of damageSkillFamiliesFor(data, ctx.job.id)) {
+    if (!isSkillUnlocked(family.base, ctx.level)) {
+      continue;
+    }
+
     for (const skill of [family.base, ...family.variations]) {
       if (isSkillUsable(ctx, skill)) {
         skills[skill.id] = computeSkillDamage(ctx, skill, target, options);

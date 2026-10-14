@@ -19,8 +19,12 @@ import {
   classSkillsFor,
   damageSkillFamiliesFor,
   damageSkillFamilyOf,
+  findJobAtLevel,
   getStatName,
   isAnteriorJob,
+  jobAtLevel,
+  jobChoicesAtLevel,
+  jobLevelRange,
   loadBundledGameData,
   requireItem,
 } from './index';
@@ -245,17 +249,84 @@ describe('bundled game data', () => {
       }
     }
 
-    // Seraph: its two attack skills by level, then Ringmaster's Merkaba; each with 3 variations.
+    // Seraph: its two attack skills by level, then Ringmaster's Merkaba, then Assist's skills
+    // (listed after every second job in the table); the Seraph skills have 3 variations each.
     expect(
       damageSkillFamiliesFor(data, CLASS_IDS.seraph).map((family) => family.base.name),
-    ).toEqual(['Flow of Salvation', 'Hammer of Judgement', 'Merkaba Hanzelrusha']);
+    ).toEqual([
+      'Flow of Salvation',
+      'Hammer of Judgement',
+      'Merkaba Hanzelrusha',
+      'Moon Beam',
+      'Burst Crack',
+    ]);
     expect(
       damageSkillFamiliesFor(data, CLASS_IDS.seraph).map((family) => family.variations.length),
-    ).toEqual([3, 3, 0]);
+    ).toEqual([3, 3, 0, 0, 0]);
+    // A first job has its own skills only.
+    expect(
+      damageSkillFamiliesFor(data, CLASS_IDS.acrobat).map((family) => family.base.name),
+    ).toEqual(['Arrow Rain']);
     // Shield Crush needs a shield in the offhand; Nen Sphere scales by the mainhand weapon.
     expect(data.damageSkills.get(50505)?.weapon).toBe('shield');
     expect(
       data.damageSkills.get(38428)?.max.scalingParameters.map((scale) => scale.part),
     ).toContain('righthandweapon');
+  });
+});
+
+describe('jobs by level', () => {
+  const data = loadBundledGameData();
+
+  it('lets every path span its first job (Lv 15) to its cap', () => {
+    for (const path of data.thirdJobs) {
+      expect(jobLevelRange(data, path.id)).toEqual({ min: 15, max: 190 });
+    }
+  });
+
+  it('changes job at Lv 60 and Lv 165', () => {
+    const names = [15, 59, 60, 164, 165, 190].map(
+      (level) => jobAtLevel(data, CLASS_IDS.slayer, level).name,
+    );
+
+    expect(names).toEqual(['Mercenary', 'Mercenary', 'Blade', 'Blade', 'Slayer', 'Slayer']);
+    expect(findJobAtLevel(data, 1, 100)).toBeUndefined();
+  });
+
+  it('offers four first jobs, eight second jobs and eight third jobs', () => {
+    const tiles = (level: number) =>
+      jobChoicesAtLevel(data, level).map((choice) => [
+        choice.job.name,
+        choice.pathJobIds.map((id) => requireDefined(data.classes.get(id), 'path').name),
+      ]);
+
+    expect(tiles(40)).toEqual([
+      ['Acrobat', ['Crackshooter', 'Harlequin']],
+      ['Assist', ['Forcemaster', 'Seraph']],
+      ['Magician', ['Arcanist', 'Mentalist']],
+      ['Mercenary', ['Slayer', 'Templar']],
+    ]);
+    expect(tiles(60).map(([name]) => name)).toEqual([
+      'Billposter',
+      'Blade',
+      'Elementor',
+      'Jester',
+      'Knight',
+      'Psykeeper',
+      'Ranger',
+      'Ringmaster',
+    ]);
+    expect(jobChoicesAtLevel(data, 165)).toHaveLength(8);
+  });
+
+  it('never teaches a skill below the first level of its class', () => {
+    // So a skill's level alone keeps later jobs' skills locked for an earlier job.
+    const skills = [...data.skills.values(), ...data.damageSkills.values()];
+
+    for (const skill of skills) {
+      const cls = skill.classId === undefined ? undefined : data.classes.get(skill.classId);
+
+      expect(skill.level, skill.name).toBeGreaterThanOrEqual(cls?.minLevel ?? 0);
+    }
   });
 });

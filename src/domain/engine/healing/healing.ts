@@ -1,13 +1,12 @@
 import {
-  GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID,
-  GLORIA_PATRI_SKILL_ID,
-  HEAL_RAIN_SKILL_ID,
+  HEALING_SKILL_IDS,
   requireSkill,
   type GameData,
   type SlimSkill,
   type Synergy,
 } from '@/data';
 
+import { isSkillLearnable } from '../../rules';
 import type { EngineOptions } from '../options';
 import { computeMaxLevelStatScale } from '../skills/statScale';
 import type { StatContext } from '../stats/context';
@@ -85,24 +84,27 @@ export function computeSkillHealing(
   return breakdown;
 }
 
-export interface HealingSkills {
-  readonly healRain: HealingBreakdown;
-  readonly gloriaPatri: HealingBreakdown;
-  readonly gloriaPatriEffectIncrease: HealingBreakdown;
-}
+/** Healing skill id → heal per cast; only the skills the character has learned are present. */
+export type HealingSkills = Readonly<Partial<Record<number, HealingBreakdown>>>;
 
-/** The three Seraph rows: Heal Rain, Gloria Patri and its Effect Increase variation. */
+/**
+ * The healing rows (Heal, Heal Rain, Gloria Patri and its Effect Increase variation) of the skills
+ * the character's job and level have learned: a Lv 40 Assist heals with Heal only.
+ */
 export function computeHealingSkills(
   data: GameData,
   ctx: StatContext,
   options: EngineOptions,
 ): HealingSkills {
-  const healingOf = (skillId: number): HealingBreakdown =>
-    computeSkillHealing(ctx, requireSkill(data, skillId), options);
+  const healing: Record<number, HealingBreakdown> = {};
 
-  return {
-    healRain: healingOf(HEAL_RAIN_SKILL_ID),
-    gloriaPatri: healingOf(GLORIA_PATRI_SKILL_ID),
-    gloriaPatriEffectIncrease: healingOf(GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID),
-  };
+  for (const skillId of HEALING_SKILL_IDS) {
+    const skill = requireSkill(data, skillId);
+
+    if (isSkillLearnable(data, ctx.job.id, ctx.level, skill)) {
+      healing[skillId] = computeSkillHealing(ctx, skill, options);
+    }
+  }
+
+  return healing;
 }

@@ -1,6 +1,6 @@
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 
-import { requireClass } from '@/data';
+import { jobAtLevel } from '@/data';
 import { Brand } from '@/components/Brand';
 import { Button } from '@/components/Button';
 import { ClassIcon } from '@/components/ItemIcon';
@@ -57,7 +57,7 @@ export function AppHeader() {
   const character = useAppStore((state) => state.build.character);
   const saveStatus = useAppStore((state) => state.ui.saveStatus);
   const actions = useActions();
-  const job = requireClass(data, character.jobId);
+  const job = jobAtLevel(data, character.jobId, character.level);
   const status = SAVE_STATUS[saveStatus];
 
   const confirmReset = (): void => {

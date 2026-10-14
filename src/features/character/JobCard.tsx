@@ -1,8 +1,9 @@
-import type { SlimClass } from '@/data';
+import { jobChoicesAtLevel, type JobChoice } from '@/data';
 import { Card, CardTitle } from '@/components/Card';
 import { ClassIcon } from '@/components/ItemIcon';
 import { Hint } from '@/components/Text';
 import { Tile, TileGroup } from '@/components/Tile';
+import { requireDefined } from '@/lib/assert';
 import { useActions, useAppStore, useGameData, type SnapshotChoice } from '@/state';
 
 interface RemovalCounts {
@@ -27,22 +28,32 @@ function describeRemoved(counts: RemovalCounts): string[] {
   return parts;
 }
 
+/** The third-job path a switch to `choice` stores. */
+function pathOf(choice: JobChoice): number {
+  return requireDefined(choice.pathJobIds[0], `No path leads through ${choice.job.name}`);
+}
+
 /**
- * Job tiles (plan A1.1). A switch that would remove gear asks for confirmation first, with the
- * automatic snapshot of the current build as an opt-out; a switch that removes nothing keeps the
- * snapshot without asking.
+ * Job tiles (plan A1.1) for the jobs of the character's level: the third jobs from Lv 165, the
+ * second jobs from Lv 60 and the first jobs below. The build stores a third-job path, so picking
+ * a first job (two paths lead through it) picks its first path; the job tiles of a higher level
+ * choose between them. A switch that would remove gear asks for confirmation first, with the automatic snapshot of the
+ * current build as an opt-out; a switch that removes nothing keeps the snapshot without asking.
  */
 export function JobCard() {
   const data = useGameData();
-  const jobId = useAppStore((state) => state.build.character.jobId);
+  const character = useAppStore((state) => state.build.character);
   const actions = useActions();
+  const choices = jobChoicesAtLevel(data, character.level);
 
-  const switchTo = (job: SlimClass, snapshot: SnapshotChoice): void => {
+  const switchTo = (choice: JobChoice, snapshot: SnapshotChoice): void => {
+    const { job } = choice;
+
     if (snapshot.keep) {
       actions.autoSnapshot('job change', snapshot.name);
     }
 
-    const removed = describeRemoved(actions.setJob(job.id));
+    const removed = describeRemoved(actions.setJob(pathOf(choice)));
     actions.pushToast(
       'info',
       removed.length === 0
@@ -51,15 +62,17 @@ export function JobCard() {
     );
   };
 
-  const select = (job: SlimClass): void => {
-    if (job.id === jobId) {
+  const select = (choice: JobChoice): void => {
+    const { job } = choice;
+
+    if (choice.pathJobIds.includes(character.jobId)) {
       return;
     }
 
-    const removed = describeRemoved(actions.previewJobChange(job.id));
+    const removed = describeRemoved(actions.previewJobChange(pathOf(choice)));
 
     if (removed.length === 0) {
-      switchTo(job, { keep: true, name: '' });
+      switchTo(choice, { keep: true, name: '' });
     } else {
       actions.openDialog({
         kind: 'confirm',
@@ -69,7 +82,7 @@ export function JobCard() {
         danger: false,
         snapshot: { reason: 'job change' },
         onConfirm: (snapshot) => {
-          switchTo(job, snapshot);
+          switchTo(choice, snapshot);
         },
       });
     }
@@ -79,15 +92,15 @@ export function JobCard() {
     <Card>
       <CardTitle>Job</CardTitle>
       <TileGroup label="Job" columns={4}>
-        {data.thirdJobs.map((job) => (
+        {choices.map((choice) => (
           <Tile
-            key={job.id}
-            selected={job.id === jobId}
+            key={choice.job.id}
+            selected={choice.pathJobIds.includes(character.jobId)}
             onSelect={() => {
-              select(job);
+              select(choice);
             }}
-            icon={<ClassIcon icon={job.icon} size={32} alt="" />}
-            label={job.name}
+            icon={<ClassIcon icon={choice.job.icon} size={32} alt="" />}
+            label={choice.job.name}
             surface="sub"
           />
         ))}

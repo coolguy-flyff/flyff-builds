@@ -89,7 +89,7 @@ const EXPECTED_COUNTS: Readonly<Record<string, number>> = {
   pets: 9,
   skills: 16,
   classSkills: 128,
-  damageSkills: 233,
+  damageSkills: 236,
   procSkills: 1,
   statNames: 169,
 };

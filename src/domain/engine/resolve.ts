@@ -1,20 +1,20 @@
-import { requireClass, type GameData, type SlimClass, type SlimItem } from '@/data';
+import { jobAtLevel, type GameData, type SlimClass, type SlimItem } from '@/data';
 import { requireDefined } from '@/lib/assert';
 
 import type { BuildState, GearSwap, Offhand, StatPage } from '../build/schema';
-import { isItemUsable, isOneHandedWeapon, offhandKind } from '../rules';
+import { isArmorSetUsable, isItemUsable, isOneHandedWeapon, offhandKind } from '../rules';
 import type { Collected } from './abilities/collect';
 import type { Contribution } from './abilities/types';
 import { resolveBuffs } from './buffs';
 import { DEFAULT_WEAPON } from './defaultWeapon';
 import { resolveAccessorySetEntry } from './gear/accessorySet';
-import { resolveEquipmentSetEntry } from './gear/equipmentSet';
+import { resolveEquipmentSetEntry, type EquipmentSetResolution } from './gear/equipmentSet';
 import { resolveFashionSetEntry } from './gear/fashionSet';
 import { collectMask } from './gear/mask';
 import { resolvePetEntry } from './gear/pet';
 import { resolvePetGrace } from './gear/petGrace';
 import { resolveShieldEntry } from './gear/shield';
-import { resolveWeaponEntry } from './gear/weapon';
+import { resolveWeaponEntry, type WeaponResolution } from './gear/weapon';
 import { ENGINE_ISSUE_CODES, engineError, type EngineIssue } from './issues';
 import { DEFAULT_ENGINE_OPTIONS, type EngineOptions } from './options';
 import type { EquippedItem, ResolvedCharacter, ResolvedOffhand } from './types';
@@ -70,11 +70,57 @@ interface OffhandResolution extends Collected {
 
 const NO_OFFHAND: OffhandResolution = { offhand: null, contributions: [], issues: [] };
 
-interface OffhandContext {
+interface GearContext {
   readonly data: GameData;
   readonly build: BuildState;
+  /** The job the character holds at its level, not the third-job path the build is for. */
   readonly job: SlimClass;
   readonly level: number;
+}
+
+function cannotEquip(ctx: GearContext, name: string): string {
+  return `Lv ${ctx.level} ${ctx.job.name} cannot equip ${name}`;
+}
+
+function unusableGear(ctx: GearContext, name: string): EngineIssue {
+  return engineError(
+    ENGINE_ISSUE_CODES.gearUnusable,
+    `${cannotEquip(ctx, name)}; the slot counts as empty`,
+  );
+}
+
+/** The mainhand, or none (bare hands) when the job at this level cannot wield it. */
+function usableMainhand(
+  ctx: GearContext,
+  mainhand: WeaponResolution | null,
+  issues: EngineIssue[],
+): WeaponResolution | null {
+  let usable = mainhand;
+  const item = mainhand?.item ?? null;
+
+  if (item !== null && !isItemUsable(ctx.data, ctx.job.id, ctx.level, item)) {
+    issues.push(unusableGear(ctx, item.name));
+    usable = null;
+  }
+
+  return usable;
+}
+
+/** The equipment set, or none when the job at this level cannot wear it. */
+function usableEquipment(
+  ctx: GearContext,
+  equipment: EquipmentSetResolution | null,
+  issues: EngineIssue[],
+): EquipmentSetResolution | null {
+  let usable = equipment;
+  const set = equipment?.set ?? null;
+
+  if (set !== null && !isArmorSetUsable(ctx.data, ctx.job.id, ctx.level, set)) {
+    issues.push(unusableGear(ctx, set.name));
+    usable = null;
+  }
+
+  return usable;
 }
 
 function ignoredOffhand(message: string): OffhandResolution {
@@ -86,7 +132,7 @@ function ignoredOffhand(message: string): OffhandResolution {
 }
 
 function acceptOffhand(
-  ctx: OffhandContext,
+  ctx: GearContext,
   kind: 'shield' | 'weapon',
   resolution: Collected & { readonly item: SlimItem | null; readonly upgrade: number },
 ): OffhandResolution {
@@ -98,7 +144,7 @@ function acceptOffhand(
     if (kind === 'weapon' && !isOneHandedWeapon(item)) {
       result = ignoredOffhand(`${item.name} is two-handed`);
     } else if (!isItemUsable(ctx.data, ctx.job.id, ctx.level, item)) {
-      result = ignoredOffhand(`${ctx.job.name} cannot equip ${item.name}`);
+      result = ignoredOffhand(cannotEquip(ctx, item.name));
     } else {
       result = {
         offhand: { kind, item, upgrade: resolution.upgrade },
@@ -113,7 +159,7 @@ function acceptOffhand(
 
 /** Applies the offhand rule (plan A3.2): 2H → none; Slayer → second 1H weapon; others → shield. */
 function resolveOffhand(
-  ctx: OffhandContext,
+  ctx: GearContext,
   stored: Offhand,
   mainhand: SlimItem,
   issues: EngineIssue[],
@@ -160,17 +206,22 @@ export function resolveGearSwap(
   swap: GearSwap,
   options: EngineOptions = DEFAULT_ENGINE_OPTIONS,
 ): ResolvedCharacter {
-  const job = requireClass(data, build.character.jobId);
   const level = build.character.level;
+  const job = jobAtLevel(data, build.character.jobId, level);
+  const gear: GearContext = { data, build, job, level };
   const issues: EngineIssue[] = [];
   const contributions: Contribution[] = [];
   const statPage = resolveStatPage(build, swap, issues);
 
   const weaponEntry = findEntry(build.weapons, swap.weaponId, 'Weapon', issues);
-  const mainhand = weaponEntry === null ? null : resolveWeaponEntry(data, weaponEntry, 'mainhand');
+  const mainhand = usableMainhand(
+    gear,
+    weaponEntry === null ? null : resolveWeaponEntry(data, weaponEntry, 'mainhand'),
+    issues,
+  );
   const mainhandItem = mainhand?.item ?? DEFAULT_WEAPON;
   const mainhandUpgrade = mainhand !== null && mainhand.item !== null ? mainhand.upgrade : 0;
-  const offhand = resolveOffhand({ data, build, job, level }, swap.offhand, mainhandItem, issues);
+  const offhand = resolveOffhand(gear, swap.offhand, mainhandItem, issues);
 
   const equipmentEntry = findEntry(
     build.equipmentSets,
@@ -178,7 +229,11 @@ export function resolveGearSwap(
     'Equipment set',
     issues,
   );
-  const equipment = equipmentEntry === null ? null : resolveEquipmentSetEntry(data, equipmentEntry);
+  const equipment = usableEquipment(
+    gear,
+    equipmentEntry === null ? null : resolveEquipmentSetEntry(data, equipmentEntry),
+    issues,
+  );
   const accessoryEntry = findEntry(
     build.accessorySets,
     swap.accessorySetId,

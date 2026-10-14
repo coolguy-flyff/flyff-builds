@@ -3,7 +3,7 @@ import { getItem, type GameData } from '@/data';
 import {
   blessingSlotCapacity,
   blessingSlotsUsed,
-  offhandKind,
+  characterOffhandKind,
   remainingStatPoints,
   stackCount,
   ultimateJewelSlots,
@@ -111,7 +111,7 @@ export function collectIssues(data: GameData, build: BuildState): Issue[] {
         weaponEntry?.itemId === undefined || weaponEntry.itemId === null
           ? null
           : (getItem(data, weaponEntry.itemId) ?? null);
-      const expected = offhandKind(data, build.character.jobId, mainhand);
+      const expected = characterOffhandKind(data, build.character, mainhand);
 
       if (expected !== swap.offhand.kind) {
         const reason =

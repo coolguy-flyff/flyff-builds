@@ -2,12 +2,14 @@ import { Fragment, useMemo } from 'react';
 
 import {
   classSkillsFor,
+  isAnteriorJob,
+  jobAtLevel,
   requireClass,
   type ClassSkill,
   type ClassSkillKind,
   type GameData,
 } from '@/data';
-import { isClassSkillUnlocked } from '@/domain/rules';
+import { isSkillUnlocked } from '@/domain/rules';
 import { Card, CardTitle } from '@/components/Card';
 import { SkillIcon } from '@/components/ItemIcon';
 import { Hint } from '@/components/Text';
@@ -50,11 +52,20 @@ function isBase(skill: ClassSkill): boolean {
   return skill.id === skill.familyId;
 }
 
-function chainsFor(data: GameData, jobId: number, kinds: readonly ClassSkillKind[]): SkillChain[] {
+/**
+ * The skill chains of one group that the character's job at its level teaches: a Lv 100
+ * Ringmaster on the Seraph path sees Ringmaster and Assist skills, not Seraph ones.
+ */
+function chainsFor(
+  data: GameData,
+  character: { readonly jobId: number; readonly level: number },
+  kinds: readonly ClassSkillKind[],
+): SkillChain[] {
+  const job = jobAtLevel(data, character.jobId, character.level);
   const families = new Map<number, ClassSkill[]>();
 
-  for (const skill of classSkillsFor(data, jobId)) {
-    if (kinds.includes(skill.kind)) {
+  for (const skill of classSkillsFor(data, character.jobId)) {
+    if (kinds.includes(skill.kind) && isAnteriorJob(data, job.id, skill.classId)) {
       const members = families.get(skill.familyId) ?? [];
 
       members.push(skill);
@@ -95,7 +106,7 @@ function TileTooltip({ tile, level }: { tile: SkillTileModel; level: number }) {
       <span className="font-semibold text-text">{tile.skill.name}</span>
       <span className="text-dim">{tileMeta(tile)}</span>
       {tile.variation && <span className="text-dim">Master variation</span>}
-      {!isClassSkillUnlocked(tile.skill, level) && (
+      {!isSkillUnlocked(tile.skill, level) && (
         <span className="text-warn">
           Requires Lv {tile.skill.level} — character is Lv {level}
         </span>
@@ -134,7 +145,7 @@ function SkillTile({
   lit: boolean;
   onToggle: () => void;
 }) {
-  const locked = !isClassSkillUnlocked(tile.skill, level);
+  const locked = !isSkillUnlocked(tile.skill, level);
 
   return (
     <Tooltip content={<TileTooltip tile={tile} level={level} />}>
@@ -242,7 +253,7 @@ function ClassSkillGroup({
   const skills = chains.flatMap((chain) => chain.tiles.map((tile) => tile.skill));
   const ids = skills.map((skill) => skill.id);
   const unlockedIds = skills
-    .filter((skill) => isClassSkillUnlocked(skill, level))
+    .filter((skill) => isSkillUnlocked(skill, level))
     .map((skill) => skill.id);
   const activeCount = ids.filter((id) => litIds.has(id)).length;
 
@@ -301,21 +312,21 @@ function ClassSkillGroup({
  */
 export function ClassSkillsCard() {
   const data = useGameData();
-  const jobId = useAppStore((state) => state.build.character.jobId);
-  const level = useAppStore((state) => state.build.character.level);
+  const character = useAppStore((state) => state.build.character);
+  const { level } = character;
   const activeIds = useAppStore((state) => state.build.buffs.classSkillIds);
   const groups = useMemo(
     () =>
-      GROUPS.map((group) => ({ group, chains: chainsFor(data, jobId, group.kinds) })).filter(
+      GROUPS.map((group) => ({ group, chains: chainsFor(data, character, group.kinds) })).filter(
         ({ chains }) => chains.length > 0,
       ),
-    [data, jobId],
+    [data, character],
   );
   const litIds = new Set(
     activeIds.filter((id) => {
       const skill = data.classSkills.get(id);
 
-      return skill !== undefined && isClassSkillUnlocked(skill, level);
+      return skill !== undefined && isSkillUnlocked(skill, level);
     }),
   );
 

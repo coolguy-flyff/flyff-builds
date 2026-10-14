@@ -5,6 +5,7 @@ import {
   STAT_KEYS,
   accessoryLinesFor,
   classSkillsFor,
+  jobLevelRange,
   type GameData,
   type SlimItem,
 } from '@/data';
@@ -355,7 +356,8 @@ function randomList<T>(
 export function randomBuild(data: GameData, seed: number): BuildState {
   const rng = createRng(seed);
   const job = pick(rng, data.thirdJobs);
-  const level = int(rng, job.minLevel, job.maxLevel);
+  const range = jobLevelRange(data, job.id);
+  const level = int(rng, range.min, range.max);
   let lastId = 0;
 
   const nextId = (): number => {

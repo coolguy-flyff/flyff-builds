@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadBundledGameData } from '@/data';
+import {
+  GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID,
+  GLORIA_PATRI_SKILL_ID,
+  HEAL_RAIN_SKILL_ID,
+  loadBundledGameData,
+} from '@/data';
 import { requireDefined } from '@/lib/assert';
 
 import { buildRows } from './rowCatalog';
@@ -12,14 +17,18 @@ describe('healing row details (feedback 2026-09-03, item 4)', () => {
   it('explains a heal as skill output, multiplier and the gain from it', () => {
     const page = makePage({
       healingSkills: {
-        healRain: { skillOutput: 2286, healingRate: 0, total: 2286 },
-        gloriaPatri: { skillOutput: 6432, healingRate: 80, total: 11577 },
-        gloriaPatriEffectIncrease: { skillOutput: 6732, healingRate: 80, total: 12117 },
+        [HEAL_RAIN_SKILL_ID]: { skillOutput: 2286, healingRate: 0, total: 2286 },
+        [GLORIA_PATRI_SKILL_ID]: { skillOutput: 6432, healingRate: 80, total: 11577 },
+        [GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID]: {
+          skillOutput: 6732,
+          healingRate: 80,
+          total: 12117,
+        },
       },
     });
     const rows = buildRows(data, [withPage(page)], { showRawTotals: false });
     const gloriaPatri = requireDefined(
-      rows.find((row) => row.id === 'gloriaPatri'),
+      rows.find((row) => row.id === `healing:${GLORIA_PATRI_SKILL_ID}`),
       'Gloria Patri row',
     );
 
@@ -29,8 +38,8 @@ describe('healing row details (feedback 2026-09-03, item 4)', () => {
       { label: 'Healing % multiplier', value: '×1.80' },
       { label: 'Gained from multiplier', value: '+5,145' },
     ]);
-    expect(
-      requireDefined(gloriaPatri.details, 'details')(makePage({ healingSkills: null })),
-    ).toEqual([]);
+    expect(requireDefined(gloriaPatri.details, 'details')(makePage({ healingSkills: {} }))).toEqual(
+      [],
+    );
   });
 });

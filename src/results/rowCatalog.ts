@@ -1,10 +1,17 @@
-import { getStatName, type GameData, type StatKey } from '@/data';
+import {
+  getStatName,
+  HEAL_SKILL_ID,
+  HEALING_SKILL_IDS,
+  requireSkill,
+  type GameData,
+  type SlimSkill,
+  type StatKey,
+} from '@/data';
 
 import {
   BLOCK_DEX_BONUS_MAX,
   BLOCK_EFFECTIVE_MAX,
   BLOCK_EFFECTIVE_MIN,
-  type HealingSkills,
   type ResultsPage,
   type SwapResult,
 } from '@/domain/engine';
@@ -25,7 +32,7 @@ export interface RangeValue {
   readonly max: number;
 }
 
-/** A cell value; `null` when the row does not apply to the column (e.g. healing for non-Seraphs). */
+/** A cell value; `null` when the row does not apply to the column (e.g. a heal the job has not learned). */
 export type RowValue = number | RangeValue | null;
 
 export const RESULTS_GROUP_IDS = [
@@ -114,7 +121,6 @@ export interface RowCatalogOptions {
   readonly skillVariations?: Readonly<Record<number, number>> | undefined;
 }
 
-const HEAL_SYNERGY_NOTE = 'Gloria Patri rows include Heal synergy (Heal Lv 20, +1000)';
 const HEAL_SYNERGY_TOOLTIP =
   'Includes the Heal synergy with Heal assumed maxed at Lv 20 (+1000 HP per cast).';
 
@@ -131,7 +137,7 @@ export const RESULTS_GROUPS: readonly ResultsGroup[] = [
   { id: 'offense', label: 'Offense' },
   { id: 'defense', label: 'Defense' },
   { id: 'damage', label: 'Damage', tooltip: DAMAGE_GROUP_TOOLTIP },
-  { id: 'healing', label: 'Healing skills', note: HEAL_SYNERGY_NOTE },
+  { id: 'healing', label: 'Healing skills' },
   { id: 'raw', label: 'Raw totals' },
 ];
 
@@ -223,12 +229,12 @@ const criticalChanceDetails: CellDetails = (page) => [
 ];
 
 /** How a heal comes together (plan feedback 2026-09-03, item 4): formula, multiplier, gain. */
-function healingDetails(key: keyof HealingSkills): CellDetails {
+function healingDetails(skillId: number): CellDetails {
   return (page) => {
+    const heal = page.healingSkills[skillId];
     let lines: CellDetail[] = [];
 
-    if (page.healingSkills !== null) {
-      const heal = page.healingSkills[key];
+    if (heal !== undefined) {
       const multiplier = 1 + heal.healingRate / 100;
 
       lines = [
@@ -242,21 +248,32 @@ function healingDetails(key: keyof HealingSkills): CellDetails {
   };
 }
 
-function healingRow(
-  key: keyof HealingSkills,
-  label: string,
-  tooltip: string | undefined,
-): ResultsRow {
+/** "Gloria Patri – Effect Increase (Lv 5)": the variation spelled out, at the level assumed. */
+function healingLabel(skill: SlimSkill): string {
+  return `${skill.name.replace(/ \((.+)\)$/, ' – $1')} (Lv ${skill.levelCount})`;
+}
+
+function healingRow(data: GameData, skillId: number): ResultsRow {
+  const skill = requireSkill(data, skillId);
+  const healSynergy = skill.max.synergies.some((synergy) => synergy.skill === HEAL_SKILL_ID);
+
   return {
-    id: key,
+    id: `healing:${skillId}`,
     group: 'healing',
-    label,
+    label: healingLabel(skill),
     format: 'int',
     higherIsBetter: true,
-    tooltip,
-    details: healingDetails(key),
-    select: (page) => (page.healingSkills === null ? null : page.healingSkills[key].total),
+    tooltip: healSynergy ? HEAL_SYNERGY_TOOLTIP : undefined,
+    details: healingDetails(skillId),
+    select: (page) => page.healingSkills[skillId]?.total ?? null,
   };
+}
+
+/** One row per healing skill some column has learned, in display order. */
+function healingRows(data: GameData, pages: readonly ResultsPage[]): ResultsRow[] {
+  return HEALING_SKILL_IDS.filter((skillId) =>
+    pages.some((page) => page.healingSkills[skillId] !== undefined),
+  ).map((skillId) => healingRow(data, skillId));
 }
 
 const STATIC_ROWS: readonly ResultsRow[] = [
@@ -368,16 +385,6 @@ function blockRows(pages: readonly ResultsPage[]): readonly ResultsRow[] {
   return sameEverywhere ? [BLOCK_ROW] : [MELEE_BLOCK_ROW, RANGED_BLOCK_ROW];
 }
 
-const HEALING_ROWS: readonly ResultsRow[] = [
-  healingRow('healRain', 'Heal Rain (Lv 10)', undefined),
-  healingRow('gloriaPatri', 'Gloria Patri (Lv 5)', HEAL_SYNERGY_TOOLTIP),
-  healingRow(
-    'gloriaPatriEffectIncrease',
-    'Gloria Patri – Effect Increase (Lv 5)',
-    HEAL_SYNERGY_TOOLTIP,
-  ),
-];
-
 /** Raw-total parameters where a smaller number is the better one. */
 const LOWER_IS_BETTER_PARAMETERS: ReadonlySet<string> = new Set(['incomingdamage']);
 
@@ -442,10 +449,7 @@ export function buildRows(
   const rows = [...STATIC_ROWS, ...blockRows(pages)].filter((row) => !isIdleEverywhere(row, pages));
 
   rows.push(...damageRows(data, pages, options.skillVariations ?? {}));
-
-  if (pages.some((page) => page.healingSkills !== null)) {
-    rows.push(...HEALING_ROWS);
-  }
+  rows.push(...healingRows(data, pages));
 
   if (options.showRawTotals) {
     rows.push(...rawRows(data, pages));

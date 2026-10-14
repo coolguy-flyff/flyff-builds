@@ -458,6 +458,8 @@ export function projectSkill(raw: RawSkill, lookup: SkillLookup): SlimSkill {
     id: raw.id,
     name: raw.name.en,
     icon: raw.icon,
+    ...(raw.class === undefined ? {} : { classId: raw.class }),
+    level: raw.level ?? 0,
     levelCount: (raw.levels ?? []).length,
     max: {
       abilities: normalizeAbilities(max.abilities),

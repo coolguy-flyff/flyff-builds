@@ -1,4 +1,4 @@
-import { requireClass } from '@/data';
+import { jobAtLevel } from '@/data';
 import { createDefaultBuild, type BuildState, type BuildWarning } from '@/domain/build';
 import {
   deleteSnapshot,
@@ -192,7 +192,7 @@ export function createSessionActions(
 
     defaultSnapshotName() {
       const { character } = get().build;
-      const job = requireClass(deps.data, character.jobId);
+      const job = jobAtLevel(deps.data, character.jobId, character.level);
 
       return `${job.name} ${character.level} — ${formatTime(deps.now())}`;
     },

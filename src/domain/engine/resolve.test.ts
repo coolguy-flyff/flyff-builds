@@ -34,6 +34,9 @@ const LION_PET = 9941;
 const K_FANG_ULTIMATE = 23879; // Slayer 1H sword
 const SWORD_OF_WHISPER_ULTIMATE = 41690; // Slayer 1H sword
 const CHAMPIONS_BOUNTY_FLASK = 10918;
+const SAINT_GUARDER_STICK = 4583; // Assist, Lv 30
+const SAYRAM_SET = 4242; // Assist, Lv 30
+const SHINING_SWORD = 3673; // Vagrant 1H sword, Lv 15
 
 function codes(issues: readonly { code: string }[]): string[] {
   return issues.map((issue) => issue.code);
@@ -230,6 +233,71 @@ describe('offhand rule', () => {
     expect(resolved.armorPieces).toEqual([]);
     expect(getStatTotal(resolved, 'sta', false)).toBe(14 + 50);
     expect(getStatTotal(resolved, 'maxhp', true)).toBe(18);
+  });
+});
+
+describe('job at the character level', () => {
+  it('resolves a Seraph-path build to Assist, Ringmaster or Seraph by level', () => {
+    const jobAt = (level: number): string => {
+      const build = createTestBuild(data, { level });
+
+      return resolveGearSwap(data, build, firstSwap(build)).job.name;
+    };
+
+    expect([jobAt(15), jobAt(59), jobAt(60), jobAt(164), jobAt(165)]).toEqual([
+      'Assist',
+      'Assist',
+      'Ringmaster',
+      'Ringmaster',
+      'Seraph',
+    ]);
+  });
+
+  it('wears first-job gear up to 10 levels above the character', () => {
+    const build = createTestBuild(data, { level: 20 });
+
+    addWeapon(build, { itemId: SAINT_GUARDER_STICK });
+    addEquipmentSet(build, { setId: SAYRAM_SET });
+
+    const resolved = resolveGearSwap(data, build, firstSwap(build));
+
+    expect(resolved.issues).toEqual([]);
+    expect(resolved.mainhand.id).toBe(SAINT_GUARDER_STICK);
+    expect(resolved.armorPieces).toHaveLength(4);
+  });
+
+  it('drops a weapon and a set the job at this level cannot wear, and says why', () => {
+    const build = createTestBuild(data, { level: 50 });
+
+    addWeapon(build, { itemId: ORACLE_ULTIMATE });
+    addEquipmentSet(build, { setId: ETRANAR_SET });
+
+    const resolved = resolveGearSwap(data, build, firstSwap(build));
+
+    expect(codes(resolved.issues)).toEqual([
+      ENGINE_ISSUE_CODES.gearUnusable,
+      ENGINE_ISSUE_CODES.gearUnusable,
+    ]);
+    expect(resolved.issues[0]?.message).toContain('Lv 50 Assist cannot equip');
+    expect(resolved.mainhand).toBe(DEFAULT_WEAPON);
+    expect(resolved.armorPieces).toEqual([]);
+    expect(resolved.contributions).toEqual([]);
+  });
+
+  it('pairs a Lv 59 Mercenary with a shield and a Lv 60 Blade with a second weapon', () => {
+    const mercenary = createTestBuild(data, { jobId: CLASS_IDS.slayer, level: 59 });
+
+    addWeapon(mercenary, { itemId: SHINING_SWORD });
+    addWeapon(mercenary, { itemId: SHINING_SWORD }, 'offhand');
+    expect(codes(resolveGearSwap(data, mercenary, firstSwap(mercenary)).issues)).toEqual([
+      ENGINE_ISSUE_CODES.offhandIgnored,
+    ]);
+
+    const blade = createTestBuild(data, { jobId: CLASS_IDS.slayer, level: 60 });
+
+    addWeapon(blade, { itemId: SHINING_SWORD });
+    addWeapon(blade, { itemId: SHINING_SWORD }, 'offhand');
+    expect(resolveGearSwap(data, blade, firstSwap(blade)).offhand?.kind).toBe('weapon');
   });
 });
 

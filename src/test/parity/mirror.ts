@@ -1,11 +1,10 @@
 import {
   ARMOR_PARTS,
   CLASS_IDS,
-  GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID,
-  GLORIA_PATRI_SKILL_ID,
-  HEAL_RAIN_SKILL_ID,
+  HEALING_SKILL_IDS,
   RM_BUFF_SKILL_IDS,
   damageSkillFamiliesFor,
+  jobAtLevel,
   requireItem,
   skillAwakeSkillId,
   type GameData,
@@ -402,11 +401,7 @@ function mirrorBuffs(fl: Flyffulator, entity: FlyffEntity, build: BuildState): v
 
 /** Healing rows read the attacker's skill levels; the engine assumes every skill maxed. */
 function mirrorHealingSkills(fl: Flyffulator, entity: FlyffEntity): void {
-  for (const skillId of [
-    HEAL_RAIN_SKILL_ID,
-    GLORIA_PATRI_SKILL_ID,
-    GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID,
-  ]) {
+  for (const skillId of HEALING_SKILL_IDS) {
     const skillProp = requireDefined(fl.Utils.getSkillById(skillId), `No skill ${skillId}`);
 
     entity.skillLevels[skillId] = skillProp.levels.length;
@@ -422,7 +417,9 @@ export function buildEntity(
   const entity = new fl.Entity(null);
   const page = requireDefined(findById(build.statPages, swap.statPageId), 'stat page');
 
-  entity.job = fl.Utils.getClassById(build.character.jobId);
+  entity.job = fl.Utils.getClassById(
+    jobAtLevel(data, build.character.jobId, build.character.level).id,
+  );
   entity.level = build.character.level;
   entity.str = page.str;
   entity.sta = page.sta;

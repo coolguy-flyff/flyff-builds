@@ -320,6 +320,74 @@ export function isAnteriorJob(data: GameData, jobId: number, otherJobId: number)
   return data.classChains.get(jobId)?.includes(otherJobId) ?? false;
 }
 
+function requireChain(data: GameData, jobId: number): readonly number[] {
+  return requireDefined(data.classChains.get(jobId), `No class chain for job ${jobId}`);
+}
+
+/**
+ * The job a character of the chosen third-job path holds at `level`: the most advanced job of the
+ * chain it has reached. A job change happens at the level where the next job starts, so Lv 60 is
+ * the second job and Lv 165 the third.
+ */
+export function jobAtLevel(data: GameData, pathJobId: number, level: number): SlimClass {
+  return requireDefined(findJobAtLevel(data, pathJobId, level), `Unknown class id ${pathJobId}`);
+}
+
+/** {@link jobAtLevel} for a stored job id that may be unknown (snapshot metadata). */
+export function findJobAtLevel(
+  data: GameData,
+  pathJobId: number,
+  level: number,
+): SlimClass | undefined {
+  const classes = (data.classChains.get(pathJobId) ?? []).map((id) => requireClass(data, id));
+
+  return classes.find((cls) => cls.minLevel <= level) ?? classes.at(-1);
+}
+
+export interface LevelRange {
+  readonly min: number;
+  readonly max: number;
+}
+
+/** The levels a build of a third-job path can take: from its first job (Lv 15) to the cap. */
+export function jobLevelRange(data: GameData, pathJobId: number): LevelRange {
+  const classes = requireChain(data, pathJobId).map((id) => requireClass(data, id));
+  const jobs = classes.filter((cls) => cls.type !== 'beginner');
+
+  return {
+    min: Math.min(...jobs.map((cls) => cls.minLevel)),
+    max: requireClass(data, pathJobId).maxLevel,
+  };
+}
+
+/** One job tile at a level: the job itself and the third-job paths that lead through it. */
+export interface JobChoice {
+  readonly job: SlimClass;
+  /** Never empty; the first path is the one picked when switching to this job. */
+  readonly pathJobIds: readonly number[];
+}
+
+/**
+ * The jobs a character can hold at `level`, by name: the eight third jobs from Lv 165, their
+ * second jobs from Lv 60, and the four first jobs below that (each shared by two paths).
+ */
+export function jobChoicesAtLevel(data: GameData, level: number): JobChoice[] {
+  const choices = new Map<number, { job: SlimClass; pathJobIds: number[] }>();
+
+  for (const path of data.thirdJobs) {
+    const job = jobAtLevel(data, path.id, level);
+    const choice = choices.get(job.id);
+
+    if (choice === undefined) {
+      choices.set(job.id, { job, pathJobIds: [path.id] });
+    } else {
+      choice.pathJobIds.push(path.id);
+    }
+  }
+
+  return [...choices.values()].sort((a, b) => byName(a.job, b.job));
+}
+
 /** The class skills a job can switch on; empty for an unknown job. */
 export function classSkillsFor(data: GameData, jobId: number): readonly ClassSkill[] {
   return data.classSkillsByJob.get(jobId) ?? [];
@@ -336,14 +404,20 @@ export function requireDamageSkill(data: GameData, skillId: number): DamageSkill
   return requireDefined(data.damageSkills.get(skillId), `Unknown damage skill id ${skillId}`);
 }
 
-/** The damage skill families a job's chain teaches, in table order; empty for an unknown job. */
+/**
+ * The damage skill families a job's chain teaches, the job's own first and then back down the
+ * chain (third, second, first job), each class in table order; empty for an unknown job.
+ */
 export function damageSkillFamiliesFor(
   data: GameData,
   jobId: number,
 ): readonly DamageSkillFamily[] {
   const chain = data.classChains.get(jobId) ?? [];
 
-  return data.damageSkillFamilies.filter((family) => chain.includes(family.base.classId));
+  // Array.prototype.sort is stable, so each class keeps the table order.
+  return data.damageSkillFamilies
+    .filter((family) => chain.includes(family.base.classId))
+    .sort((a, b) => chain.indexOf(a.base.classId) - chain.indexOf(b.base.classId));
 }
 
 /** The family a curated damage skill (base or variation) belongs to. */

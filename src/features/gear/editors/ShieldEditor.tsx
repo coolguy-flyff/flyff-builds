@@ -4,7 +4,7 @@ import { resolveShieldEntry } from '@/domain/engine';
 import { piercingSlots, skillAwakeOptions } from '@/domain/rules';
 import { SubCard } from '@/components/Card';
 import { rarityClassName } from '@/components/rarity';
-import { useActions, useAppStore, useGameData } from '@/state';
+import { useActions, useGameData } from '@/state';
 
 import { EntryEditorShell } from '../EntryEditorShell';
 import { shieldMetaLine, shieldRowMeta } from '../format';
@@ -13,6 +13,7 @@ import { SkillAwakeSelect } from './SkillAwakeSelect';
 import { StackEditor } from './StackEditor';
 import { StatAwakeEditor } from './StatAwakeEditor';
 import { UpgradeField } from './UpgradeField';
+import { useWearableShields } from './useWearableGear';
 
 function shieldGroup(): string {
   return 'Shields';
@@ -22,8 +23,7 @@ function shieldGroup(): string {
 export function ShieldEditor({ entry }: { entry: ShieldEntry }) {
   const data = useGameData();
   const actions = useActions();
-  const jobId = useAppStore((state) => state.build.character.jobId);
-  const items = data.shieldsByJob.get(jobId) ?? [];
+  const items = useWearableShields();
   const item = entry.itemId === null ? null : (getItem(data, entry.itemId) ?? null);
   const resolution = resolveShieldEntry(data, entry);
   const awakeOptions = item === null ? [] : skillAwakeOptions(data, item);

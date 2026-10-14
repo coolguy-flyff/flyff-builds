@@ -1,6 +1,6 @@
 import type { GameData } from '@/data';
 
-import { isClassSkillUnlocked } from '../../rules/usability';
+import { isSkillUnlocked } from '../../rules/usability';
 import type { Sink } from '../abilities/collect';
 import { ENGINE_ISSUE_CODES, engineWarning } from '../issues';
 import { maxedSkillContributions } from './maxedSkill';
@@ -31,7 +31,7 @@ export function collectClassSkills(
       continue;
     }
 
-    if (!isClassSkillUnlocked(skill, level)) {
+    if (!isSkillUnlocked(skill, level)) {
       sink.issues.push(
         engineWarning(
           ENGINE_ISSUE_CODES.skillLocked,

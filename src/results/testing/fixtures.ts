@@ -1,3 +1,9 @@
+import {
+  GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID,
+  GLORIA_PATRI_SKILL_ID,
+  HEAL_RAIN_SKILL_ID,
+  HEAL_SKILL_ID,
+} from '@/data';
 import { trainingDummyTarget, type DamageResults, type ResultsPage } from '@/domain/engine';
 import type { VitalBreakdown } from '@/domain/engine';
 
@@ -78,9 +84,10 @@ export const BASE_PAGE: ResultsPage = {
   meleeBlockBreakdown: BARE_BLOCK,
   rangedBlockBreakdown: BARE_BLOCK,
   healingSkills: {
-    healRain: { skillOutput: 2286, healingRate: 0, total: 2286 },
-    gloriaPatri: { skillOutput: 6432, healingRate: 0, total: 6432 },
-    gloriaPatriEffectIncrease: { skillOutput: 6732, healingRate: 0, total: 6732 },
+    [HEAL_SKILL_ID]: { skillOutput: 1826, healingRate: 0, total: 1826 },
+    [HEAL_RAIN_SKILL_ID]: { skillOutput: 2286, healingRate: 0, total: 2286 },
+    [GLORIA_PATRI_SKILL_ID]: { skillOutput: 6432, healingRate: 0, total: 6432 },
+    [GLORIA_PATRI_EFFECT_INCREASE_SKILL_ID]: { skillOutput: 6732, healingRate: 0, total: 6732 },
   },
   hpBreakdown: ZERO_BREAKDOWN,
   mpBreakdown: ZERO_BREAKDOWN,

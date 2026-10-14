@@ -1,4 +1,4 @@
-import { CLASS_IDS, type GameData } from '@/data';
+import type { GameData } from '@/data';
 
 import { getRawTotals, type StatBucket } from '../abilities/totals';
 import { computeDamageResults } from '../damage/damage';
@@ -73,8 +73,8 @@ export interface ResultsPage {
   readonly rangedBlock: number;
   readonly meleeBlockBreakdown: BlockBreakdown;
   readonly rangedBlockBreakdown: BlockBreakdown;
-  /** Only for Seraphs. */
-  readonly healingSkills: HealingSkills | null;
+  /** The healing skills the job at this level has learned; empty for most jobs. */
+  readonly healingSkills: HealingSkills;
   /** Basic attacks and curated skills against the chosen target (plan §1). */
   readonly damage: DamageResults;
   /** Every parameter with a non-zero total, for the optional raw-totals group. */
@@ -136,8 +136,7 @@ export function computeResultsPage(
     rangedBlock: rangedBlock.total,
     meleeBlockBreakdown: meleeBlock,
     rangedBlockBreakdown: rangedBlock,
-    healingSkills:
-      resolved.job.id === CLASS_IDS.seraph ? computeHealingSkills(data, ctx, options) : null,
+    healingSkills: computeHealingSkills(data, ctx, options),
     damage: computeDamageResults(data, ctx, options),
     rawTotals: getRawTotals(resolved),
   };

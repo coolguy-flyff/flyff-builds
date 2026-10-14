@@ -77,13 +77,13 @@ describe('bare Seraph 190 (STR 15 / STA 400 / DEX 15 / INT 15, no gear, no buffs
   });
 
   it('computes Seraph healing rows and leaves them out for other jobs', () => {
-    expect(page.healingSkills).not.toBeNull();
+    expect(Object.keys(page.healingSkills)).toHaveLength(4);
 
     const templar = createTestBuild(data, { jobId: CLASS_IDS.templar });
 
     expect(
       computeResultsPage(data, resolveGearSwap(data, templar, firstSwap(templar))).healingSkills,
-    ).toBeNull();
+    ).toEqual({});
   });
 });
 

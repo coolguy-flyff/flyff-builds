@@ -1,4 +1,4 @@
-import { defaultClassSkillIds, getItem, isAnteriorJob, requireClass } from '@/data';
+import { defaultClassSkillIds, getItem, isAnteriorJob, jobLevelRange } from '@/data';
 import { repairReferences, type BuildState } from '@/domain/build';
 import { clamp } from '@/lib/math';
 
@@ -61,8 +61,8 @@ export function createCharacterActions({ set, get, deps }: ActionContext): Chara
   return {
     setLevel(level) {
       set((draft) => {
-        const job = requireClass(deps.data, draft.build.character.jobId);
-        draft.build.character.level = clamp(Math.round(level), job.minLevel, job.maxLevel);
+        const range = jobLevelRange(deps.data, draft.build.character.jobId);
+        draft.build.character.level = clamp(Math.round(level), range.min, range.max);
       });
     },
 
@@ -80,15 +80,11 @@ export function createCharacterActions({ set, get, deps }: ActionContext): Chara
       const summary = this.previewJobChange(jobId);
 
       set((draft) => {
-        const job = requireClass(deps.data, jobId);
+        const range = jobLevelRange(deps.data, jobId);
         const removed = incompatibleGear(deps, draft.build, jobId);
 
         draft.build.character.jobId = jobId;
-        draft.build.character.level = clamp(
-          draft.build.character.level,
-          job.minLevel,
-          job.maxLevel,
-        );
+        draft.build.character.level = clamp(draft.build.character.level, range.min, range.max);
         draft.build.equipmentSets = draft.build.equipmentSets.filter(
           (entry) => !removed.equipmentSetIds.has(entry.id),
         );

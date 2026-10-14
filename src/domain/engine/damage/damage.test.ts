@@ -52,6 +52,10 @@ const ARCANIST = 36983;
 const FORCEMASTER = 43403;
 const MENTALIST = 54571;
 const MAXIMUM_CRISIS = 6026;
+const CRACKSHOOTER = 35045;
+const FLARINE_STICK = 681; // Assist, Lv 15
+const STEEL_KNUCKLE = 3899; // Assist, Lv 30
+const FLAMING_BOW = 3458; // Acrobat, Lv 45
 
 function damageOf(build: ReturnType<typeof createTestBuild>, options = DEFAULT_ENGINE_OPTIONS) {
   const resolved = resolveGearSwap(data, build, firstSwap(build), options);
@@ -295,6 +299,36 @@ describe('dual wield, shields and weapon requirements', () => {
     }
 
     expect(isSkillUsable(ctx, requireDamageSkill(data, HAMMER_OF_JUDGEMENT))).toBe(false);
+  });
+});
+
+describe('skills by job and level', () => {
+  const skillNames = (jobId: number, level: number, weaponId: number): string[] => {
+    const build = createTestBuild(data, { jobId, level });
+
+    addWeapon(build, { itemId: weaponId });
+
+    return Object.keys(damageOf(build).skills).map(
+      (id) => requireDamageSkill(data, Number(id)).name,
+    );
+  };
+
+  it('gives an Assist Moon Beam with a stick and Burst Crack with a knuckle from Lv 28', () => {
+    expect(skillNames(CLASS_IDS.seraph, 15, FLARINE_STICK)).toEqual(['Moon Beam']);
+    expect(skillNames(CLASS_IDS.seraph, 27, STEEL_KNUCKLE)).toEqual([]);
+    expect(skillNames(CLASS_IDS.seraph, 28, STEEL_KNUCKLE)).toEqual(['Burst Crack']);
+  });
+
+  it('keeps a Ringmaster to its own and Assist skills', () => {
+    expect(skillNames(CLASS_IDS.seraph, 100, FLARINE_STICK).sort()).toEqual([
+      'Merkaba Hanzelrusha',
+      'Moon Beam',
+    ]);
+  });
+
+  it('gives an Acrobat Arrow Rain from Lv 50', () => {
+    expect(skillNames(CRACKSHOOTER, 49, FLAMING_BOW)).toEqual([]);
+    expect(skillNames(CRACKSHOOTER, 50, FLAMING_BOW)).toEqual(['Arrow Rain']);
   });
 });
 

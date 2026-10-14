@@ -260,6 +260,10 @@ export const SlimSkillSchema = z.object({
   id: nonNegativeInt,
   name: z.string().min(1),
   icon: z.string().min(1),
+  /** The class that teaches the skill; none for an item, NPC or system skill (Waterbomb). */
+  classId: nonNegativeInt.optional(),
+  /** Character level required to learn it (0 for a skill no class teaches). */
+  level: nonNegativeInt,
   levelCount: z.number().int().positive(),
   max: z.object({
     abilities: z.array(AbilitySchema),
@@ -278,8 +282,6 @@ export const CLASS_SKILL_KINDS = ['classBuff', 'selfBuff', 'passive'] as const;
 export const ClassSkillSchema = SlimSkillSchema.extend({
   /** The class that teaches the skill (any class of the chain, Vagrant included). */
   classId: nonNegativeInt,
-  /** Character level required to learn it; orders the rows within a class. */
-  level: nonNegativeInt,
   kind: z.enum(CLASS_SKILL_KINDS),
   /** Master variations share the id of their base skill and are mutually exclusive. */
   familyId: nonNegativeInt,
@@ -293,10 +295,6 @@ export const ClassSkillSchema = SlimSkillSchema.extend({
  * damage formula needs: a class's damage skill or a skill an item triggers by chance.
  */
 export const AttackSkillSchema = SlimSkillSchema.extend({
-  /** The class that teaches the skill; none for a skill only an item triggers (Waterbomb). */
-  classId: nonNegativeInt.optional(),
-  /** Character level required to learn it. */
-  level: nonNegativeInt,
   /** Magic skills scale with Magic Attack % and meet the target's magic defense. */
   magic: z.boolean(),
   /** Element of a magic skill (`fire`, `fireearth`, …) for the element-mastery bonus. */
