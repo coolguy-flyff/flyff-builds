@@ -6,6 +6,7 @@ import { CLASS_IDS } from '@/data';
 import { reorderByKeyboard, stubSiblingLayout } from '@/components/testing/sortable';
 import { renderWithStore } from '@/features/buffs/renderWithStore';
 import { createTestStore } from '@/features/buffs/testStore';
+import { requireDefined } from '@/lib/assert';
 import type { AppStoreApi } from '@/state';
 
 import { SwapsSection } from './SwapsSection';
@@ -18,7 +19,7 @@ const FIRST_SWAP = 2;
 
 function addWeapon(store: AppStoreApi, itemId: number): number {
   const { actions } = store.getState();
-  const id = actions.addEntry('weapons');
+  const id = requireDefined(actions.addEntry('weapons'), 'added weapon');
   actions.setWeaponItem(id, itemId);
 
   return id;
@@ -34,7 +35,7 @@ describe('offhand rule', () => {
     const store = createTestStore();
     const { actions } = store.getState();
     const weaponId = addWeapon(store, ORACLE);
-    const shieldId = actions.addEntry('shields');
+    const shieldId = requireDefined(actions.addEntry('shields'), 'added shield');
     actions.setShieldItem(shieldId, AZURE_SHIELD);
     actions.updateEntry('gearSwaps', FIRST_SWAP, (swap) => {
       swap.weaponId = weaponId;

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { CLASS_IDS, loadBundledGameData } from '@/data';
-import { createDefaultBuild } from '@/domain/build';
+import { createDefaultBuild, LIMITS } from '@/domain/build';
+import { requireDefined } from '@/lib/assert';
 import { createMemoryStorage, readCurrentBuild, StorageError } from '@/persistence';
 
 import { bindAutosave } from './autosave';
@@ -24,7 +25,7 @@ describe('lists', () => {
     const { store } = setup();
     const { actions } = store.getState();
 
-    const weaponId = actions.addEntry('weapons');
+    const weaponId = requireDefined(actions.addEntry('weapons'), 'added weapon');
     actions.setWeaponItem(weaponId, ORACLE);
     actions.setWeaponUpgrade(weaponId, 10);
     actions.setCustomName('weapons', weaponId, '  My stick  ');
@@ -59,11 +60,24 @@ describe('lists', () => {
     expect(actions.removeEntry('gearSwaps', 2)).toBe(false);
   });
 
+  it('neither adds nor duplicates past a list limit', () => {
+    const { store } = setup();
+    const { actions } = store.getState();
+
+    while (store.getState().build.gearSwaps.length < LIMITS.gearSwaps) {
+      actions.addEntry('gearSwaps');
+    }
+
+    expect(actions.addEntry('gearSwaps')).toBeUndefined();
+    expect(actions.duplicateEntry('gearSwaps', 2)).toBeUndefined();
+    expect(store.getState().build.gearSwaps.length).toBe(LIMITS.gearSwaps);
+  });
+
   it('pre-fills a new swap with the first entry of every list', () => {
     const { store } = setup();
     const { actions } = store.getState();
-    const equipmentId = actions.addEntry('equipmentSets');
-    const petId = actions.addEntry('pets');
+    const equipmentId = requireDefined(actions.addEntry('equipmentSets'), 'added set');
+    const petId = requireDefined(actions.addEntry('pets'), 'added pet');
     const swapId = actions.addEntry('gearSwaps');
     const swap = store.getState().build.gearSwaps.find((entry) => entry.id === swapId);
 
@@ -102,9 +116,9 @@ describe('character', () => {
   it('switching job removes incompatible gear and clears swap slots', () => {
     const { store } = setup();
     const { actions } = store.getState();
-    const equipmentId = actions.addEntry('equipmentSets');
+    const equipmentId = requireDefined(actions.addEntry('equipmentSets'), 'added set');
     actions.setEquipmentSet(equipmentId, ETRANAR_SET);
-    const weaponId = actions.addEntry('weapons');
+    const weaponId = requireDefined(actions.addEntry('weapons'), 'added weapon');
     actions.setWeaponItem(weaponId, ORACLE);
     actions.updateEntry('gearSwaps', 2, (swap) => {
       swap.equipmentSetId = equipmentId;

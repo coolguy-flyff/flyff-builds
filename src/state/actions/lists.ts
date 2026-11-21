@@ -9,6 +9,7 @@ import {
   createShieldEntry,
   createStatPage,
   createWeaponEntry,
+  isEntryListFull,
   repairReferences,
   type AnyEntry,
   type BuildState,
@@ -21,7 +22,9 @@ import type { AppState } from '../types';
 import { takeId, type ActionContext } from './shared';
 
 export interface ListActions {
-  addEntry(list: EntryListKey): number;
+  /** Returns the new entry's id, or `undefined` when the list is at its limit. */
+  addEntry(list: EntryListKey): number | undefined;
+  /** Returns the copy's id, or `undefined` when the source is missing or the list is full. */
   duplicateEntry(list: EntryListKey, id: number): number | undefined;
   removeEntry(list: EntryListKey, id: number): boolean;
   /** Moves an entry by `delta` positions (clamped to the list). */
@@ -123,20 +126,26 @@ function selectNeighbour(draft: AppState, list: EntryListKey, removedIndex: numb
 export function createListActions({ set, get }: ActionContext): ListActions {
   return {
     addEntry(list) {
-      let created = 0;
+      let created: number | undefined;
 
-      set((draft) => {
-        const id = takeId(draft);
-        entriesOf(draft.build, list).push(createEntry(draft.build, list, id));
-        draft.ui.selected[list] = id;
-        created = id;
-      });
+      if (!isEntryListFull(get().build, list)) {
+        set((draft) => {
+          const id = takeId(draft);
+          entriesOf(draft.build, list).push(createEntry(draft.build, list, id));
+          draft.ui.selected[list] = id;
+          created = id;
+        });
+      }
 
       return created;
     },
 
     duplicateEntry(list, id) {
       let created: number | undefined;
+
+      if (isEntryListFull(get().build, list)) {
+        return created;
+      }
 
       set((draft) => {
         const entries = entriesOf(draft.build, list);

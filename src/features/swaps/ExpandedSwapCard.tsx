@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { issuesFor, type GearSwap } from '@/domain/build';
+import { isEntryListFull, issuesFor, type GearSwap } from '@/domain/build';
 import { Card } from '@/components/Card';
 import { EditorActions } from '@/components/EditorFrame';
 import { InlineName } from '@/components/InlineName';
@@ -71,6 +71,7 @@ export function ExpandedSwapCard({ swap }: { swap: GearSwap }) {
     nameOf('gearSwaps', swap.id),
   );
   const onlySwap = build.gearSwaps.length === 1;
+  const atLimit = isEntryListFull(build, 'gearSwaps');
   const statPageError = issues.find((issue) => issue.code === STAT_PAGE_ISSUE)?.message;
   const offhandError = issues.find((issue) => issue.code === OFFHAND_ISSUE)?.message;
 
@@ -128,6 +129,7 @@ export function ExpandedSwapCard({ swap }: { swap: GearSwap }) {
             onDuplicate={() => {
               expand(actions.duplicateEntry('gearSwaps', swap.id));
             }}
+            duplicateDisabled={atLimit}
             onDelete={() => {
               actions.removeEntry('gearSwaps', swap.id);
             }}

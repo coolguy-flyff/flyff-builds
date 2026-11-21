@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 
 import { STAT_KEYS, type StatKey } from '@/data';
-import { autoStatPageName, MIN_BASE_STAT, swapsReferencing, type StatPage } from '@/domain/build';
+import {
+  autoStatPageName,
+  isEntryListFull,
+  MIN_BASE_STAT,
+  swapsReferencing,
+  type StatPage,
+} from '@/domain/build';
 import { remainingStatPoints, statPointShares, totalStatPoints } from '@/domain/rules';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -110,6 +116,7 @@ export function StatPageCard({
     .map((swap) => selectors.entryName(build, 'gearSwaps', swap.id))
     .join(', ');
   const onlyPage = build.statPages.length === 1;
+  const atLimit = isEntryListFull(build, 'statPages');
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
@@ -178,6 +185,7 @@ export function StatPageCard({
           <div className="ml-auto flex gap-1.5">
             <Button
               size="sm"
+              disabled={atLimit}
               onClick={() => {
                 actions.duplicateEntry('statPages', page.id);
               }}

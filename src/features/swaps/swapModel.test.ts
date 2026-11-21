@@ -32,7 +32,7 @@ function firstSwap(build: BuildState): GearSwap {
 
 function addWeapon(store: AppStoreApi, itemId: number): number {
   const { actions } = store.getState();
-  const id = actions.addEntry('weapons');
+  const id = requireDefined(actions.addEntry('weapons'), 'added weapon');
   actions.setWeaponItem(id, itemId);
 
   return id;
@@ -40,7 +40,7 @@ function addWeapon(store: AppStoreApi, itemId: number): number {
 
 function addShield(store: AppStoreApi, itemId: number): number {
   const { actions } = store.getState();
-  const id = actions.addEntry('shields');
+  const id = requireDefined(actions.addEntry('shields'), 'added shield');
   actions.setShieldItem(id, itemId);
 
   return id;
@@ -138,14 +138,14 @@ describe('compositionChips', () => {
   it('summarises the picks with short names, custom names winning', () => {
     const store = createTestStore();
     const { actions } = store.getState();
-    const equipmentId = actions.addEntry('equipmentSets');
+    const equipmentId = requireDefined(actions.addEntry('equipmentSets'), 'added set');
     actions.setEquipmentSet(equipmentId, ETRANAR_SET);
     actions.updateEntry('equipmentSets', equipmentId, (entry) => {
       entry.upgrade = 10;
     });
     const weaponId = addWeapon(store, ORACLE);
     actions.setCustomName('weapons', weaponId, 'My stick');
-    const petId = actions.addEntry('pets');
+    const petId = requireDefined(actions.addEntry('pets'), 'added pet');
     actions.updateEntry('gearSwaps', FIRST_SWAP, (swap) => {
       swap.equipmentSetId = equipmentId;
       swap.weaponId = weaponId;

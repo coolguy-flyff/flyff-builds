@@ -44,7 +44,7 @@ export function GearCategoryView({ category }: { category: GearListKey }) {
           focusFirstControl(editorRef.current);
         }}
         onAdd={() => {
-          pendingFocusRef.current = actions.addEntry(category);
+          pendingFocusRef.current = actions.addEntry(category) ?? null;
         }}
       />
       <div ref={editorRef} className="min-w-0">

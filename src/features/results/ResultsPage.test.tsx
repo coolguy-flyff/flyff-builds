@@ -42,8 +42,8 @@ function setup() {
   );
   const { actions } = store.getState();
   const firstSwapId = requireDefined(store.getState().build.gearSwaps[0], 'default swap').id;
-  const secondSwapId = actions.addEntry('gearSwaps');
-  const weaponId = actions.addEntry('weapons');
+  const secondSwapId = requireDefined(actions.addEntry('gearSwaps'), 'added swap');
+  const weaponId = requireDefined(actions.addEntry('weapons'), 'added weapon');
 
   actions.setWeaponItem(weaponId, ORACLE);
   actions.updateEntry('gearSwaps', firstSwapId, (swap) => {
@@ -198,7 +198,7 @@ describe('ResultsPage', () => {
     ).id;
 
     act(() => {
-      const shieldId = actions.addEntry('shields');
+      const shieldId = requireDefined(actions.addEntry('shields'), 'added shield');
 
       actions.setShieldItem(shieldId, shieldItemId);
       actions.updateEntry('gearSwaps', firstSwapId, (swap) => {
@@ -280,7 +280,7 @@ describe('ResultsPage', () => {
     const { store, actions, firstSwapId } = setup();
 
     act(() => {
-      const petId = actions.addEntry('pets');
+      const petId = requireDefined(actions.addEntry('pets'), 'added pet');
 
       actions.updateEntry('pets', petId, (pet) => {
         pet.petItemId = LION_PET;
@@ -314,7 +314,7 @@ describe('ResultsPage', () => {
     const { store, actions } = setup();
 
     act(() => {
-      const petId = actions.addEntry('pets');
+      const petId = requireDefined(actions.addEntry('pets'), 'added pet');
 
       actions.updateEntry('pets', petId, (pet) => {
         pet.petItemId = LION_PET;

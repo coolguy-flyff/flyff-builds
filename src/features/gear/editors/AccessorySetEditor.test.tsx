@@ -32,7 +32,7 @@ function mount() {
   let entryId = 0;
 
   act(() => {
-    entryId = actions.addEntry('accessorySets');
+    entryId = requireDefined(actions.addEntry('accessorySets'), 'added accessory set');
     actions.updateEntry('accessorySets', entryId, (entry) => {
       entry.setId = ADEPTS_SET;
     });

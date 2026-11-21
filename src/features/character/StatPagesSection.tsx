@@ -1,4 +1,4 @@
-import { LIMITS } from '@/domain/build';
+import { isEntryListFull, LIMITS } from '@/domain/build';
 import { DashedAddCard } from '@/components/DashedAddCard';
 import { useActions, useAppStore, useBuild } from '@/state';
 
@@ -9,7 +9,7 @@ export function StatPagesSection() {
   const selectedId = useAppStore((state) => state.ui.selected.statPages);
   const actions = useActions();
   const activeId = selectedId ?? build.statPages[0]?.id ?? null;
-  const atLimit = build.statPages.length >= LIMITS.statPages;
+  const atLimit = isEntryListFull(build, 'statPages');
 
   return (
     <div className="flex flex-col gap-3.5">

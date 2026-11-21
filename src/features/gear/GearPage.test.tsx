@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { loadBundledGameData } from '@/data';
 import { createDefaultBuild, type GearListKey } from '@/domain/build';
+import { requireDefined } from '@/lib/assert';
 import { createMemoryStorage } from '@/persistence';
 import { createAppStore, StoreProvider } from '@/state';
 
@@ -36,7 +37,7 @@ describe('GearPage', () => {
     const { actions } = store.getState();
 
     act(() => {
-      const id = actions.addEntry('weapons');
+      const id = requireDefined(actions.addEntry('weapons'), 'added weapon');
       actions.setWeaponItem(id, ORACLE);
       actions.setWeaponUpgrade(id, 10);
     });

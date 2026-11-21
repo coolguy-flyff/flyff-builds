@@ -8,7 +8,7 @@ import {
   createStatPage,
   createWeaponEntry,
 } from '@/domain/build/defaults';
-import type { BuildState } from '@/domain/build/schema';
+import { LIMITS, type BuildState } from '@/domain/build/schema';
 
 import { ByteReader, ByteWriter } from '../../bytes';
 import { decodeErrorCode } from '../../testing/errors';
@@ -149,8 +149,12 @@ describe('encodeV1 / decodeV1', () => {
       ['shield offhand without shields', withByteFromEnd(body, 5, 1), 'CORRUPT'],
       ['offhand position without a kind', withByteFromEnd(body, 4, 1), 'CORRUPT'],
       ['reserved swap flag bits', withByteFromEnd(body, 10, 2), 'CORRUPT'],
-      ['too many swaps', withByteFromEnd(body, 12, 17), 'LIMIT_EXCEEDED'],
-      ['too many stat pages', withByteFromEnd(body, body.length - 4, 17), 'LIMIT_EXCEEDED'],
+      ['too many swaps', withByteFromEnd(body, 12, LIMITS.gearSwaps + 1), 'LIMIT_EXCEEDED'],
+      [
+        'too many stat pages',
+        withByteFromEnd(body, body.length - 4, LIMITS.statPages + 1),
+        'LIMIT_EXCEEDED',
+      ],
       [
         'no stat pages and no swaps',
         bytesOf((writer) => {

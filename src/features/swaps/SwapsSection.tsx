@@ -1,4 +1,4 @@
-import { LIMITS } from '@/domain/build';
+import { isEntryListFull, LIMITS } from '@/domain/build';
 import { DashedAddCard } from '@/components/DashedAddCard';
 import { Sortable } from '@/components/Sortable';
 import { useActions, useAppStore, useBuild } from '@/state';
@@ -17,7 +17,7 @@ export function SwapsSection() {
   const activeId = build.gearSwaps.some((swap) => swap.id === expandedId)
     ? expandedId
     : (build.gearSwaps[0]?.id ?? null);
-  const atLimit = build.gearSwaps.length >= LIMITS.gearSwaps;
+  const atLimit = isEntryListFull(build, 'gearSwaps');
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -51,7 +51,11 @@ export function SwapsSection() {
         }
         disabled={atLimit}
         onClick={() => {
-          actions.setExpandedSwap(actions.addEntry('gearSwaps'));
+          const id = actions.addEntry('gearSwaps');
+
+          if (id !== undefined) {
+            actions.setExpandedSwap(id);
+          }
         }}
       />
     </div>

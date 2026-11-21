@@ -15,7 +15,7 @@ export const BUILD_SCHEMA_VERSION = 4 as const;
 export const LIMITS = {
   statPages: 16,
   entriesPerList: 32,
-  gearSwaps: 16,
+  gearSwaps: 32,
   premiumItems: 32,
   nameLength: 32,
   blessingLines: 10,
@@ -298,3 +298,31 @@ export type EntryListKey = (typeof ENTRY_LIST_KEYS)[number];
 
 export type EntryOf<K extends EntryListKey> = BuildState[K][number];
 export type AnyEntry = EntryOf<EntryListKey>;
+
+export function entryListLimit(list: EntryListKey): number {
+  let limit: number;
+
+  switch (list) {
+    case 'statPages':
+      limit = LIMITS.statPages;
+      break;
+    case 'gearSwaps':
+      limit = LIMITS.gearSwaps;
+      break;
+    case 'equipmentSets':
+    case 'weapons':
+    case 'shields':
+    case 'accessorySets':
+    case 'fashionSets':
+    case 'pets':
+      limit = LIMITS.entriesPerList;
+      break;
+  }
+
+  return limit;
+}
+
+/** Adding or duplicating beyond this would produce a build the schema (and share codes) reject. */
+export function isEntryListFull(build: BuildState, list: EntryListKey): boolean {
+  return build[list].length >= entryListLimit(list);
+}
