@@ -51,6 +51,21 @@ describe('validateBuild', () => {
     }
   });
 
+  it('trims over-long names instead of rejecting the build', () => {
+    const build = createDefaultBuild(data);
+    const swap = requireDefined(build.gearSwaps[0], 'swap');
+    const result = validateBuild(data, {
+      ...build,
+      gearSwaps: [{ ...swap, customName: 'x'.repeat(40) }],
+    });
+
+    expect(result.ok).toBe(true);
+
+    if (result.ok) {
+      expect(result.value.build.gearSwaps[0]?.customName).toBe('x'.repeat(32));
+    }
+  });
+
   it('accepts the default build without warnings', () => {
     const result = validateBuild(data, createDefaultBuild(data));
 

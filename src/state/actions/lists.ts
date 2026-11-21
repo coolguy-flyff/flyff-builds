@@ -1,6 +1,7 @@
 import { current } from 'immer';
 
 import {
+  clampName,
   createAccessorySetEntry,
   createEquipmentSetEntry,
   createFashionSetEntry,
@@ -10,6 +11,7 @@ import {
   createStatPage,
   createWeaponEntry,
   isEntryListFull,
+  LIMITS,
   repairReferences,
   type AnyEntry,
   type BuildState,
@@ -42,6 +44,13 @@ export interface ListActions {
 /** The lists are heterogeneous; this is the one place that widens them for generic CRUD. */
 function entriesOf(build: BuildState, list: EntryListKey): AnyEntry[] {
   return build[list];
+}
+
+const COPY_SUFFIX = ' (copy)';
+
+/** Shortens the original rather than the suffix, so the copy stays recognisable. */
+function copyName(name: string): string {
+  return `${clampName(name).slice(0, LIMITS.nameLength - COPY_SUFFIX.length)}${COPY_SUFFIX}`;
 }
 
 function firstId(entries: readonly { id: number }[]): number | null {
@@ -160,7 +169,7 @@ export function createListActions({ set, get }: ActionContext): ListActions {
         copy.id = takeId(draft);
 
         if (copy.customName !== undefined) {
-          copy.customName = `${copy.customName} (copy)`;
+          copy.customName = copyName(copy.customName);
         }
 
         entries.splice(index + 1, 0, copy);
@@ -230,7 +239,7 @@ export function createListActions({ set, get }: ActionContext): ListActions {
         if (trimmed === '') {
           delete entry.customName;
         } else {
-          entry.customName = trimmed.slice(0, 32);
+          entry.customName = clampName(trimmed);
         }
       });
     },

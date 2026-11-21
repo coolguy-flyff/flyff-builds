@@ -60,6 +60,17 @@ describe('lists', () => {
     expect(actions.removeEntry('gearSwaps', 2)).toBe(false);
   });
 
+  it('keeps a long name within the limit when duplicating', () => {
+    const { store } = setup();
+    const { actions } = store.getState();
+    actions.setCustomName('gearSwaps', 2, 'a'.repeat(30));
+
+    const copyId = actions.duplicateEntry('gearSwaps', 2);
+    const copy = store.getState().build.gearSwaps.find((swap) => swap.id === copyId);
+
+    expect(copy?.customName).toBe(`${'a'.repeat(25)} (copy)`);
+  });
+
   it('neither adds nor duplicates past a list limit', () => {
     const { store } = setup();
     const { actions } = store.getState();

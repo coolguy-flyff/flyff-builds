@@ -1,5 +1,5 @@
 import type { PvpTargetStats } from '@/config/pvpTargets';
-import { createPvpTarget, LIMITS, type PvpTarget } from '@/domain/build';
+import { clampName, createPvpTarget, LIMITS, type PvpTarget } from '@/domain/build';
 import { DUMMY_TARGET_CHOICE } from '@/domain/engine';
 
 import { takeId, type ActionContext } from './shared';
@@ -26,7 +26,7 @@ export function createPvpTargetActions({ set, get }: ActionContext): PvpTargetAc
         set((draft) => {
           const id = takeId(draft);
 
-          draft.build.pvpTargets.push(createPvpTarget(id, name.slice(0, LIMITS.nameLength), stats));
+          draft.build.pvpTargets.push(createPvpTarget(id, clampName(name), stats));
           draft.ui.results.damageTarget = { kind: 'custom', id };
           created = id;
         });

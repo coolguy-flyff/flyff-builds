@@ -34,7 +34,14 @@ const entryId = z.number().int().positive();
 const gameId = z.number().int().nonnegative();
 const upgrade = z.number().int().min(0).max(MAX_UPGRADE_LEVEL);
 const baseStat = z.number().int().min(MIN_BASE_STAT);
-const customName = z.string().max(LIMITS.nameLength).optional();
+
+export function clampName(name: string): string {
+  return name.slice(0, LIMITS.nameLength);
+}
+
+/** Over-long names are trimmed rather than rejected: a name is never worth losing a build over. */
+const entryName = z.string().overwrite(clampName);
+const customName = entryName.optional();
 
 export const StatAwakeLineSchema = z.object({
   stat: z.enum(STAT_KEYS),
@@ -229,7 +236,7 @@ export const CharacterSchema = z.object({
  */
 export const PvpTargetSchema = z.object({
   id: entryId,
-  name: z.string().max(LIMITS.nameLength),
+  name: entryName,
   defense: z.number().int().nonnegative(),
   magicDefense: z.number().int().nonnegative(),
   magicResistance: z.number(),
